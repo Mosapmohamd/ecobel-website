@@ -6,11 +6,16 @@ from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 
+from . import models
+from .database import engine
 from .routers import staff_router, catalog, coupons, orders, account
 from .routers.staff_router import limiter
 
-# Schema is managed by Alembic (see alembic/ and the README) — run
-# `alembic upgrade head` before starting the server.
+# Creates any tables that don't already exist yet (won't touch or drop
+# tables that are already there — safe to run every time the app starts,
+# including against a database that already has the shared
+# categories/products/etc. tables from ecobel-accounting-system).
+models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI(
     title="Eco Bel — Website API",

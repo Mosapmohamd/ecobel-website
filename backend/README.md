@@ -9,24 +9,18 @@ staff-only API for managing orders and coupons.
 This service does **not** have its own copy of the product catalog. It
 reads and writes the same `categories`, `products`, `inventory_movements`,
 and `finance_entries` tables as [ecobel-accounting-system](../ecobel-accounting-system) —
-same `DATABASE_URL` in both `.env` files, same Postgres database in
-production.
+same `DATABASE_URL` in both `.env` files, same database in production.
 
 **Why:** the accounting team manages products/stock/categories in one
 place; the website should never show stale prices or oversell stock.
 
-**What this means for schema changes:**
-- `app/models.py` defines those four tables identically to how
-  ecobel-accounting-system defines them. If a column changes there, mirror
-  the change here (and vice versa) — they must always match exactly.
-- This service's Alembic migrations only create/alter its own tables
-  (`customers`, `coupons`, `orders`, `order_items`, `staff_users`).
-  `alembic upgrade head` here will fail if the shared tables don't already
-  exist — run the accounting system's migrations against the shared
-  database first.
-- A longer-term fix worth considering once both services stabilize: pull
-  the shared models into their own small Python package so there's exactly
-  one definition instead of two kept in sync by hand.
+**What this means for schema changes:** `app/models.py` defines those
+four tables identically to how ecobel-accounting-system defines them. If
+a column changes there, mirror the change here (and vice versa) — they
+must always match exactly. A longer-term fix worth considering once both
+services stabilize: pull the shared models into their own small Python
+package so there's exactly one definition instead of two kept in sync by
+hand.
 
 ## Setup
 
@@ -38,45 +32,22 @@ pip install -r requirements.txt
 cp .env.example .env            # DATABASE_URL must match ecobel-accounting-system's
 ```
 
-### First-time schema setup
+### Database — no separate migration step
 
-**Real shared database, local or production** — point *both* services'
-`DATABASE_URL` at the exact same database (a shared PostgreSQL instance
-in production; for local dev, the quickest option is one shared SQLite
-file — see below), then run the accounting system's migrations **first**
-(it owns the shared tables), then this service's:
+The app creates any tables it doesn't find yet the moment it starts
+(`Base.metadata.create_all` in `app/main.py`) — there's no `alembic
+upgrade` or similar command to remember to run. This is safe against a
+database that already has data: it only creates tables that don't exist
+yet and never touches or drops existing ones, so pointing this service at
+a copy of the accounting system's database (with real products already
+in it) just adds this service's own tables (`customers`, `coupons`,
+`orders`, `order_items`, `staff_users`) alongside the existing data.
 
-```bash
-# in ecobel-accounting-system/backend
-alembic upgrade head
-
-# then, in this repo
-alembic upgrade head
-```
-
-Each service tracks its own migration history in a separate table
-(`alembic_version_accounting` / `alembic_version_website`) specifically
-so both can coexist in one database — this is already set up in each
-repo's `alembic/env.py`, nothing to configure.
-
-**Local shared-SQLite-file setup**, in both backends' `.env`:
-
-```bash
-DATABASE_URL=sqlite:////absolute/path/to/a/shared/ecobel_shared_dev.db
-```
-
-(Windows: `sqlite:///C:/path/to/ecobel_shared_dev.db`.) Verified working:
-a product created via the accounting system's API shows up immediately
-in this service's `/catalog/products`.
-
-**Working on this service completely standalone** (no accounting system
-running at all, e.g. to test just the storefront)? Bootstrap the shared
-tables locally instead:
-
-```bash
-python dev_bootstrap_shared_tables.py   # creates categories/products/etc. locally only
-alembic upgrade head                     # creates this service's own tables
-```
+**Quickest way to get real product data locally**: copy the accounting
+system's `ecobel_dev.db` file into this service's `backend/` folder and
+point `DATABASE_URL` at it (the default, `sqlite:///./ecobel_dev.db`,
+already expects it right there) — no need to run the accounting system
+at the same time once the data's copied over.
 
 Create a staff account (prompts for the password):
 
