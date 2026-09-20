@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { catalogApi, type Category, type Product } from '@/lib/api';
 import ProductCard from '@/components/ProductCard';
+import HeroBanner from '@/components/HeroBanner';
 
 export default function HomePage() {
   const [categories, setCategories] = useState<Category[]>([]);
@@ -22,32 +23,7 @@ export default function HomePage() {
 
   return (
     <div>
-      {/* Hero */}
-      <section style={{ background: `linear-gradient(135deg, var(--forest) 0%, var(--forest-deep) 100%)` }}>
-        <div className="mx-auto max-w-6xl px-5 py-20 flex flex-col md:flex-row items-center gap-10">
-          <div className="flex-1">
-            <div className="text-sm font-bold mb-3" style={{ color: 'var(--gold-soft)' }}>
-              مكونات طبيعية · تركيبات آمنة
-            </div>
-            <h1 className="text-4xl md:text-5xl font-bold" style={{ color: 'var(--cream)' }}>
-              جمالك يبدأ من عناية نقية
-            </h1>
-            <p className="mt-4 text-[17px] max-w-md" style={{ color: 'rgba(251,249,244,0.82)' }}>
-              منتجات Eco Bel للعناية بالبشرة والشعر، مصنوعة من مكونات طبيعية لنتائج فعّالة تدوم.
-            </p>
-            <Link href="/products" className="btn btn-gold mt-7">تسوقي الآن</Link>
-          </div>
-          <div className="flex-1 flex justify-center">
-            <svg viewBox="0 0 220 260" width="240">
-              <ellipse cx="110" cy="240" rx="70" ry="10" fill="#00000022" />
-              <rect x="55" y="70" width="110" height="150" rx="14" fill="#E9E2CE" />
-              <rect x="70" y="40" width="80" height="40" rx="10" fill="#C9A227" />
-              <rect x="88" y="20" width="44" height="26" rx="6" fill="#8FA888" />
-              <rect x="70" y="120" width="80" height="46" rx="4" fill="#1F3A2E" opacity="0.85" />
-            </svg>
-          </div>
-        </div>
-      </section>
+      <HeroBanner />
 
       {/* Trust strip */}
       <section className="border-b" style={{ background: 'var(--parchment-2)', borderColor: 'var(--line)' }}>
