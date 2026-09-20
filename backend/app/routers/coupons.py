@@ -1,10 +1,11 @@
 from datetime import datetime, timezone
 from typing import List
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 
 from .. import models, schemas, auth
 from ..database import get_db
+from .staff_router import limiter
 
 router = APIRouter(prefix="/coupons", tags=["Coupons"])
 
@@ -30,7 +31,8 @@ def _validate_coupon(db: Session, code: str, order_subtotal: float) -> tuple[mod
 
 
 @router.post("/validate", response_model=schemas.CouponValidateResponse)
-def validate_coupon(payload: schemas.CouponValidateRequest, db: Session = Depends(get_db)):
+@limiter.limit("5/minute")
+def validate_coupon(request: Request, payload: schemas.CouponValidateRequest, db: Session = Depends(get_db)):
     coupon, reason, discount = _validate_coupon(db, payload.code, payload.order_subtotal)
     if not coupon:
         return schemas.CouponValidateResponse(valid=False, reason=reason)

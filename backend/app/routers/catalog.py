@@ -1,5 +1,5 @@
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from .. import models, schemas
@@ -14,7 +14,11 @@ def list_categories(db: Session = Depends(get_db)):
 
 
 @router.get("/products", response_model=List[schemas.ProductOut])
-def list_products(category_id: Optional[str] = None, db: Session = Depends(get_db)):
+def list_products(
+    category_id: Optional[str] = None,
+    limit: int = Query(100, ge=1, le=200),
+    db: Session = Depends(get_db),
+):
     """Public storefront listing — only active products with stock > 0 are shown."""
     q = (
         db.query(models.Product)
@@ -23,7 +27,7 @@ def list_products(category_id: Optional[str] = None, db: Session = Depends(get_d
     )
     if category_id:
         q = q.filter(models.Product.category_id == category_id)
-    return q.order_by(models.Product.name).all()
+    return q.order_by(models.Product.name).limit(limit).all()
 
 
 @router.get("/products/{product_id}", response_model=schemas.ProductOut)

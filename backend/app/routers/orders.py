@@ -1,12 +1,13 @@
 import random
 import string
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session, joinedload
 
 from .. import models, schemas, auth, services
 from ..database import get_db
 from .coupons import _validate_coupon
+from .staff_router import limiter
 
 router = APIRouter(prefix="/orders", tags=["Orders"])
 
@@ -26,7 +27,8 @@ def _generate_order_number(db: Session) -> str:
 
 
 @router.post("/", response_model=schemas.OrderOut, status_code=201)
-def create_order(payload: schemas.OrderCreate, db: Session = Depends(get_db)):
+@limiter.limit("5/minute")
+def create_order(request: Request, payload: schemas.OrderCreate, db: Session = Depends(get_db)):
     if not payload.items:
         raise HTTPException(400, "الطلب لازم يحتوي على منتج واحد على الأقل")
 
@@ -38,6 +40,10 @@ def create_order(payload: schemas.OrderCreate, db: Session = Depends(get_db)):
             db.query(models.Product)
             .filter(models.Product.id == item_in.product_id)
             .filter(models.Product.is_active == True)  # noqa: E712
+            .with_for_update()  # lock the row until this transaction commits —
+            # closes the race where two concurrent checkouts both read the
+            # same quantity before either deducts, causing overselling.
+            # (No-op on SQLite; effective on the real PostgreSQL target.)
             .first()
         )
         if not product:
@@ -110,7 +116,8 @@ def create_order(payload: schemas.OrderCreate, db: Session = Depends(get_db)):
 
 
 @router.get("/track", response_model=schemas.OrderOut)
-def track_order(order_number: str, phone: str, db: Session = Depends(get_db)):
+@limiter.limit("5/minute")
+def track_order(request: Request, order_number: str, phone: str, db: Session = Depends(get_db)):
     """Public tracking — requires BOTH the order number and the phone number
     used at checkout, so a guessed/leaked order number alone can't expose
     someone else's address and order details."""

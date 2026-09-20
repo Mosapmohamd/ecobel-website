@@ -139,6 +139,18 @@ here rather than retrofitted:
 - Checkout always re-prices from the database; nothing about the order
   total, unit prices, or discount is ever taken from the request body
   except product IDs, quantities, and the coupon code.
+- **`POST /orders/`, `POST /coupons/validate`, and `GET /orders/track` are
+  rate-limited** (5/minute per IP) — these are the only public write/probe
+  endpoints, and without a limit any of them could be scripted: exhausting
+  real stock with junk orders, brute-forcing coupon codes, or brute-forcing
+  an order number against a known phone number.
+- **Checkout caps items per order (≤30) and quantity per line (≤100)** as
+  defense-in-depth against a single oversized request.
+- **Stock rows are locked (`SELECT ... FOR UPDATE`) during checkout** to
+  close a race condition where two concurrent orders for the last unit
+  could both pass the stock check before either commits, overselling.
+  (No-op on SQLite; effective on the real PostgreSQL target.)
+- `/catalog/products` caps its page size (`limit`, max 200).
 
 ## Not yet built (future work)
 

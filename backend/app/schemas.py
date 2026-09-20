@@ -68,14 +68,14 @@ class CouponOut(BaseModel):
 # ---------------- Orders / Checkout ----------------
 class OrderItemIn(BaseModel):
     product_id: str
-    quantity: int = Field(..., gt=0)
+    quantity: int = Field(..., gt=0, le=100)
 
 
 class OrderCreate(BaseModel):
     customer_name: str
     customer_phone: str
     shipping_address: str
-    items: List[OrderItemIn]
+    items: List[OrderItemIn] = Field(..., min_length=1, max_length=30)
     coupon_code: Optional[str] = None
     note: Optional[str] = None
 
