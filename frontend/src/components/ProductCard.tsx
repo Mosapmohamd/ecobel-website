@@ -3,19 +3,35 @@
 import Link from 'next/link';
 import type { Product } from '@/lib/api';
 import { useCart } from '@/lib/cart';
+import { useWishlist } from '@/lib/wishlist';
 
 export default function ProductCard({ product }: { product: Product }) {
   const { add } = useCart();
+  const { has, toggle } = useWishlist();
+  const wished = has(product.id);
 
   return (
     <div className="rounded-lg overflow-hidden border flex flex-col" style={{ background: 'var(--cream)', borderColor: 'var(--line)' }}>
-      <Link href={`/products/${product.id}`}>
+      <Link href={`/products/${product.id}`} className="relative block">
         <div
           className="aspect-square flex items-center justify-center"
           style={{ background: 'var(--parchment-2)' }}
         >
           <ProductGlyph name={product.name} />
         </div>
+        <button
+          aria-label="أضيفي للمفضلة"
+          onClick={(e) => {
+            e.preventDefault();
+            toggle(product);
+          }}
+          className="absolute top-2 left-2 w-8 h-8 rounded-full flex items-center justify-center"
+          style={{ background: 'rgba(255,255,255,0.9)' }}
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill={wished ? 'var(--rose)' : 'none'} stroke={wished ? 'var(--rose)' : 'var(--forest)'} strokeWidth="2">
+            <path d="M12 21s-7-4.5-9.5-9A5.5 5.5 0 0 1 12 6a5.5 5.5 0 0 1 9.5 6c-2.5 4.5-9.5 9-9.5 9Z" />
+          </svg>
+        </button>
       </Link>
       <div className="p-4 flex flex-col flex-1">
         <div className="text-[11.5px] font-bold" style={{ color: 'var(--sage)' }}>{product.category_name}</div>
