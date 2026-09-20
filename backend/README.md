@@ -102,8 +102,15 @@ Public (no auth):
   GET  /catalog/products?category_id=...
   GET  /catalog/products/{id}
   POST /coupons/validate           { code, order_subtotal } -> discount preview
-  POST /orders/                    checkout — see below
+  POST /orders/                    checkout — see below (auth optional — see Customer accounts)
   GET  /orders/track?order_number=..&phone=..   (both must match — see Security)
+  POST /account/register           creates an account, returns a token
+  POST /account/login              { phone, password } -> token
+
+Customer (Bearer token from POST /account/register or /account/login):
+  GET   /account/me
+  PATCH /account/me
+  GET   /account/orders            the logged-in customer's own order history
 
 Staff (Bearer token from POST /staff/login):
   GET   /coupons/
@@ -111,6 +118,22 @@ Staff (Bearer token from POST /staff/login):
   GET   /orders/?status=...
   PATCH /orders/{id}/status
 ```
+
+### Customer accounts
+
+Registration is optional — checkout works the same for guests. When
+`POST /orders/` is called *with* a customer's Bearer token, the order is
+linked to their account (`Order.customer_id`) instead of doing the
+phone-based guest find-or-create, and it then shows up in
+`GET /account/orders`. Registering with a phone number that already has
+guest orders under it upgrades that existing `Customer` row into a real
+account rather than creating a duplicate.
+
+Customer tokens and staff tokens are both JWTs signed with the same
+`SECRET_KEY`, but carry a `type` claim (`"customer"` vs `"staff"`) that
+each endpoint's auth dependency checks — a customer token can't be used
+against staff-only endpoints and vice versa, even though the low-level
+encoding is otherwise identical.
 
 ### Checkout (`POST /orders/`)
 
@@ -173,10 +196,6 @@ here rather than retrofitted:
 
 ## Not yet built (future work)
 
-- Customer accounts / login ("My Account") — `Customer.hashed_password`
-  exists in the model but there's no registration/login flow yet; every
-  checkout today is effectively a guest checkout that finds-or-creates a
-  `Customer` row by phone number.
 - Wishlist, product comparison, quick-view, product reviews/ratings —
   planned Phase 1 features, not started.
 - WhatsApp/email order-confirmation notifications.

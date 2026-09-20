@@ -25,7 +25,9 @@ ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/staff/login")
+staff_oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/staff/login")
+customer_oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/account/login")
+customer_oauth2_scheme_optional = OAuth2PasswordBearer(tokenUrl="/account/login", auto_error=False)
 
 
 def verify_password(plain: str, hashed: str) -> bool:
@@ -43,6 +45,10 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
 
+def _decode(token: str) -> dict:
+    return jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+
+
 def authenticate_staff(db: Session, username: str, password: str) -> Optional[models.StaffUser]:
     user = db.query(models.StaffUser).filter(models.StaffUser.username == username).first()
     if not user or not verify_password(password, user.hashed_password):
@@ -50,14 +56,19 @@ def authenticate_staff(db: Session, username: str, password: str) -> Optional[mo
     return user
 
 
-def get_current_staff(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)) -> models.StaffUser:
+def get_current_staff(token: str = Depends(staff_oauth2_scheme), db: Session = Depends(get_db)) -> models.StaffUser:
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="بيانات الدخول غير صحيحة أو الجلسة منتهية",
         headers={"WWW-Authenticate": "Bearer"},
     )
     try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        payload = _decode(token)
+        # "type" distinguishes a staff token from a customer token — without
+        # it, a logged-in customer's token would also pass here, since both
+        # are signed with the same SECRET_KEY.
+        if payload.get("type") != "staff":
+            raise credentials_exception
         username: str = payload.get("sub")
         if username is None:
             raise credentials_exception
@@ -68,3 +79,54 @@ def get_current_staff(token: str = Depends(oauth2_scheme), db: Session = Depends
     if user is None:
         raise credentials_exception
     return user
+
+
+def authenticate_customer(db: Session, phone: str, password: str) -> Optional[models.Customer]:
+    user = db.query(models.Customer).filter(models.Customer.phone == phone).first()
+    if not user or not user.hashed_password or not verify_password(password, user.hashed_password):
+        return None
+    return user
+
+
+def get_current_customer(
+    token: str = Depends(customer_oauth2_scheme), db: Session = Depends(get_db)
+) -> models.Customer:
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="بيانات الدخول غير صحيحة أو الجلسة منتهية",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    try:
+        payload = _decode(token)
+        if payload.get("type") != "customer":
+            raise credentials_exception
+        customer_id: str = payload.get("sub")
+        if customer_id is None:
+            raise credentials_exception
+    except JWTError:
+        raise credentials_exception
+
+    customer = db.get(models.Customer, customer_id)
+    if customer is None:
+        raise credentials_exception
+    return customer
+
+
+def get_current_customer_optional(
+    token: Optional[str] = Depends(customer_oauth2_scheme_optional), db: Session = Depends(get_db)
+) -> Optional[models.Customer]:
+    """For endpoints usable by both guests and logged-in customers (checkout):
+    returns the Customer if a valid customer token was sent, else None —
+    never raises, so a guest request without a token still succeeds."""
+    if not token:
+        return None
+    try:
+        payload = _decode(token)
+        if payload.get("type") != "customer":
+            return None
+        customer_id: str = payload.get("sub")
+        if customer_id is None:
+            return None
+    except JWTError:
+        return None
+    return db.get(models.Customer, customer_id)

@@ -6,7 +6,7 @@ from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 
-from .routers import staff_router, catalog, coupons, orders
+from .routers import staff_router, catalog, coupons, orders, account
 from .routers.staff_router import limiter
 
 # Schema is managed by Alembic (see alembic/ and the README) — run
@@ -39,6 +39,7 @@ app.add_middleware(
 )
 
 app.include_router(staff_router.router)
+app.include_router(account.router)
 app.include_router(catalog.router)
 app.include_router(coupons.router)
 app.include_router(orders.router)

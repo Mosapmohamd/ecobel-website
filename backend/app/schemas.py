@@ -11,6 +11,36 @@ class Token(BaseModel):
     token_type: str = "bearer"
 
 
+# ---------------- Customer accounts ----------------
+class CustomerRegister(BaseModel):
+    name: str
+    phone: str
+    email: Optional[EmailStr] = None
+    address: Optional[str] = None
+    password: str = Field(..., min_length=6)
+
+
+class CustomerLogin(BaseModel):
+    phone: str
+    password: str
+
+
+class CustomerUpdate(BaseModel):
+    name: Optional[str] = None
+    email: Optional[EmailStr] = None
+    address: Optional[str] = None
+
+
+class CustomerOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: str
+    name: str
+    phone: str
+    email: Optional[str]
+    address: Optional[str]
+    created_at: datetime
+
+
 # ---------------- Catalog (read-only here) ----------------
 class CategoryOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)

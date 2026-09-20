@@ -28,7 +28,12 @@ def _generate_order_number(db: Session) -> str:
 
 @router.post("/", response_model=schemas.OrderOut, status_code=201)
 @limiter.limit("5/minute")
-def create_order(request: Request, payload: schemas.OrderCreate, db: Session = Depends(get_db)):
+def create_order(
+    request: Request,
+    payload: schemas.OrderCreate,
+    db: Session = Depends(get_db),
+    logged_in_customer: models.Customer | None = Depends(auth.get_current_customer_optional),
+):
     if not payload.items:
         raise HTTPException(400, "الطلب لازم يحتوي على منتج واحد على الأقل")
 
@@ -62,12 +67,16 @@ def create_order(request: Request, payload: schemas.OrderCreate, db: Session = D
     shipping_fee = 0.0 if (subtotal - discount_amount) >= FREE_SHIPPING_THRESHOLD else SHIPPING_FEE
     total_amount = subtotal - discount_amount + shipping_fee
 
-    # Find-or-create a lightweight customer record keyed by phone.
-    customer = db.query(models.Customer).filter(models.Customer.phone == payload.customer_phone).first()
-    if not customer:
-        customer = models.Customer(name=payload.customer_name, phone=payload.customer_phone)
-        db.add(customer)
-        db.flush()
+    # Link to the logged-in customer's real account if they're authenticated;
+    # otherwise fall back to the phone-based guest find-or-create as before.
+    if logged_in_customer:
+        customer = logged_in_customer
+    else:
+        customer = db.query(models.Customer).filter(models.Customer.phone == payload.customer_phone).first()
+        if not customer:
+            customer = models.Customer(name=payload.customer_name, phone=payload.customer_phone)
+            db.add(customer)
+            db.flush()
 
     order = models.Order(
         order_number=_generate_order_number(db),
