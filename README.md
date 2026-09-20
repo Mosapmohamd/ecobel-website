@@ -9,10 +9,11 @@ and hosting, sharing its product/inventory data with
 - [`backend/`](./backend) — FastAPI + SQLAlchemy API: catalog, cash-on-delivery
   checkout, coupons, order tracking, staff order management (see its README
   for setup — **read the "shares a database" section first**)
-- `frontend/` — not started yet
+- [`frontend/`](./frontend) — Next.js storefront (catalog, cart, checkout,
+  order tracking)
 
 ## Status
 
-Backend in progress: catalog, checkout, coupons, order tracking, and
-staff endpoints are built and tested. Not yet built: customer accounts,
-wishlist/compare, product images, notifications, and the frontend itself.
+Backend and frontend both working end-to-end: catalog, cart, checkout,
+coupons, order tracking, and staff endpoints are built and tested. Not yet
+built: customer accounts, wishlist/compare, product images, notifications.

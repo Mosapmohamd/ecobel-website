@@ -5,10 +5,13 @@ backend/*.db
 backend/server.log
 backend/.env
 
-# Node / frontend (once added)
+# Node / frontend
 frontend/node_modules/
+frontend/.next/
 frontend/dist/
 frontend/.env
+frontend/.env.local
+frontend/next.log
 
 # OS
 .DS_Store

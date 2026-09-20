@@ -24,10 +24,10 @@ app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 app.add_middleware(SlowAPIMiddleware)
 
-# Comma-separated allowed origins — the storefront frontend (and, if ever
-# needed, a staff dashboard). Defaults cover local dev only.
+# Comma-separated allowed origins — the storefront frontend (Next.js dev
+# server on :3000 by default) and, if ever needed, a staff dashboard.
 FRONTEND_ORIGINS = os.getenv(
-    "FRONTEND_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173"
+    "FRONTEND_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000"
 ).split(",")
 
 app.add_middleware(
