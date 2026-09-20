@@ -48,6 +48,7 @@ class Product(Base):
     quantity = Column(Integer, nullable=False, default=0)
     low_stock_threshold = Column(Integer, nullable=False, default=10)
     is_active = Column(Boolean, default=True)
+    image_url = Column(String, nullable=True)
     created_at = Column(DateTime(timezone=True), default=now)
     updated_at = Column(DateTime(timezone=True), default=now, onupdate=now)
 
