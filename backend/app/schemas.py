@@ -1,4 +1,5 @@
 from datetime import datetime
+from enum import Enum as PyEnum
 from typing import Optional, List
 from pydantic import BaseModel, ConfigDict, Field, EmailStr
 
@@ -58,6 +59,55 @@ class ProductOut(BaseModel):
     sale_price: float
     quantity: int
     stock_status: str
+    image_url: Optional[str] = None
+
+
+# ---------------- Admin: categories & products ----------------
+class CategoryCreate(BaseModel):
+    name: str
+
+
+class CategoryUpdate(BaseModel):
+    name: str
+
+
+class ProductAdminCreate(BaseModel):
+    name: str
+    category_id: str
+    sku: Optional[str] = None
+    sale_price: float = Field(0, ge=0)
+    quantity: int = Field(0, ge=0)
+    low_stock_threshold: int = Field(10, ge=0)
+
+
+class ProductAdminUpdate(BaseModel):
+    name: Optional[str] = None
+    category_id: Optional[str] = None
+    sku: Optional[str] = None
+    sale_price: Optional[float] = Field(None, ge=0)
+    quantity: Optional[int] = Field(None, ge=0)
+    low_stock_threshold: Optional[int] = Field(None, ge=0)
+    is_active: Optional[bool] = None
+
+
+# ---------------- Admin: sales analytics ----------------
+class RevenuePoint(BaseModel):
+    date: str
+    total: float
+
+
+class TopProduct(BaseModel):
+    product_name: str
+    quantity_sold: int
+    revenue: float
+
+
+class SalesAnalytics(BaseModel):
+    total_revenue: float
+    total_orders: int
+    orders_by_status: dict[str, int]
+    revenue_last_30_days: List[RevenuePoint]
+    top_products: List[TopProduct]
 
 
 # ---------------- Coupons ----------------
@@ -72,13 +122,29 @@ class CouponValidateResponse(BaseModel):
     discount_amount: float = 0
 
 
+class CouponLimitType(str, PyEnum):
+    duration = "duration"
+    count = "count"
+    unlimited = "unlimited"
+
+
 class CouponCreate(BaseModel):
     code: str
     discount_type: CouponDiscountType
     discount_value: float = Field(..., gt=0)
     min_order_amount: float = Field(0, ge=0)
+    limit_type: CouponLimitType = CouponLimitType.unlimited
+    max_uses: Optional[int] = Field(None, gt=0, description="Required when limit_type is 'count'")
+    expires_at: Optional[datetime] = Field(None, description="Required when limit_type is 'duration'")
+
+
+class CouponUpdate(BaseModel):
+    discount_value: Optional[float] = Field(None, gt=0)
+    min_order_amount: Optional[float] = Field(None, ge=0)
+    limit_type: Optional[CouponLimitType] = None
     max_uses: Optional[int] = Field(None, gt=0)
     expires_at: Optional[datetime] = None
+    is_active: Optional[bool] = None
 
 
 class CouponOut(BaseModel):
