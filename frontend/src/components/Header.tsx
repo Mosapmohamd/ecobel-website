@@ -2,9 +2,11 @@
 
 import Link from 'next/link';
 import { useCart } from '@/lib/cart';
+import { useAuth } from '@/lib/auth';
 
 export default function Header() {
   const { count } = useCart();
+  const { customer } = useAuth();
 
   return (
     <header>
@@ -33,21 +35,26 @@ export default function Header() {
             <Link href="/track">تتبع طلبك</Link>
           </nav>
 
-          <Link href="/cart" className="relative flex items-center" aria-label="السلة">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--forest)" strokeWidth="2">
-              <path d="M3 6h2l2.4 12.2a2 2 0 0 0 2 1.8h7.6a2 2 0 0 0 2-1.6L21 8H6" />
-              <circle cx="10" cy="21" r="1" />
-              <circle cx="17" cy="21" r="1" />
-            </svg>
-            {count > 0 && (
-              <span
-                className="absolute -top-2 -left-2 flex items-center justify-center rounded-full text-[10px] font-extrabold"
-                style={{ width: 17, height: 17, background: 'var(--gold)', color: 'var(--forest-deep)' }}
-              >
-                {count}
-              </span>
-            )}
-          </Link>
+          <div className="flex items-center gap-5">
+            <Link href={customer ? '/account' : '/account/login'} className="text-[14px] font-medium hidden sm:inline" style={{ color: 'var(--forest)' }}>
+              {customer ? `أهلًا ${customer.name.split(' ')[0]}` : 'تسجيل الدخول'}
+            </Link>
+            <Link href="/cart" className="relative flex items-center" aria-label="السلة">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--forest)" strokeWidth="2">
+                <path d="M3 6h2l2.4 12.2a2 2 0 0 0 2 1.8h7.6a2 2 0 0 0 2-1.6L21 8H6" />
+                <circle cx="10" cy="21" r="1" />
+                <circle cx="17" cy="21" r="1" />
+              </svg>
+              {count > 0 && (
+                <span
+                  className="absolute -top-2 -left-2 flex items-center justify-center rounded-full text-[10px] font-extrabold"
+                  style={{ width: 17, height: 17, background: 'var(--gold)', color: 'var(--forest-deep)' }}
+                >
+                  {count}
+                </span>
+              )}
+            </Link>
+          </div>
         </div>
       </div>
     </header>
