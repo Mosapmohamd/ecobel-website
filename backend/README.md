@@ -40,8 +40,11 @@ cp .env.example .env            # DATABASE_URL must match ecobel-accounting-syst
 
 ### First-time schema setup
 
-In production (shared PostgreSQL), run the accounting system's migrations
-**first**, then this service's:
+**Real shared database, local or production** — point *both* services'
+`DATABASE_URL` at the exact same database (a shared PostgreSQL instance
+in production; for local dev, the quickest option is one shared SQLite
+file — see below), then run the accounting system's migrations **first**
+(it owns the shared tables), then this service's:
 
 ```bash
 # in ecobel-accounting-system/backend
@@ -51,8 +54,24 @@ alembic upgrade head
 alembic upgrade head
 ```
 
-**Working on this service standalone**, with no real shared Postgres set
-up yet? Bootstrap the shared tables locally first:
+Each service tracks its own migration history in a separate table
+(`alembic_version_accounting` / `alembic_version_website`) specifically
+so both can coexist in one database — this is already set up in each
+repo's `alembic/env.py`, nothing to configure.
+
+**Local shared-SQLite-file setup**, in both backends' `.env`:
+
+```bash
+DATABASE_URL=sqlite:////absolute/path/to/a/shared/ecobel_shared_dev.db
+```
+
+(Windows: `sqlite:///C:/path/to/ecobel_shared_dev.db`.) Verified working:
+a product created via the accounting system's API shows up immediately
+in this service's `/catalog/products`.
+
+**Working on this service completely standalone** (no accounting system
+running at all, e.g. to test just the storefront)? Bootstrap the shared
+tables locally instead:
 
 ```bash
 python dev_bootstrap_shared_tables.py   # creates categories/products/etc. locally only
