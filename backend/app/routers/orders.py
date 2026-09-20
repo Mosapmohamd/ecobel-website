@@ -124,22 +124,55 @@ def create_order(
     return order
 
 
-@router.get("/track", response_model=schemas.OrderOut)
+@router.get("/track")
 @limiter.limit("5/minute")
-def track_order(request: Request, order_number: str, phone: str, db: Session = Depends(get_db)):
-    """Public tracking — requires BOTH the order number and the phone number
-    used at checkout, so a guessed/leaked order number alone can't expose
-    someone else's address and order details."""
-    order = (
+def track_order(
+    request: Request,
+    order_number: Optional[str] = None,
+    phone: Optional[str] = None,
+    db: Session = Depends(get_db),
+):
+    """Flexible order lookup:
+    - order_number + phone (both match): full order details.
+    - order_number only: status-only confirmation (no address/items) —
+      knowing the order number alone shouldn't reveal where it's going.
+    - phone only: status-only list of every order for that phone — same
+      reasoning, and it's a list since one phone can have many orders.
+    """
+    if not order_number and not phone:
+        raise HTTPException(400, "لازم تدخلي رقم الطلب أو رقم التليفون على الأقل")
+
+    if order_number and phone:
+        order = (
+            db.query(models.Order)
+            .options(joinedload(models.Order.items))
+            .filter(models.Order.order_number == order_number.strip().upper())
+            .filter(models.Order.customer_phone == phone.strip())
+            .first()
+        )
+        if not order:
+            raise HTTPException(404, "الطلب غير موجود — تأكدي من رقم الطلب ورقم التليفون")
+        return schemas.OrderOut.model_validate(order)
+
+    if order_number:
+        order = (
+            db.query(models.Order)
+            .filter(models.Order.order_number == order_number.strip().upper())
+            .first()
+        )
+        if not order:
+            raise HTTPException(404, "مفيش طلب بالرقم ده")
+        return [schemas.OrderTrackSummary.model_validate(order)]
+
+    orders = (
         db.query(models.Order)
-        .options(joinedload(models.Order.items))
-        .filter(models.Order.order_number == order_number.strip().upper())
         .filter(models.Order.customer_phone == phone.strip())
-        .first()
+        .order_by(models.Order.created_at.desc())
+        .all()
     )
-    if not order:
-        raise HTTPException(404, "الطلب غير موجود — تأكد من رقم الطلب ورقم التليفون")
-    return order
+    if not orders:
+        raise HTTPException(404, "مفيش طلبات مسجّلة بالرقم ده")
+    return [schemas.OrderTrackSummary.model_validate(o) for o in orders]
 
 
 # ---------------- Staff ----------------
