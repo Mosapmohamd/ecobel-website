@@ -139,3 +139,14 @@ class OrderOut(BaseModel):
 
 class OrderStatusUpdate(BaseModel):
     status: OrderStatus
+
+
+class OrderTrackSummary(BaseModel):
+    """Reduced view used when only one of order_number/phone is given —
+    confirms the order exists and its status, without exposing the
+    address or full item list to someone who only guessed one credential."""
+    model_config = ConfigDict(from_attributes=True)
+    order_number: str
+    status: OrderStatus
+    total_amount: float
+    created_at: datetime

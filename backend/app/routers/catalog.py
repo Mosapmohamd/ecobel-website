@@ -16,18 +16,21 @@ def list_categories(db: Session = Depends(get_db)):
 @router.get("/products", response_model=List[schemas.ProductOut])
 def list_products(
     category_id: Optional[str] = None,
+    q: Optional[str] = Query(None, description="Free-text search on product name"),
     limit: int = Query(100, ge=1, le=200),
     db: Session = Depends(get_db),
 ):
     """Public storefront listing — only active products with stock > 0 are shown."""
-    q = (
+    query = (
         db.query(models.Product)
         .filter(models.Product.is_active == True)  # noqa: E712
         .filter(models.Product.quantity > 0)
     )
     if category_id:
-        q = q.filter(models.Product.category_id == category_id)
-    return q.order_by(models.Product.name).limit(limit).all()
+        query = query.filter(models.Product.category_id == category_id)
+    if q:
+        query = query.filter(models.Product.name.ilike(f"%{q.strip()}%"))
+    return query.order_by(models.Product.name).limit(limit).all()
 
 
 @router.get("/products/{product_id}", response_model=schemas.ProductOut)
