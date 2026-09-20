@@ -4,11 +4,13 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
+import { useStaffAuth } from '@/lib/staffAuth';
 
 export default function LoginPage() {
   const { login } = useAuth();
+  const { login: staffLogin } = useStaffAuth();
   const router = useRouter();
-  const [phone, setPhone] = useState('');
+  const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -18,10 +20,19 @@ export default function LoginPage() {
     setError(null);
     setLoading(true);
     try {
-      await login(phone, password);
+      // Try a customer account first (identifier = phone number)...
+      await login(identifier, password);
       router.push('/account');
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'رقم التليفون أو كلمة المرور غير صحيحة');
+    } catch {
+      // ...and fall back to a staff account (identifier = username) —
+      // one login form works for both, so there's no separate admin URL
+      // to remember. Whichever one matches wins.
+      try {
+        await staffLogin(identifier, password);
+        router.push('/admin');
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'بيانات الدخول غير صحيحة');
+      }
     } finally {
       setLoading(false);
     }
@@ -38,7 +49,7 @@ export default function LoginPage() {
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <div className="field">
           <label>رقم التليفون</label>
-          <input value={phone} onChange={(e) => setPhone(e.target.value)} required dir="ltr" />
+          <input value={identifier} onChange={(e) => setIdentifier(e.target.value)} required dir="ltr" />
         </div>
         <div className="field">
           <label>كلمة المرور</label>

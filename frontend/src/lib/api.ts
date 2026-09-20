@@ -14,6 +14,7 @@ export interface Product {
   sale_price: number;
   quantity: number;
   stock_status: 'ok' | 'low' | 'out';
+  image_url: string | null;
 }
 
 export interface OrderItemIn {
@@ -170,11 +171,31 @@ export const staffApi = {
   },
 };
 
+export interface RevenuePoint {
+  date: string;
+  total: number;
+}
+
+export interface TopProduct {
+  product_name: string;
+  quantity_sold: number;
+  revenue: number;
+}
+
+export interface SalesAnalytics {
+  total_revenue: number;
+  total_orders: number;
+  orders_by_status: Record<string, number>;
+  revenue_last_30_days: RevenuePoint[];
+  top_products: TopProduct[];
+}
+
 export const adminApi = {
   listOrders: (token: string, status?: string) =>
     request<Order[]>(`/orders/${status ? `?status=${status}` : ''}`, { token }),
   updateOrderStatus: (token: string, orderId: string, status: string) =>
     request<Order>(`/orders/${orderId}/status`, { method: 'PATCH', body: JSON.stringify({ status }), token }),
+
   listCoupons: (token: string) => request<Coupon[]>('/coupons/', { token }),
   createCoupon: (
     token: string,
@@ -183,7 +204,47 @@ export const adminApi = {
       discount_type: 'percentage' | 'fixed';
       discount_value: number;
       min_order_amount?: number;
+      limit_type: 'duration' | 'count' | 'unlimited';
       max_uses?: number;
+      expires_at?: string;
     }
   ) => request<Coupon>('/coupons/', { method: 'POST', body: JSON.stringify(payload), token }),
+  renewCoupon: (token: string, couponId: string) =>
+    request<Coupon>(`/coupons/${couponId}/renew`, { method: 'POST', token }),
+  deleteCoupon: (token: string, couponId: string) =>
+    fetch(`${API_BASE}/coupons/${couponId}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } }),
+
+  listCategories: (token: string) => request<Category[]>('/admin/categories', { token }),
+  createCategory: (token: string, name: string) =>
+    request<Category>('/admin/categories', { method: 'POST', body: JSON.stringify({ name }), token }),
+  updateCategory: (token: string, id: string, name: string) =>
+    request<Category>(`/admin/categories/${id}`, { method: 'PATCH', body: JSON.stringify({ name }), token }),
+  deleteCategory: (token: string, id: string) =>
+    fetch(`${API_BASE}/admin/categories/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } }),
+
+  listAllProducts: (token: string) => request<Product[]>('/admin/products', { token }),
+  createProduct: (
+    token: string,
+    payload: { name: string; category_id: string; sale_price: number; quantity: number; low_stock_threshold?: number; sku?: string }
+  ) => request<Product>('/admin/products', { method: 'POST', body: JSON.stringify(payload), token }),
+  updateProduct: (
+    token: string,
+    id: string,
+    payload: Partial<{ name: string; category_id: string; sale_price: number; quantity: number; low_stock_threshold: number; is_active: boolean }>
+  ) => request<Product>(`/admin/products/${id}`, { method: 'PATCH', body: JSON.stringify(payload), token }),
+  deleteProduct: (token: string, id: string) =>
+    fetch(`${API_BASE}/admin/products/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } }),
+  uploadProductImage: async (token: string, id: string, file: File) => {
+    const form = new FormData();
+    form.append('file', file);
+    const res = await fetch(`${API_BASE}/admin/products/${id}/image`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+      body: form,
+    });
+    if (!res.ok) throw new Error('تعذر رفع الصورة');
+    return res.json() as Promise<Product>;
+  },
+
+  analytics: (token: string) => request<SalesAnalytics>('/admin/analytics', { token }),
 };
