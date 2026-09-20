@@ -167,8 +167,5 @@ here rather than retrofitted:
 
 ## Not yet built (future work)
 
-- Wishlist, product comparison, quick-view, product reviews/ratings —
-  planned Phase 1 features, not started.
+- Product comparison, quick-view, product reviews/ratings.
 - WhatsApp/email order-confirmation notifications.
-- Product images (no image field/storage wired up yet).
-- The frontend itself — this is backend only so far.
