@@ -55,6 +55,26 @@ export interface Order {
   items: OrderItemOut[];
 }
 
+export interface OrderTrackSummary {
+  order_number: string;
+  status: 'pending' | 'shipped' | 'delivered' | 'cancelled';
+  total_amount: number;
+  created_at: string;
+}
+
+export interface Coupon {
+  id: string;
+  code: string;
+  discount_type: 'percentage' | 'fixed';
+  discount_value: number;
+  min_order_amount: number;
+  max_uses: number | null;
+  used_count: number;
+  is_active: boolean;
+  expires_at: string | null;
+  created_at: string;
+}
+
 async function request<T>(path: string, options?: RequestInit & { token?: string }): Promise<T> {
   const headers: Record<string, string> = { 'Content-Type': 'application/json', ...(options?.headers as Record<string, string> || {}) };
   if (options?.token) headers.Authorization = `Bearer ${options.token}`;
@@ -74,8 +94,13 @@ async function request<T>(path: string, options?: RequestInit & { token?: string
 
 export const catalogApi = {
   categories: () => request<Category[]>('/catalog/categories'),
-  products: (categoryId?: string) =>
-    request<Product[]>(`/catalog/products${categoryId ? `?category_id=${categoryId}` : ''}`),
+  products: (opts?: { categoryId?: string; q?: string }) => {
+    const params = new URLSearchParams();
+    if (opts?.categoryId) params.set('category_id', opts.categoryId);
+    if (opts?.q) params.set('q', opts.q);
+    const qs = params.toString();
+    return request<Product[]>(`/catalog/products${qs ? `?${qs}` : ''}`);
+  },
   product: (id: string) => request<Product>(`/catalog/products/${id}`),
 };
 
@@ -96,8 +121,12 @@ export const orderApi = {
     coupon_code?: string;
     note?: string;
   }, token?: string) => request<Order>('/orders/', { method: 'POST', body: JSON.stringify(payload), token }),
-  track: (orderNumber: string, phone: string) =>
-    request<Order>(`/orders/track?order_number=${encodeURIComponent(orderNumber)}&phone=${encodeURIComponent(phone)}`),
+  track: (opts: { orderNumber?: string; phone?: string }) => {
+    const params = new URLSearchParams();
+    if (opts.orderNumber) params.set('order_number', opts.orderNumber);
+    if (opts.phone) params.set('phone', opts.phone);
+    return request<Order | OrderTrackSummary[]>(`/orders/track?${params.toString()}`);
+  },
 };
 
 export const accountApi = {
@@ -115,4 +144,46 @@ export const accountApi = {
   updateMe: (token: string, payload: { name?: string; email?: string; address?: string }) =>
     request<Customer>('/account/me', { method: 'PATCH', body: JSON.stringify(payload), token }),
   myOrders: (token: string) => request<Order[]>('/account/orders', { token }),
+};
+
+export const staffApi = {
+  login: async (username: string, password: string) => {
+    const form = new URLSearchParams();
+    form.set('username', username);
+    form.set('password', password);
+    const res = await fetch(`${API_BASE}/staff/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: form.toString(),
+    });
+    if (!res.ok) {
+      let detail = 'اسم المستخدم أو كلمة المرور غير صحيحة';
+      try {
+        const data = await res.json();
+        if (typeof data.detail === 'string') detail = data.detail;
+      } catch {
+        // ignore
+      }
+      throw new Error(detail);
+    }
+    return res.json() as Promise<{ access_token: string; token_type: string }>;
+  },
+};
+
+export const adminApi = {
+  listOrders: (token: string, status?: string) =>
+    request<Order[]>(`/orders/${status ? `?status=${status}` : ''}`, { token }),
+  updateOrderStatus: (token: string, orderId: string, status: string) =>
+    request<Order>(`/orders/${orderId}/status`, { method: 'PATCH', body: JSON.stringify({ status }), token }),
+  listCoupons: (token: string) => request<Coupon[]>('/coupons/', { token }),
+  createCoupon: (
+    token: string,
+    payload: {
+      code: string;
+      discount_type: 'percentage' | 'fixed';
+      discount_value: number;
+      min_order_amount?: number;
+      max_uses?: number;
+    }
+  ) => request<Coupon>('/coupons/', { method: 'POST', body: JSON.stringify(payload), token }),
 };
