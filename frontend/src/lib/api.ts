@@ -29,6 +29,15 @@ export interface OrderItemOut {
   line_total: number;
 }
 
+export interface Customer {
+  id: string;
+  name: string;
+  phone: string;
+  email: string | null;
+  address: string | null;
+  created_at: string;
+}
+
 export interface Order {
   id: string;
   order_number: string;
@@ -46,11 +55,10 @@ export interface Order {
   items: OrderItemOut[];
 }
 
-async function request<T>(path: string, options?: RequestInit): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`, {
-    ...options,
-    headers: { 'Content-Type': 'application/json', ...(options?.headers || {}) },
-  });
+async function request<T>(path: string, options?: RequestInit & { token?: string }): Promise<T> {
+  const headers: Record<string, string> = { 'Content-Type': 'application/json', ...(options?.headers as Record<string, string> || {}) };
+  if (options?.token) headers.Authorization = `Bearer ${options.token}`;
+  const res = await fetch(`${API_BASE}${path}`, { ...options, headers });
   if (!res.ok) {
     let detail = 'حصل خطأ، حاول تاني';
     try {
@@ -87,7 +95,24 @@ export const orderApi = {
     items: OrderItemIn[];
     coupon_code?: string;
     note?: string;
-  }) => request<Order>('/orders/', { method: 'POST', body: JSON.stringify(payload) }),
+  }, token?: string) => request<Order>('/orders/', { method: 'POST', body: JSON.stringify(payload), token }),
   track: (orderNumber: string, phone: string) =>
     request<Order>(`/orders/track?order_number=${encodeURIComponent(orderNumber)}&phone=${encodeURIComponent(phone)}`),
+};
+
+export const accountApi = {
+  register: (payload: { name: string; phone: string; email?: string; address?: string; password: string }) =>
+    request<{ access_token: string; token_type: string }>('/account/register', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  login: (phone: string, password: string) =>
+    request<{ access_token: string; token_type: string }>('/account/login', {
+      method: 'POST',
+      body: JSON.stringify({ phone, password }),
+    }),
+  me: (token: string) => request<Customer>('/account/me', { token }),
+  updateMe: (token: string, payload: { name?: string; email?: string; address?: string }) =>
+    request<Customer>('/account/me', { method: 'PATCH', body: JSON.stringify(payload), token }),
+  myOrders: (token: string) => request<Order[]>('/account/orders', { token }),
 };
