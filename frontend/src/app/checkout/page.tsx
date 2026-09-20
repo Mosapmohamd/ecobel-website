@@ -1,8 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useCart } from '@/lib/cart';
+import { useAuth } from '@/lib/auth';
 import { couponApi, orderApi, type Order } from '@/lib/api';
 
 const SHIPPING_FEE = 50;
@@ -10,11 +11,22 @@ const FREE_SHIPPING_THRESHOLD = 1000;
 
 export default function CheckoutPage() {
   const { lines, subtotal, clear } = useCart();
+  const { customer, token } = useAuth();
 
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [address, setAddress] = useState('');
   const [note, setNote] = useState('');
+  const [prefilled, setPrefilled] = useState(false);
+
+  useEffect(() => {
+    if (customer && !prefilled) {
+      setName(customer.name);
+      setPhone(customer.phone);
+      setAddress(customer.address || '');
+      setPrefilled(true);
+    }
+  }, [customer, prefilled]);
 
   const [couponCode, setCouponCode] = useState('');
   const [couponStatus, setCouponStatus] = useState<{ valid: boolean; reason?: string; discount: number } | null>(null);
@@ -55,7 +67,7 @@ export default function CheckoutPage() {
         items: lines.map((l) => ({ product_id: l.product.id, quantity: l.quantity })),
         coupon_code: couponStatus?.valid ? couponCode.trim() : undefined,
         note: note || undefined,
-      });
+      }, token || undefined);
       setConfirmedOrder(order);
       clear();
     } catch (err) {
