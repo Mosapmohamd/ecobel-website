@@ -1,0 +1,107 @@
+@import url('https://fonts.googleapis.com/css2?family=Markazi+Text:wght@600;700&family=Tajawal:wght@400;500;700;800&display=swap');
+@import "tailwindcss";
+
+:root {
+  --forest: #1f3a2e;
+  --forest-deep: #152a21;
+  --sage: #8fa888;
+  --gold: #c9a227;
+  --gold-soft: #e4c874;
+  --parchment: #f3efe4;
+  --parchment-2: #eae3d2;
+  --ink: #241f1a;
+  --cream: #fbf9f4;
+  --line: rgba(36, 31, 26, 0.12);
+  --rose: #c97b8a;
+  --ok: #5b8c5a;
+
+  --background: var(--parchment);
+  --foreground: var(--ink);
+}
+
+@theme inline {
+  --color-forest: var(--forest);
+  --color-forest-deep: var(--forest-deep);
+  --color-sage: var(--sage);
+  --color-gold: var(--gold);
+  --color-gold-soft: var(--gold-soft);
+  --color-parchment: var(--parchment);
+  --color-parchment-2: var(--parchment-2);
+  --color-ink: var(--ink);
+  --color-cream: var(--cream);
+  --color-rose: var(--rose);
+  --color-ok: var(--ok);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-display: 'Markazi Text', serif;
+  --font-body: 'Tajawal', sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  direction: rtl;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-body);
+}
+
+h1, h2, h3 {
+  font-family: var(--font-display);
+  font-weight: 700;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-radius: 6px;
+  padding: 12px 24px;
+  font-weight: 700;
+  font-size: 14.5px;
+  cursor: pointer;
+  border: none;
+  transition: background .15s;
+}
+.btn-primary { background: var(--forest); color: var(--cream); }
+.btn-primary:hover { background: var(--forest-deep); }
+.btn-gold { background: var(--gold); color: var(--forest-deep); }
+.btn-gold:hover { background: var(--gold-soft); }
+.btn-secondary { background: var(--parchment-2); color: var(--forest); }
+.btn:disabled { opacity: .5; cursor: not-allowed; }
+
+.field label {
+  display: block;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--forest);
+  margin-bottom: 6px;
+}
+.field input, .field textarea, .field select {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 10px 12px;
+  font-size: 14.5px;
+  background: #fff;
+  color: var(--ink);
+  font-family: var(--font-body);
+}
+.field input:focus, .field textarea:focus, .field select:focus {
+  outline: 2px solid var(--gold-soft);
+  outline-offset: 1px;
+}
+
+.badge {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 800;
+  padding: 4px 10px;
+  border-radius: 100px;
+}
