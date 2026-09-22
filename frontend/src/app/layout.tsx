@@ -3,7 +3,6 @@ import "./globals.css";
 import { CartProvider } from "@/lib/cart";
 import { WishlistProvider } from "@/lib/wishlist";
 import { AuthProvider } from "@/lib/auth";
-import { StaffAuthProvider } from "@/lib/staffAuth";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 
@@ -16,17 +15,15 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="ar" dir="rtl" className="h-full">
       <body className="min-h-full flex flex-col">
-        <StaffAuthProvider>
-          <AuthProvider>
-            <CartProvider>
-              <WishlistProvider>
-                <Header />
-                <main className="flex-1">{children}</main>
-                <Footer />
-              </WishlistProvider>
-            </CartProvider>
-          </AuthProvider>
-        </StaffAuthProvider>
+        <AuthProvider>
+          <CartProvider>
+            <WishlistProvider>
+              <Header />
+              <main className="flex-1">{children}</main>
+              <Footer />
+            </WishlistProvider>
+          </CartProvider>
+        </AuthProvider>
       </body>
     </html>
   );

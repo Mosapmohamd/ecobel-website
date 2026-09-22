@@ -6,13 +6,11 @@ import { useRouter } from 'next/navigation';
 import { useCart } from '@/lib/cart';
 import { useWishlist } from '@/lib/wishlist';
 import { useAuth } from '@/lib/auth';
-import { useStaffAuth } from '@/lib/staffAuth';
 
 export default function Header() {
   const { count } = useCart();
   const { count: wishCount } = useWishlist();
   const { customer } = useAuth();
-  const { token: staffToken, username: staffUsername } = useStaffAuth();
   const router = useRouter();
   const [query, setQuery] = useState('');
 
@@ -59,13 +57,8 @@ export default function Header() {
           </form>
 
           <div className="flex items-center gap-5 flex-none">
-            {staffToken && (
-              <Link href="/admin" className="btn" style={{ background: 'var(--gold)', color: 'var(--forest-deep)', padding: '7px 16px', fontSize: 13 }}>
-                لوحة التحكم
-              </Link>
-            )}
             <Link href={customer ? '/account' : '/account/login'} className="text-[14px] font-medium hidden sm:inline" style={{ color: 'var(--forest)' }}>
-              {staffToken ? `مرحبًا ${staffUsername}` : customer ? `أهلًا ${customer.name.split(' ')[0]}` : 'تسجيل الدخول'}
+              {customer ? `أهلًا ${customer.name.split(' ')[0]}` : 'تسجيل الدخول'}
             </Link>
             <Link href="/wishlist" className="relative flex items-center" aria-label="المفضلة">
               <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="var(--forest)" strokeWidth="2">

@@ -4,11 +4,9 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
-import { useStaffAuth } from '@/lib/staffAuth';
 
 export default function LoginPage() {
   const { login } = useAuth();
-  const { login: staffLogin } = useStaffAuth();
   const router = useRouter();
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
@@ -20,19 +18,10 @@ export default function LoginPage() {
     setError(null);
     setLoading(true);
     try {
-      // Try a customer account first (identifier = phone number)...
       await login(identifier, password);
       router.push('/account');
-    } catch {
-      // ...and fall back to a staff account (identifier = username) —
-      // one login form works for both, so there's no separate admin URL
-      // to remember. Whichever one matches wins.
-      try {
-        await staffLogin(identifier, password);
-        router.push('/admin');
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'بيانات الدخول غير صحيحة');
-      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'بيانات الدخول غير صحيحة');
     } finally {
       setLoading(false);
     }
