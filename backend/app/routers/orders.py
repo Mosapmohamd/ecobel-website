@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session, joinedload
 from .. import models, schemas, auth, services
 from ..database import get_db
 from .coupons import _validate_coupon
-from .staff_router import limiter
+from ..rate_limit import limiter
 
 router = APIRouter(prefix="/orders", tags=["Orders"])
 
@@ -174,27 +174,3 @@ def track_order(
         raise HTTPException(404, "مفيش طلبات مسجّلة بالرقم ده")
     return [schemas.OrderTrackSummary.model_validate(o) for o in orders]
 
-
-# ---------------- Staff ----------------
-@router.get("/", response_model=List[schemas.OrderOut], dependencies=[Depends(auth.get_current_staff)])
-def list_orders(status: Optional[models.OrderStatus] = None, db: Session = Depends(get_db)):
-    q = db.query(models.Order).options(joinedload(models.Order.items))
-    if status:
-        q = q.filter(models.Order.status == status)
-    return q.order_by(models.Order.created_at.desc()).all()
-
-
-@router.patch("/{order_id}/status", response_model=schemas.OrderOut, dependencies=[Depends(auth.get_current_staff)])
-def update_order_status(order_id: str, payload: schemas.OrderStatusUpdate, db: Session = Depends(get_db)):
-    order = (
-        db.query(models.Order)
-        .options(joinedload(models.Order.items))
-        .filter(models.Order.id == order_id)
-        .first()
-    )
-    if not order:
-        raise HTTPException(404, "الطلب غير موجود")
-    order.status = payload.status
-    db.commit()
-    db.refresh(order)
-    return order

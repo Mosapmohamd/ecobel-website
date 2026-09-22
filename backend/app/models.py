@@ -199,15 +199,3 @@ class OrderItem(Base):
     order = relationship("Order", back_populates="items")
     product = relationship("Product")
 
-
-class StaffUser(Base):
-    """Website-only staff account, separate from ecobel-accounting-system's
-    users table — used to gate admin actions (order status updates, coupon
-    management) here. Same auth pattern (JWT, bcrypt) as the accounting
-    system, but a distinct login since these are different applications."""
-    __tablename__ = "staff_users"
-
-    id = Column(String, primary_key=True, default=gen_id)
-    username = Column(String, unique=True, nullable=False, index=True)
-    hashed_password = Column(String, nullable=False)
-    created_at = Column(DateTime(timezone=True), default=now)
