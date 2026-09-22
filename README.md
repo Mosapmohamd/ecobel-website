@@ -7,13 +7,19 @@ and hosting, sharing its product/inventory data with
 (same database) rather than duplicating it.
 
 - [`backend/`](./backend) — FastAPI + SQLAlchemy API: catalog, cash-on-delivery
-  checkout, coupons, order tracking, staff order management (see its README
-  for setup — **read the "shares a database" section first**)
-- [`frontend/`](./frontend) — Next.js storefront (catalog, cart, checkout,
-  order tracking)
+  checkout, coupon validation, order tracking, customer accounts (see its
+  README for setup — **read the "shares a database" section first**)
+- [`frontend/`](./frontend) — Next.js storefront (catalog, wishlist, search,
+  cart, checkout, order tracking, customer accounts)
+
+All admin functionality (product/category management, coupon management,
+online-order status updates, sales analytics) lives in
+ecobel-accounting-system, not here — this repo is the public storefront
+only.
 
 ## Status
 
-Backend and frontend both working end-to-end: catalog, cart, checkout,
-coupons, order tracking, and staff endpoints are built and tested. Not yet
-built: customer accounts, wishlist/compare, product images, notifications.
+Backend and frontend working end-to-end: catalog, search, wishlist, cart,
+checkout, coupon validation, order tracking, and customer accounts are
+built and tested. Not yet built: product comparison/quick-view/reviews,
+order-confirmation notifications.
