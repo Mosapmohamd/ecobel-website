@@ -4,9 +4,9 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useCart } from '@/lib/cart';
 import { useAuth } from '@/lib/auth';
-import { couponApi, orderApi, type Order } from '@/lib/api';
+import { couponApi, orderApi, catalogApi, type Order } from '@/lib/api';
 
-const SHIPPING_FEE = 50;
+const DEFAULT_SHIPPING_FEE = 50;
 const FREE_SHIPPING_THRESHOLD = 1000;
 
 export default function CheckoutPage() {
@@ -15,9 +15,15 @@ export default function CheckoutPage() {
 
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
+  const [city, setCity] = useState('');
   const [address, setAddress] = useState('');
   const [note, setNote] = useState('');
   const [prefilled, setPrefilled] = useState(false);
+
+  const [rates, setRates] = useState<{ city: string; fee: number }[]>([]);
+  useEffect(() => {
+    catalogApi.shippingRates().then(setRates).catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (customer && !prefilled) {
@@ -38,7 +44,8 @@ export default function CheckoutPage() {
 
   const discount = couponStatus?.valid ? couponStatus.discount : 0;
   const netAfterDiscount = subtotal - discount;
-  const shippingFee = netAfterDiscount >= FREE_SHIPPING_THRESHOLD ? 0 : SHIPPING_FEE;
+  const cityFee = rates.find((r) => r.city === city.trim())?.fee;
+  const shippingFee = netAfterDiscount >= FREE_SHIPPING_THRESHOLD ? 0 : (cityFee ?? DEFAULT_SHIPPING_FEE);
   const total = netAfterDiscount + shippingFee;
 
   async function handleApplyCoupon() {
@@ -63,6 +70,7 @@ export default function CheckoutPage() {
       const order = await orderApi.create({
         customer_name: name,
         customer_phone: phone,
+        city,
         shipping_address: address,
         items: lines.map((l) => ({ product_id: l.product.id, quantity: l.quantity })),
         coupon_code: couponStatus?.valid ? couponCode.trim() : undefined,
@@ -130,6 +138,21 @@ export default function CheckoutPage() {
             <input value={phone} onChange={(e) => setPhone(e.target.value)} required dir="ltr" />
           </div>
           <div className="field">
+            <label>المدينة</label>
+            <input
+              list="cities-list"
+              value={city}
+              onChange={(e) => setCity(e.target.value)}
+              placeholder="مثال: القاهرة"
+              required
+            />
+            <datalist id="cities-list">
+              {rates.map((r) => (
+                <option key={r.city} value={r.city} />
+              ))}
+            </datalist>
+          </div>
+          <div className="field">
             <label>عنوان التوصيل بالتفصيل</label>
             <textarea value={address} onChange={(e) => setAddress(e.target.value)} rows={3} required />
           </div>
@@ -185,7 +208,10 @@ export default function CheckoutPage() {
             {discount > 0 && (
               <div className="flex justify-between" style={{ color: 'var(--ok)' }}><span>الخصم</span><span>-{discount.toLocaleString('ar-EG')} ج.م</span></div>
             )}
-            <div className="flex justify-between"><span>الشحن</span><span>{shippingFee === 0 ? 'مجاني' : `${shippingFee} ج.م`}</span></div>
+            <div className="flex justify-between">
+              <span>الشحن{city ? ` (${city})` : ''}</span>
+              <span>{shippingFee === 0 ? 'مجاني' : `${shippingFee} ج.م`}</span>
+            </div>
             <div className="flex justify-between font-extrabold text-base pt-2 border-t" style={{ borderColor: 'var(--line)', color: 'var(--forest)' }}>
               <span>الإجمالي</span><span>{total.toLocaleString('ar-EG')} ج.م</span>
             </div>

@@ -69,6 +69,7 @@ export interface Order {
   order_number: string;
   customer_name: string;
   customer_phone: string;
+  city: string | null;
   shipping_address: string;
   status: 'pending' | 'shipped' | 'delivered' | 'cancelled';
   payment_method: string;
@@ -117,6 +118,7 @@ export const catalogApi = {
   product: (id: string) => request<Product>(`/catalog/products/${id}`),
   offers: () => request<Offer[]>('/catalog/offers'),
   routines: () => request<Routine[]>('/catalog/routines'),
+  shippingRates: () => request<{ city: string; fee: number }[]>('/catalog/shipping-rates'),
 };
 
 export const couponApi = {
@@ -131,6 +133,7 @@ export const orderApi = {
   create: (payload: {
     customer_name: string;
     customer_phone: string;
+    city: string;
     shipping_address: string;
     items: OrderItemIn[];
     coupon_code?: string;
@@ -142,7 +145,7 @@ export const orderApi = {
     if (opts.phone) params.set('phone', opts.phone);
     return request<Order | OrderTrackSummary[]>(`/orders/track?${params.toString()}`);
   },
-  edit: (orderId: string, payload: { items: OrderItemIn[]; shipping_address?: string; note?: string }, token: string) =>
+  edit: (orderId: string, payload: { items: OrderItemIn[]; city?: string; shipping_address?: string; note?: string }, token: string) =>
     request<Order>(`/orders/${orderId}`, { method: 'PATCH', body: JSON.stringify(payload), token }),
   cancel: (orderId: string, token: string) =>
     request<Order>(`/orders/${orderId}`, { method: 'DELETE', token }),
