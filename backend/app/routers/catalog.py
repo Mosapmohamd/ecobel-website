@@ -76,3 +76,15 @@ def list_routines(db: Session = Depends(get_db)):
         .order_by(models.Routine.created_at.desc())
         .all()
     )
+
+
+@router.get("/shipping-rates", response_model=List[schemas.ShippingRateOut])
+def list_shipping_rates(db: Session = Depends(get_db)):
+    """Active cities and their delivery fee, for the checkout page's city
+    selector. Managed by staff in the accounting system."""
+    return (
+        db.query(models.ShippingRate)
+        .filter(models.ShippingRate.is_active == True)  # noqa: E712
+        .order_by(models.ShippingRate.city)
+        .all()
+    )
