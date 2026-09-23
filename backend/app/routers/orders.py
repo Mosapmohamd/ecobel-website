@@ -12,10 +12,28 @@ from ..rate_limit import limiter
 
 router = APIRouter(prefix="/orders", tags=["Orders"])
 
-# Flat shipping fee, waived at/above this subtotal — matches the current
-# site's "free shipping over 1000 EGP" policy. Adjust here if it changes.
-SHIPPING_FEE = 50.0
+# Fallback delivery fee for a city with no configured ShippingRate row —
+# actual per-city fees are set by staff in the accounting system.
+DEFAULT_SHIPPING_FEE = 50.0
 FREE_SHIPPING_THRESHOLD = 1000.0
+
+
+def _shipping_fee(db: Session, city: str | None, net_subtotal: float) -> float:
+    """Free shipping above the threshold regardless of city; otherwise the
+    city's configured rate, falling back to DEFAULT_SHIPPING_FEE if the
+    city isn't in the table (or wasn't given)."""
+    if net_subtotal >= FREE_SHIPPING_THRESHOLD:
+        return 0.0
+    if city:
+        rate = (
+            db.query(models.ShippingRate)
+            .filter(models.ShippingRate.city == city.strip())
+            .filter(models.ShippingRate.is_active == True)  # noqa: E712
+            .first()
+        )
+        if rate:
+            return rate.fee
+    return DEFAULT_SHIPPING_FEE
 
 
 def _effective_price(db: Session, product: models.Product) -> float:
@@ -81,7 +99,7 @@ def create_order(
         if not coupon:
             raise HTTPException(400, reason)
 
-    shipping_fee = 0.0 if (subtotal - discount_amount) >= FREE_SHIPPING_THRESHOLD else SHIPPING_FEE
+    shipping_fee = _shipping_fee(db, payload.city, subtotal - discount_amount)
     total_amount = subtotal - discount_amount + shipping_fee
 
     # Link to the logged-in customer's real account if they're authenticated;
@@ -100,6 +118,7 @@ def create_order(
         customer_id=customer.id,
         customer_name=payload.customer_name,
         customer_phone=payload.customer_phone,
+        city=payload.city,
         shipping_address=payload.shipping_address,
         subtotal=subtotal,
         coupon_id=coupon.id if coupon else None,
@@ -134,6 +153,7 @@ def create_order(
         amount=total_amount,
         description=f"طلب موقع #{order.order_number}",
         reference_id=order.id,
+        source="website",
     ))
 
     db.commit()
@@ -256,13 +276,15 @@ def edit_order(
             discount_amount = 0.0
             order.coupon_id = None
 
-    shipping_fee = 0.0 if (subtotal - discount_amount) >= FREE_SHIPPING_THRESHOLD else SHIPPING_FEE
+    shipping_fee = _shipping_fee(db, payload.city or order.city, subtotal - discount_amount)
     total_amount = subtotal - discount_amount + shipping_fee
 
     order.subtotal = subtotal
     order.discount_amount = discount_amount
     order.shipping_fee = shipping_fee
     order.total_amount = total_amount
+    if payload.city:
+        order.city = payload.city
     if payload.shipping_address:
         order.shipping_address = payload.shipping_address
     if payload.note is not None:
@@ -281,6 +303,18 @@ def edit_order(
             db, product, -qty, models.MovementType.website_sale,
             reference_id=order.id, note=f"تعديل طلب #{order.order_number}",
         )
+
+    # The original income entry (created at checkout) was for the old
+    # total — correct it in place rather than leaving stale accounting
+    # data or creating a second, confusing income row for the same order.
+    original_entry = (
+        db.query(models.FinanceEntry)
+        .filter(models.FinanceEntry.reference_id == order.id)
+        .filter(models.FinanceEntry.type == models.FinanceEntryType.income)
+        .first()
+    )
+    if original_entry:
+        original_entry.amount = total_amount
 
     db.commit()
     db.refresh(order)
@@ -316,6 +350,16 @@ def cancel_order(
                 reference_id=order.id, note=f"إلغاء طلب #{order.order_number}",
             )
     order.status = models.OrderStatus.cancelled
+
+    db.add(models.FinanceEntry(
+        type=models.FinanceEntryType.expense,
+        category="إلغاء طلب موقع",
+        amount=order.total_amount,
+        description=f"إلغاء طلب #{order.order_number}",
+        reference_id=order.id,
+        source="website",
+    ))
+
     db.commit()
     db.refresh(order)
     return order
