@@ -53,6 +53,12 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
           {product.stock_status === 'out' && <span className="badge" style={{ background: 'rgba(201,123,138,0.18)', color: 'var(--rose)' }}>نفذت الكمية</span>}
         </div>
 
+        {product.description && (
+          <p className="mt-5 text-[14.5px] leading-relaxed" style={{ color: '#4a453e' }}>
+            {product.description}
+          </p>
+        )}
+
         {product.stock_status !== 'out' && (
           <div className="mt-8 flex items-center gap-4">
             <div className="flex items-center border rounded-md" style={{ borderColor: 'var(--line)' }}>
