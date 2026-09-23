@@ -3,7 +3,8 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
-import { accountApi, type Order } from '@/lib/api';
+import { accountApi, orderApi, type Order } from '@/lib/api';
+import OrderEditor from './OrderEditor';
 
 const STATUS_LABEL: Record<Order['status'], string> = {
   pending: 'قيد التجهيز',
@@ -17,12 +18,13 @@ export default function AccountPage() {
   const router = useRouter();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loadingOrders, setLoadingOrders] = useState(true);
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!loading && !customer) router.push('/account/login');
   }, [loading, customer, router]);
 
-  useEffect(() => {
+  function loadOrders() {
     if (token) {
       accountApi
         .myOrders(token)
@@ -30,7 +32,19 @@ export default function AccountPage() {
         .catch(() => {})
         .finally(() => setLoadingOrders(false));
     }
-  }, [token]);
+  }
+  useEffect(loadOrders, [token]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function handleCancel(orderId: string) {
+    if (!token) return;
+    if (!confirm('متأكدة إنك عايزة تلغي الطلب ده؟')) return;
+    try {
+      await orderApi.cancel(orderId, token);
+      loadOrders();
+    } catch {
+      alert('تعذر إلغاء الطلب');
+    }
+  }
 
   if (loading || !customer) {
     return <div className="mx-auto max-w-4xl px-5 py-16" style={{ color: '#8a8074' }}>جاري التحميل...</div>;
@@ -85,6 +99,34 @@ export default function AccountPage() {
               <div className="text-[13px]" style={{ color: '#8a8074' }}>
                 {new Date(o.created_at).toLocaleDateString('ar-EG')} · {o.items.length} صنف · {o.total_amount.toLocaleString('ar-EG')} ج.م
               </div>
+
+              {o.status === 'pending' && (
+                <>
+                  {editingId === o.id ? (
+                    token && (
+                      <OrderEditor
+                        order={o}
+                        token={token}
+                        onClose={() => setEditingId(null)}
+                        onSaved={() => { setEditingId(null); loadOrders(); }}
+                      />
+                    )
+                  ) : (
+                    <div className="flex gap-2 mt-3">
+                      <button className="btn btn-secondary" style={{ padding: '6px 14px', fontSize: 12.5 }} onClick={() => setEditingId(o.id)}>
+                        تعديل الطلب
+                      </button>
+                      <button
+                        className="btn"
+                        style={{ padding: '6px 14px', fontSize: 12.5, background: 'rgba(201,123,138,0.15)', color: 'var(--rose)' }}
+                        onClick={() => handleCancel(o.id)}
+                      >
+                        إلغاء الطلب
+                      </button>
+                    </div>
+                  )}
+                </>
+              )}
             </div>
           ))}
         </div>
