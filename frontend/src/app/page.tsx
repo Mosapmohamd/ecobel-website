@@ -2,20 +2,26 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { catalogApi, type Category, type Product } from '@/lib/api';
+import { catalogApi, type Category, type Product, type Offer, type Routine } from '@/lib/api';
 import ProductCard from '@/components/ProductCard';
+import OfferCard from '@/components/OfferCard';
+import RoutineCard from '@/components/RoutineCard';
 import HeroBanner from '@/components/HeroBanner';
 
 export default function HomePage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
+  const [offers, setOffers] = useState<Offer[]>([]);
+  const [routines, setRoutines] = useState<Routine[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    Promise.all([catalogApi.categories(), catalogApi.products()])
-      .then(([c, p]) => {
+    Promise.all([catalogApi.categories(), catalogApi.products(), catalogApi.offers(), catalogApi.routines()])
+      .then(([c, p, o, r]) => {
         setCategories(c);
         setProducts(p);
+        setOffers(o);
+        setRoutines(r);
       })
       .catch(() => {})
       .finally(() => setLoading(false));
@@ -34,6 +40,34 @@ export default function HomePage() {
           <span>↩️ استبدال خلال 14 يوم</span>
         </div>
       </section>
+
+      {/* Offers */}
+      {offers.length > 0 && (
+        <section className="mx-auto max-w-6xl px-5 py-16">
+          <div className="text-sm font-bold mb-2" style={{ color: 'var(--rose)' }}>لفترة محدودة</div>
+          <h2 className="text-3xl mb-8">العروض</h2>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-5">
+            {offers.map((o) => (
+              <OfferCard key={o.id} offer={o} />
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* Routines */}
+      {routines.length > 0 && (
+        <section className="mx-auto max-w-6xl px-5 py-16" style={{ background: 'var(--parchment-2)' }}>
+          <div className="mx-auto max-w-6xl">
+            <div className="text-sm font-bold mb-2" style={{ color: 'var(--forest)' }}>مجموعات مختارة بعناية</div>
+            <h2 className="text-3xl mb-8">الروتين</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              {routines.map((r) => (
+                <RoutineCard key={r.id} routine={r} />
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Categories */}
       {categories.length > 0 && (
