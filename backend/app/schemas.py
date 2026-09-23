@@ -83,6 +83,7 @@ class OrderItemIn(BaseModel):
 class OrderCreate(BaseModel):
     customer_name: str
     customer_phone: str
+    city: str
     shipping_address: str
     items: List[OrderItemIn] = Field(..., min_length=1, max_length=30)
     coupon_code: Optional[str] = None
@@ -104,6 +105,7 @@ class OrderOut(BaseModel):
     order_number: str
     customer_name: str
     customer_phone: str
+    city: Optional[str] = None
     shipping_address: str
     status: OrderStatus
     payment_method: str
@@ -167,5 +169,12 @@ class OrderItemEdit(BaseModel):
 
 class OrderEdit(BaseModel):
     items: List[OrderItemEdit] = Field(..., min_length=1, max_length=30)
+    city: Optional[str] = None
     shipping_address: Optional[str] = None
     note: Optional[str] = None
+
+
+class ShippingRateOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    city: str
+    fee: float

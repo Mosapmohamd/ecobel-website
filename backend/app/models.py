@@ -104,6 +104,7 @@ class FinanceEntry(Base):
     amount = Column(Float, nullable=False)
     description = Column(Text, nullable=True)
     reference_id = Column(String, nullable=True)
+    source = Column(String, nullable=True)  # "website" | "b2b" | "spending"
     entry_date = Column(DateTime(timezone=True), default=now)
     created_at = Column(DateTime(timezone=True), default=now)
 
@@ -166,6 +167,7 @@ class Order(Base):
     # Customer record changes later, and populated for guest checkout too.
     customer_name = Column(String, nullable=False)
     customer_phone = Column(String, nullable=False)
+    city = Column(String, nullable=True)  # drives the shipping fee — see ShippingRate
     shipping_address = Column(Text, nullable=False)
 
     status = Column(Enum(OrderStatus), nullable=False, default=OrderStatus.pending)
@@ -268,3 +270,15 @@ class RoutineItem(Base):
     @property
     def image_url(self) -> str | None:
         return self.product.image_url if self.product else None
+
+
+class ShippingRate(Base):
+    """Mirrored from ecobel-accounting-system, which owns and manages this —
+    city -> delivery fee, looked up at checkout."""
+    __tablename__ = "shipping_rates"
+
+    id = Column(String, primary_key=True, default=gen_id)
+    city = Column(String, unique=True, nullable=False)
+    fee = Column(Float, nullable=False)
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime(timezone=True), default=now)
