@@ -15,6 +15,31 @@ export interface Product {
   quantity: number;
   stock_status: 'ok' | 'low' | 'out';
   image_url: string | null;
+  description: string | null;
+}
+
+export interface Offer {
+  id: string;
+  product_id: string;
+  product_name: string;
+  original_price: number;
+  image_url: string | null;
+  title: string;
+  offer_price: number;
+}
+
+export interface RoutineItem {
+  product_id: string;
+  product_name: string;
+  sale_price: number;
+  image_url: string | null;
+}
+
+export interface Routine {
+  id: string;
+  name: string;
+  description: string | null;
+  items: RoutineItem[];
 }
 
 export interface OrderItemIn {
@@ -90,6 +115,8 @@ export const catalogApi = {
     return request<Product[]>(`/catalog/products${qs ? `?${qs}` : ''}`);
   },
   product: (id: string) => request<Product>(`/catalog/products/${id}`),
+  offers: () => request<Offer[]>('/catalog/offers'),
+  routines: () => request<Routine[]>('/catalog/routines'),
 };
 
 export const couponApi = {
@@ -115,6 +142,10 @@ export const orderApi = {
     if (opts.phone) params.set('phone', opts.phone);
     return request<Order | OrderTrackSummary[]>(`/orders/track?${params.toString()}`);
   },
+  edit: (orderId: string, payload: { items: OrderItemIn[]; shipping_address?: string; note?: string }, token: string) =>
+    request<Order>(`/orders/${orderId}`, { method: 'PATCH', body: JSON.stringify(payload), token }),
+  cancel: (orderId: string, token: string) =>
+    request<Order>(`/orders/${orderId}`, { method: 'DELETE', token }),
 };
 
 export const accountApi = {
