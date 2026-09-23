@@ -59,6 +59,7 @@ class ProductOut(BaseModel):
     quantity: int
     stock_status: str
     image_url: Optional[str] = None
+    description: Optional[str] = None
 
 
 # ---------------- Coupons ----------------
@@ -128,3 +129,43 @@ class OrderTrackSummary(BaseModel):
     status: OrderStatus
     total_amount: float
     created_at: datetime
+
+
+# ---------------- Homepage: offers & routines (read-only) ----------------
+class OfferOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: str
+    product_id: str
+    product_name: str
+    original_price: float
+    image_url: Optional[str] = None
+    title: str
+    offer_price: float
+
+
+class RoutineItemOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    product_id: str
+    product_name: str
+    sale_price: float
+    image_url: Optional[str] = None
+
+
+class RoutineOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: str
+    name: str
+    description: Optional[str]
+    items: List[RoutineItemOut]
+
+
+# ---------------- Order editing (customer, pending orders only) ----------------
+class OrderItemEdit(BaseModel):
+    product_id: str
+    quantity: int = Field(..., gt=0, le=100)
+
+
+class OrderEdit(BaseModel):
+    items: List[OrderItemEdit] = Field(..., min_length=1, max_length=30)
+    shipping_address: Optional[str] = None
+    note: Optional[str] = None
