@@ -139,18 +139,12 @@ export default function CheckoutPage() {
           </div>
           <div className="field">
             <label>المدينة</label>
-            <input
-              list="cities-list"
-              value={city}
-              onChange={(e) => setCity(e.target.value)}
-              placeholder="مثال: القاهرة"
-              required
-            />
-            <datalist id="cities-list">
+            <select value={city} onChange={(e) => setCity(e.target.value)} required disabled={rates.length === 0}>
+              <option value="">{rates.length === 0 ? 'لا توجد مدن متاحة حاليًا' : 'اختاري مدينتك...'}</option>
               {rates.map((r) => (
-                <option key={r.city} value={r.city} />
+                <option key={r.city} value={r.city}>{r.city} — شحن {r.fee.toLocaleString('ar-EG')} ج.م</option>
               ))}
-            </datalist>
+            </select>
           </div>
           <div className="field">
             <label>عنوان التوصيل بالتفصيل</label>
