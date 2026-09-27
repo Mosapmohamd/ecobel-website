@@ -9,6 +9,17 @@ import { couponApi, orderApi, catalogApi, type Order } from '@/lib/api';
 const DEFAULT_SHIPPING_FEE = 50;
 const FREE_SHIPPING_THRESHOLD = 1000;
 
+function validateName(value: string): string | null {
+  const parts = value.trim().split(/\s+/).filter(Boolean);
+  if (parts.length !== 3) return 'الاسم لازم يكون ثلاثي (اسم أول، أب، جد) مفصول بمسافات';
+  return null;
+}
+
+function validatePhone(value: string): string | null {
+  if (!/^01\d{9}$/.test(value.trim())) return 'رقم التليفون لازم يبدأ بـ 01 ويتكون من 11 رقم';
+  return null;
+}
+
 export default function CheckoutPage() {
   const { lines, subtotal, clear } = useCart();
   const { customer, token } = useAuth();
@@ -40,6 +51,8 @@ export default function CheckoutPage() {
 
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [nameError, setNameError] = useState<string | null>(null);
+  const [phoneError, setPhoneError] = useState<string | null>(null);
   const [confirmedOrder, setConfirmedOrder] = useState<Order | null>(null);
 
   const discount = couponStatus?.valid ? couponStatus.discount : 0;
@@ -65,11 +78,22 @@ export default function CheckoutPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+
+    const nameErr = validateName(name);
+    const phoneErr = validatePhone(phone);
+    setNameError(nameErr);
+    setPhoneError(phoneErr);
+    if (nameErr || phoneErr) return;
+    if (!city) {
+      setError('اختاري المحافظة قبل تأكيد الطلب');
+      return;
+    }
+
     setSubmitting(true);
     try {
       const order = await orderApi.create({
-        customer_name: name,
-        customer_phone: phone,
+        customer_name: name.trim().replace(/\s+/g, ' '),
+        customer_phone: phone.trim(),
         city,
         shipping_address: address,
         items: lines.map((l) => ({ product_id: l.product.id, quantity: l.quantity })),
@@ -130,17 +154,32 @@ export default function CheckoutPage() {
 
         <div className="flex flex-col gap-4">
           <div className="field">
-            <label>الاسم بالكامل</label>
-            <input value={name} onChange={(e) => setName(e.target.value)} required />
+            <label>الاسم بالكامل (ثلاثي)</label>
+            <input
+              value={name}
+              onChange={(e) => { setName(e.target.value); if (nameError) setNameError(null); }}
+              onBlur={() => setNameError(validateName(name))}
+              placeholder="مثال: سارة أحمد محمد"
+              required
+            />
+            {nameError && <p className="text-[12px] mt-1" style={{ color: 'var(--rose)' }}>{nameError}</p>}
           </div>
           <div className="field">
             <label>رقم التليفون</label>
-            <input value={phone} onChange={(e) => setPhone(e.target.value)} required dir="ltr" />
+            <input
+              value={phone}
+              onChange={(e) => { setPhone(e.target.value); if (phoneError) setPhoneError(null); }}
+              onBlur={() => setPhoneError(validatePhone(phone))}
+              placeholder="01xxxxxxxxx"
+              required
+              dir="ltr"
+            />
+            {phoneError && <p className="text-[12px] mt-1" style={{ color: 'var(--rose)' }}>{phoneError}</p>}
           </div>
           <div className="field">
-            <label>المدينة</label>
+            <label>المحافظة</label>
             <select value={city} onChange={(e) => setCity(e.target.value)} required disabled={rates.length === 0}>
-              <option value="">{rates.length === 0 ? 'لا توجد مدن متاحة حاليًا' : 'اختاري مدينتك...'}</option>
+              <option value="">{rates.length === 0 ? 'لا توجد محافظات متاحة حاليًا' : 'اختاري محافظتك...'}</option>
               {rates.map((r) => (
                 <option key={r.city} value={r.city}>{r.city} — شحن {r.fee.toLocaleString('ar-EG')} ج.م</option>
               ))}
@@ -161,7 +200,11 @@ export default function CheckoutPage() {
           <p className="text-[13.5px]" style={{ color: '#8a8074' }}>هتدفعي كاش للمندوب لما الطلب يوصلك.</p>
         </div>
 
-        <button type="submit" className="btn btn-primary w-full mt-8" disabled={submitting}>
+        <button
+          type="submit"
+          className="btn btn-primary w-full mt-8"
+          disabled={submitting || !!nameError || !!phoneError || !city}
+        >
           {submitting ? 'جاري إرسال الطلب...' : `تأكيد الطلب — ${total.toLocaleString('ar-EG')} ج.م`}
         </button>
       </form>
