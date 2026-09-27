@@ -1,8 +1,25 @@
 from datetime import datetime
+import re
 from typing import Optional, List
-from pydantic import BaseModel, ConfigDict, Field, EmailStr
+from pydantic import BaseModel, ConfigDict, Field, EmailStr, field_validator
 
 from .models import CouponDiscountType, OrderStatus
+
+_EGYPT_PHONE_RE = re.compile(r"^01\d{9}$")
+
+
+def _validate_full_name(value: str) -> str:
+    parts = [p for p in value.strip().split(" ") if p]
+    if len(parts) != 3:
+        raise ValueError("الاسم لازم يكون ثلاثي (اسم أول، أب، جد) مفصول بمسافات")
+    return " ".join(parts)
+
+
+def _validate_egypt_phone(value: str) -> str:
+    value = value.strip()
+    if not _EGYPT_PHONE_RE.match(value):
+        raise ValueError("رقم التليفون لازم يبدأ بـ 01 ويتكون من 11 رقم")
+    return value
 
 
 # ---------------- Auth (staff) ----------------
@@ -83,11 +100,21 @@ class OrderItemIn(BaseModel):
 class OrderCreate(BaseModel):
     customer_name: str
     customer_phone: str
-    city: str
+    city: str = Field(..., min_length=1)
     shipping_address: str
     items: List[OrderItemIn] = Field(..., min_length=1, max_length=30)
     coupon_code: Optional[str] = None
     note: Optional[str] = None
+
+    @field_validator("customer_name")
+    @classmethod
+    def _check_name(cls, v: str) -> str:
+        return _validate_full_name(v)
+
+    @field_validator("customer_phone")
+    @classmethod
+    def _check_phone(cls, v: str) -> str:
+        return _validate_egypt_phone(v)
 
 
 class OrderItemOut(BaseModel):
