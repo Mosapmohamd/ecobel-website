@@ -64,7 +64,7 @@ export default function HeroBanner() {
           <div className="text-sm font-bold mb-3" style={{ color: 'var(--gold-soft)' }}>{slide.eyebrow}</div>
           <h1 className="text-4xl md:text-5xl font-bold" style={{ color: 'var(--cream)' }}>{slide.title}</h1>
           <p className="mt-4 text-[17px] max-w-md" style={{ color: 'rgba(251,249,244,0.82)' }}>{slide.text}</p>
-          <Link href={slide.href} className="btn btn-gold mt-7">{slide.cta}</Link>
+          <Link href={slide.href} className="btn btn-primary mt-7">{slide.cta}</Link>
         </div>
         <div className="flex-1 flex justify-center">
           <svg viewBox="0 0 220 260" width="240">
