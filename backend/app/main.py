@@ -8,7 +8,7 @@ from slowapi.middleware import SlowAPIMiddleware
 
 from . import models
 from .database import engine
-from .routers import catalog, coupons, orders, account
+from .routers import catalog, coupons, orders, account, reviews
 from .rate_limit import limiter
 
 # Creates any tables that don't already exist yet (won't touch or drop
@@ -45,6 +45,7 @@ app.include_router(account.router)
 app.include_router(catalog.router)
 app.include_router(coupons.router)
 app.include_router(orders.router)
+app.include_router(reviews.router)
 
 
 @app.get("/")
