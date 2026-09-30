@@ -26,17 +26,17 @@ export default function AboutPage() {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mt-12">
-          <div className="rounded-lg border p-6 text-center" style={{ borderColor: 'var(--line)', background: 'var(--cream)' }}>
+          <div className="rounded border p-6 text-center" style={{ borderColor: 'var(--line)', background: 'var(--cream)' }}>
             <div className="text-3xl mb-2">🌿</div>
             <div className="font-bold mb-1">مكونات طبيعية</div>
             <p className="text-[13.5px]" style={{ color: '#8a8074' }}>تركيبات مدروسة بدون مواد ضارة</p>
           </div>
-          <div className="rounded-lg border p-6 text-center" style={{ borderColor: 'var(--line)', background: 'var(--cream)' }}>
+          <div className="rounded border p-6 text-center" style={{ borderColor: 'var(--line)', background: 'var(--cream)' }}>
             <div className="text-3xl mb-2">🚚</div>
             <div className="font-bold mb-1">شحن لكل المحافظات</div>
             <p className="text-[13.5px]" style={{ color: '#8a8074' }}>مجانًا فوق 1000 جنيه</p>
           </div>
-          <div className="rounded-lg border p-6 text-center" style={{ borderColor: 'var(--line)', background: 'var(--cream)' }}>
+          <div className="rounded border p-6 text-center" style={{ borderColor: 'var(--line)', background: 'var(--cream)' }}>
             <div className="text-3xl mb-2">💵</div>
             <div className="font-bold mb-1">الدفع عند الاستلام</div>
             <p className="text-[13.5px]" style={{ color: '#8a8074' }}>تدفعي براحتك لما يوصلك الطلب</p>

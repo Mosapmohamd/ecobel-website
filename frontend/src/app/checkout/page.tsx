@@ -6,8 +6,7 @@ import { useCart } from '@/lib/cart';
 import { useAuth } from '@/lib/auth';
 import { couponApi, orderApi, catalogApi, type Order } from '@/lib/api';
 
-const DEFAULT_SHIPPING_FEE = 50;
-const FREE_SHIPPING_THRESHOLD = 1000;
+import { FREE_SHIPPING_THRESHOLD, DEFAULT_SHIPPING_FEE } from '@/lib/constants';
 
 function validateName(value: string): string | null {
   const parts = value.trim().split(/\s+/).filter(Boolean);
@@ -147,7 +146,7 @@ export default function CheckoutPage() {
         <h1 className="text-3xl mb-8">إتمام الطلب</h1>
 
         {error && (
-          <div className="rounded-md p-3 mb-5 text-[13.5px]" style={{ background: 'rgba(201,123,138,0.15)', color: 'var(--rose)' }}>
+          <div className="rounded p-3 mb-5 text-[13.5px]" style={{ background: 'rgba(201,123,138,0.15)', color: 'var(--rose)' }}>
             {error}
           </div>
         )}
@@ -195,7 +194,7 @@ export default function CheckoutPage() {
           </div>
         </div>
 
-        <div className="mt-8 p-4 rounded-md" style={{ background: 'var(--parchment-2)' }}>
+        <div className="mt-8 p-4 rounded" style={{ background: 'var(--parchment-2)' }}>
           <div className="font-bold mb-2">💵 الدفع عند الاستلام</div>
           <p className="text-[13.5px]" style={{ color: '#8a8074' }}>هتدفعي كاش للمندوب لما الطلب يوصلك.</p>
         </div>
@@ -210,7 +209,7 @@ export default function CheckoutPage() {
       </form>
 
       <aside>
-        <div className="rounded-lg border p-5" style={{ background: 'var(--cream)', borderColor: 'var(--line)' }}>
+        <div className="rounded border p-5" style={{ background: 'var(--cream)', borderColor: 'var(--line)' }}>
           <h2 className="text-xl mb-4">ملخص الطلب</h2>
 
           <div className="flex flex-col gap-2 mb-4 text-[13.5px]">

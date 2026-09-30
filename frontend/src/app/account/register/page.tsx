@@ -34,7 +34,7 @@ export default function RegisterPage() {
     <div className="mx-auto max-w-sm px-5 py-16">
       <h1 className="text-3xl mb-8">حساب جديد</h1>
       {error && (
-        <div className="rounded-md p-3 mb-5 text-[13.5px]" style={{ background: 'rgba(201,123,138,0.15)', color: 'var(--rose)' }}>
+        <div className="rounded p-3 mb-5 text-[13.5px]" style={{ background: 'rgba(201,123,138,0.15)', color: 'var(--rose)' }}>
           {error}
         </div>
       )}

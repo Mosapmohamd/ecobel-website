@@ -79,7 +79,7 @@ export default function HomePage() {
               <Link
                 key={c.id}
                 href={`/products?category=${c.id}`}
-                className="rounded-lg p-8 flex items-end min-h-[140px]"
+                className="rounded p-8 flex items-end min-h-[140px]"
                 style={{ background: 'linear-gradient(160deg,#DCE7D6 0%, #B9CDAF 100%)' }}
               >
                 <span className="text-xl font-bold" style={{ color: 'var(--forest-deep)' }}>{c.name}</span>
@@ -106,7 +106,7 @@ export default function HomePage() {
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-5">
             {products.slice(0, 8).map((p) => (
-              <ProductCard key={p.id} product={p} />
+              <ProductCard key={p.id} product={p} offer={offers.find((o) => o.product_id === p.id)} />
             ))}
           </div>
         )}

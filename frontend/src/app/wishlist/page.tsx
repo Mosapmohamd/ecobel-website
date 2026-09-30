@@ -1,11 +1,18 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useWishlist } from '@/lib/wishlist';
 import ProductCard from '@/components/ProductCard';
+import { catalogApi, type Offer } from '@/lib/api';
 
 export default function WishlistPage() {
   const { items } = useWishlist();
+  const [offers, setOffers] = useState<Offer[]>([]);
+
+  useEffect(() => {
+    catalogApi.offers().then(setOffers).catch(() => {});
+  }, []);
 
   if (items.length === 0) {
     return (
@@ -22,7 +29,7 @@ export default function WishlistPage() {
       <h1 className="text-3xl mb-8">المفضلة</h1>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-5">
         {items.map((p) => (
-          <ProductCard key={p.id} product={p} />
+          <ProductCard key={p.id} product={p} offer={offers.find((o) => o.product_id === p.id)} />
         ))}
       </div>
     </div>

@@ -88,7 +88,7 @@ function TrackContent() {
       </form>
 
       {error && (
-        <div className="rounded-md p-3 mt-6 text-[13.5px]" style={{ background: 'rgba(201,123,138,0.15)', color: 'var(--rose)' }}>
+        <div className="rounded p-3 mt-6 text-[13.5px]" style={{ background: 'rgba(201,123,138,0.15)', color: 'var(--rose)' }}>
           {error}
         </div>
       )}
@@ -96,7 +96,7 @@ function TrackContent() {
       {results && results.length > 0 && (
         <div className="flex flex-col gap-4 mt-8">
           {results.map((r) => (
-            <div key={r.order_number} className="rounded-lg border p-5" style={{ background: 'var(--cream)', borderColor: 'var(--line)' }}>
+            <div key={r.order_number} className="rounded border p-5" style={{ background: 'var(--cream)', borderColor: 'var(--line)' }}>
               <div className="flex justify-between items-center mb-3">
                 <div className="font-bold text-lg">طلب #{r.order_number}</div>
                 <StatusBadge status={r.status} />

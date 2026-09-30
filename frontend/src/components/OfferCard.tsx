@@ -9,7 +9,7 @@ export default function OfferCard({ offer }: { offer: Offer }) {
   const percentOff = Math.round((1 - offer.offer_price / offer.original_price) * 100);
 
   return (
-    <div className="rounded-lg overflow-hidden border flex flex-col relative" style={{ background: 'var(--cream)', borderColor: 'var(--line)' }}>
+    <div className="rounded overflow-hidden border flex flex-col relative" style={{ background: 'var(--cream)', borderColor: 'var(--line)' }}>
       <span
         className="absolute top-2 right-2 badge z-10"
         style={{ background: 'var(--rose)', color: '#fff' }}

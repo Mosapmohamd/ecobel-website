@@ -36,7 +36,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
 
   return (
     <div className="mx-auto max-w-6xl px-5 py-12 grid grid-cols-1 md:grid-cols-2 gap-12">
-      <div className="aspect-square rounded-lg flex items-center justify-center" style={{ background: 'var(--parchment-2)' }}>
+      <div className="aspect-square rounded flex items-center justify-center" style={{ background: 'var(--parchment-2)' }}>
         <ProductGlyph name={product.name} />
       </div>
 
@@ -61,7 +61,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
 
         {product.stock_status !== 'out' && (
           <div className="mt-8 flex items-center gap-4">
-            <div className="flex items-center border rounded-md" style={{ borderColor: 'var(--line)' }}>
+            <div className="flex items-center border rounded" style={{ borderColor: 'var(--line)' }}>
               <button className="px-3 py-2" onClick={() => setQuantity((q) => Math.max(1, q - 1))}>−</button>
               <span className="px-4">{quantity}</span>
               <button className="px-3 py-2" onClick={() => setQuantity((q) => Math.min(product.quantity, q + 1))}>+</button>

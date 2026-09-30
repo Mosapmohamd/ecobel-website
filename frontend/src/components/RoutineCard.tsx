@@ -21,7 +21,7 @@ export default function RoutineCard({ routine }: { routine: Routine }) {
   }
 
   return (
-    <div className="rounded-lg border p-5" style={{ background: 'var(--cream)', borderColor: 'var(--line)' }}>
+    <div className="rounded border p-5" style={{ background: 'var(--cream)', borderColor: 'var(--line)' }}>
       <div className="text-[15px] font-bold mb-1">{routine.name}</div>
       {routine.description && (
         <p className="text-[13px] mb-4" style={{ color: '#8a8074' }}>{routine.description}</p>
@@ -31,7 +31,7 @@ export default function RoutineCard({ routine }: { routine: Routine }) {
         {routine.items.map((it, i) => (
           <div key={it.product_id} className="flex items-center gap-2">
             <div
-              className="w-14 h-14 rounded-md flex items-center justify-center flex-none"
+              className="w-14 h-14 rounded flex items-center justify-center flex-none"
               style={{ background: 'var(--parchment-2)' }}
               title={it.product_name}
             >

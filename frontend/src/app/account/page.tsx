@@ -65,7 +65,7 @@ export default function AccountPage() {
         </button>
       </div>
 
-      <div className="rounded-lg border p-5 mb-10" style={{ background: 'var(--cream)', borderColor: 'var(--line)' }}>
+      <div className="rounded border p-5 mb-10" style={{ background: 'var(--cream)', borderColor: 'var(--line)' }}>
         <h2 className="text-xl mb-4">بياناتي</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-[14px]">
           <div><span style={{ color: '#8a8074' }}>الاسم: </span>{customer.name}</div>
@@ -83,7 +83,7 @@ export default function AccountPage() {
       ) : (
         <div className="flex flex-col gap-3">
           {orders.map((o) => (
-            <div key={o.id} className="rounded-lg border p-4" style={{ background: 'var(--cream)', borderColor: 'var(--line)' }}>
+            <div key={o.id} className="rounded border p-4" style={{ background: 'var(--cream)', borderColor: 'var(--line)' }}>
               <div className="flex justify-between items-center mb-2">
                 <span className="font-bold">طلب #{o.order_number}</span>
                 <span

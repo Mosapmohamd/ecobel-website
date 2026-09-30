@@ -68,9 +68,9 @@ export default function OrderEditor({
   const availableToAdd = catalog.filter((p) => !lines.some((l) => l.product_id === p.id));
 
   return (
-    <div className="rounded-lg border p-4 mt-2" style={{ background: 'var(--parchment)', borderColor: 'var(--line)' }}>
+    <div className="rounded border p-4 mt-2" style={{ background: 'var(--parchment)', borderColor: 'var(--line)' }}>
       {error && (
-        <div className="rounded-md p-3 mb-3 text-[13px]" style={{ background: 'rgba(201,123,138,0.15)', color: 'var(--rose)' }}>
+        <div className="rounded p-3 mb-3 text-[13px]" style={{ background: 'rgba(201,123,138,0.15)', color: 'var(--rose)' }}>
           {error}
         </div>
       )}
@@ -79,7 +79,7 @@ export default function OrderEditor({
         {lines.map((l) => (
           <div key={l.product_id} className="flex items-center justify-between gap-3 text-[13.5px]">
             <span className="flex-1">{l.name}</span>
-            <div className="flex items-center border rounded-md" style={{ borderColor: 'var(--line)' }}>
+            <div className="flex items-center border rounded" style={{ borderColor: 'var(--line)' }}>
               <button className="px-2" onClick={() => setQuantity(l.product_id, l.quantity - 1)}>−</button>
               <span className="px-3">{l.quantity}</span>
               <button className="px-2" onClick={() => setQuantity(l.product_id, l.quantity + 1)}>+</button>
