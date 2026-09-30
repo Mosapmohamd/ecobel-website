@@ -5,6 +5,7 @@ import { WishlistProvider } from "@/lib/wishlist";
 import { AuthProvider } from "@/lib/auth";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import PromoBar from "@/components/PromoBar";
 
 export const metadata: Metadata = {
   title: "Eco Bel — متجر العناية بالبشرة والشعر",
@@ -18,6 +19,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <AuthProvider>
           <CartProvider>
             <WishlistProvider>
+              <PromoBar />
               <Header />
               <main className="flex-1">{children}</main>
               <Footer />

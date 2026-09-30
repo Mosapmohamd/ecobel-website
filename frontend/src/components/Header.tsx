@@ -21,12 +21,6 @@ export default function Header() {
 
   return (
     <header>
-      <div style={{ background: 'var(--forest)', color: 'rgba(251,249,244,0.85)' }}>
-        <div className="mx-auto max-w-6xl px-5 py-2 flex items-center justify-between text-[13px]">
-          <span>شحن لكل المحافظات 🚚 — الشحن مجانًا فوق 1000 جنيه</span>
-          <span>01508582006</span>
-        </div>
-      </div>
       <div className="border-b" style={{ background: 'var(--cream)', borderColor: 'var(--line)' }}>
         <div className="mx-auto max-w-6xl px-5 py-4 flex items-center justify-between gap-4">
           <Link
