@@ -167,3 +167,31 @@ export const accountApi = {
     request<Customer>('/account/me', { method: 'PATCH', body: JSON.stringify(payload), token }),
   myOrders: (token: string) => request<Order[]>('/account/orders', { token }),
 };
+
+// ---------------- Reviews ----------------
+export interface Review {
+  id: string;
+  customer_name: string;
+  rating: number;
+  comment: string | null;
+  created_at: string;
+}
+
+export interface ReviewSummary {
+  average_rating: number;
+  review_count: number;
+  reviews: Review[];
+}
+
+export interface ReviewEligibility {
+  can_review: boolean;
+  reason: string | null;
+}
+
+export const reviewApi = {
+  list: (productId: string) => request<ReviewSummary>(`/products/${productId}/reviews/`),
+  eligibility: (productId: string, token: string) =>
+    request<ReviewEligibility>(`/products/${productId}/reviews/eligibility`, { token }),
+  create: (productId: string, payload: { rating: number; comment?: string }, token: string) =>
+    request<Review>(`/products/${productId}/reviews/`, { method: 'POST', body: JSON.stringify(payload), token }),
+};

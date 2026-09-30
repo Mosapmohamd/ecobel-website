@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { catalogApi, type Product, type Offer } from '@/lib/api';
 import { useCart } from '@/lib/cart';
 import ProductCard, { ProductGlyph } from '@/components/ProductCard';
+import ReviewsSection from '@/components/ReviewsSection';
 
 export default function ProductDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = usePromise(params);
@@ -122,6 +123,8 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
           </div>
         </div>
       </div>
+
+      <ReviewsSection productId={product.id} />
 
       {related.length > 0 && (
         <div className="mt-20">
