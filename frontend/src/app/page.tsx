@@ -80,7 +80,7 @@ export default function HomePage() {
                 key={c.id}
                 href={`/products?category=${c.id}`}
                 className="rounded p-8 flex items-end min-h-[140px]"
-                style={{ background: 'linear-gradient(160deg,#DCE7D6 0%, #B9CDAF 100%)' }}
+                style={{ background: 'linear-gradient(160deg, #f6e7ea 0%, #e6c3cb 100%)' }}
               >
                 <span className="text-xl font-bold" style={{ color: 'var(--forest-deep)' }}>{c.name}</span>
               </Link>

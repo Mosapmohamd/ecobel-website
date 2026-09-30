@@ -27,7 +27,7 @@ const SLIDES: Slide[] = [
     text: 'على مجموعة مختارة من منتجات العناية بالبشرة — قبل ما ينتهي العرض.',
     cta: 'شوفي العروض',
     href: '/products',
-    bg: 'linear-gradient(135deg, #7A5A22 0%, #4a3714 100%)',
+    bg: 'linear-gradient(135deg, #dc4c64 0%, #a83349 100%)',
   },
   {
     eyebrow: 'توصيل لكل مصر',
@@ -35,7 +35,7 @@ const SLIDES: Slide[] = [
     text: 'اطلبي من أي محافظة، وادفعي عند الاستلام براحتك — بدون أي مقدّم.',
     cta: 'ابدأي التسوق',
     href: '/products',
-    bg: 'linear-gradient(135deg, #3E5C47 0%, #1F3A2E 100%)',
+    bg: 'linear-gradient(135deg, #a67783 0%, #6b4a54 100%)',
   },
   {
     eyebrow: 'عناية بالشعر',
@@ -43,7 +43,7 @@ const SLIDES: Slide[] = [
     text: 'مجموعة كاملة لتقوية وترطيب الشعر بمكونات طبيعية 100%.',
     cta: 'اكتشفي المجموعة',
     href: '/products',
-    bg: 'linear-gradient(135deg, #8FA888 0%, #4a5c45 100%)',
+    bg: 'linear-gradient(135deg, #e39aa6 0%, #b5566b 100%)',
   },
 ];
 
@@ -69,10 +69,10 @@ export default function HeroBanner() {
         <div className="flex-1 flex justify-center">
           <svg viewBox="0 0 220 260" width="240">
             <ellipse cx="110" cy="240" rx="70" ry="10" fill="#00000022" />
-            <rect x="55" y="70" width="110" height="150" rx="14" fill="#E9E2CE" />
-            <rect x="70" y="40" width="80" height="40" rx="10" fill="#C9A227" />
-            <rect x="88" y="20" width="44" height="26" rx="6" fill="#8FA888" />
-            <rect x="70" y="120" width="80" height="46" rx="4" fill="#1F3A2E" opacity="0.85" />
+            <rect x="55" y="70" width="110" height="150" rx="14" fill="#F2EAEC" />
+            <rect x="70" y="40" width="80" height="40" rx="10" fill="#E39AA6" />
+            <rect x="88" y="20" width="44" height="26" rx="6" fill="#A67783" />
+            <rect x="70" y="120" width="80" height="46" rx="4" fill="#B5566B" opacity="0.85" />
           </svg>
         </div>
       </div>

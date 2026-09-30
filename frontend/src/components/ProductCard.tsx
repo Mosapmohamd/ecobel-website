@@ -71,11 +71,11 @@ export default function ProductCard({ product, offer }: { product: Product; offe
 /** Simple generated placeholder glyph until real product photos exist. */
 export function ProductGlyph({ name }: { name: string }) {
   const hue = Array.from(name).reduce((s, c) => s + c.charCodeAt(0), 0) % 3;
-  const colors = ['#1F3A2E', '#7A5A22', '#8FA888'];
+  const colors = ['#b5566b', '#a67783', '#dc4c64'];
   return (
     <svg viewBox="0 0 100 120" width="56%" height="56%">
       <rect x="30" y="30" width="40" height="70" rx="8" fill={colors[hue]} opacity="0.85" />
-      <rect x="40" y="16" width="20" height="18" rx="4" fill="#C9A227" />
+      <rect x="40" y="16" width="20" height="18" rx="4" fill="#e39aa6" />
     </svg>
   );
 }
