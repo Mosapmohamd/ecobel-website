@@ -15,7 +15,7 @@
   --rose: #c97b8a;
   --ok: #5b8c5a;
 
-  --background: var(--parchment);
+  --background: #ffffff;
   --foreground: var(--ink);
 }
 
@@ -61,7 +61,7 @@ h1, h2, h3 {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  border-radius: 6px;
+  border-radius: 4px;
   padding: 12px 24px;
   font-weight: 700;
   font-size: 14.5px;
@@ -69,10 +69,11 @@ h1, h2, h3 {
   border: none;
   transition: background .15s;
 }
+/* Single action color across the whole site (forest green) — gold stays
+   an accent (price, small highlights) and is never used on a clickable
+   action button, so there's only ever one color the eye learns as "buy". */
 .btn-primary { background: var(--forest); color: var(--cream); }
 .btn-primary:hover { background: var(--forest-deep); }
-.btn-gold { background: var(--gold); color: var(--forest-deep); }
-.btn-gold:hover { background: var(--gold-soft); }
 .btn-secondary { background: var(--parchment-2); color: var(--forest); }
 .btn:disabled { opacity: .5; cursor: not-allowed; }
 
@@ -86,7 +87,7 @@ h1, h2, h3 {
 .field input, .field textarea, .field select {
   width: 100%;
   border: 1px solid var(--line);
-  border-radius: 6px;
+  border-radius: 4px;
   padding: 10px 12px;
   font-size: 14.5px;
   background: #fff;
@@ -103,5 +104,5 @@ h1, h2, h3 {
   font-size: 11px;
   font-weight: 800;
   padding: 4px 10px;
-  border-radius: 100px;
+  border-radius: 4px;
 }
