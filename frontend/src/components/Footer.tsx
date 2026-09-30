@@ -3,7 +3,9 @@ export default function Footer() {
     <footer style={{ background: 'var(--forest-deep)', color: 'rgba(251,249,244,0.75)' }} className="mt-20">
       <div className="mx-auto max-w-6xl px-5 py-12 grid grid-cols-1 sm:grid-cols-4 gap-8">
         <div>
-          <div className="text-2xl font-bold mb-2" style={{ fontFamily: 'var(--font-display)', color: 'var(--cream)' }}>
+          <div className="flex items-center gap-2 text-2xl font-bold mb-2" style={{ fontFamily: 'var(--font-display)', color: 'var(--cream)' }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/logo/ecobel-mark-white.png" alt="" style={{ height: 30, width: 'auto' }} />
             Eco Bel
           </div>
           <p className="text-[13.5px] leading-relaxed mb-4" style={{ color: 'rgba(251,249,244,0.6)' }}>

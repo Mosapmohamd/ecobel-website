@@ -28,9 +28,8 @@ export default function Header() {
             className="flex items-center gap-2 text-2xl font-bold flex-none"
             style={{ fontFamily: 'var(--font-display)', color: 'var(--forest)' }}
           >
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-              <path d="M12 2C9 6 7 9 7 13a5 5 0 0 0 10 0c0-4-2-7-5-11Z" fill="var(--gold)" />
-            </svg>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/logo/ecobel-mark-black.png" alt="" width={34} height={23} style={{ height: 30, width: 'auto' }} />
             Eco Bel
           </Link>
 
