@@ -1,17 +1,18 @@
 'use client';
 
 import Link from 'next/link';
-import type { Product } from '@/lib/api';
+import type { Product, Offer } from '@/lib/api';
 import { useCart } from '@/lib/cart';
 import { useWishlist } from '@/lib/wishlist';
 
-export default function ProductCard({ product }: { product: Product }) {
+export default function ProductCard({ product, offer }: { product: Product; offer?: Offer }) {
   const { add } = useCart();
   const { has, toggle } = useWishlist();
   const wished = has(product.id);
+  const percentOff = offer ? Math.round((1 - offer.offer_price / product.sale_price) * 100) : 0;
 
   return (
-    <div className="rounded-lg overflow-hidden border flex flex-col" style={{ background: 'var(--cream)', borderColor: 'var(--line)' }}>
+    <div className="rounded overflow-hidden border flex flex-col" style={{ background: 'var(--cream)', borderColor: 'var(--line)' }}>
       <Link href={`/products/${product.id}`} className="relative block">
         <div
           className="aspect-square flex items-center justify-center"
@@ -19,6 +20,11 @@ export default function ProductCard({ product }: { product: Product }) {
         >
           <ProductGlyph name={product.name} />
         </div>
+        {offer && (
+          <span className="absolute top-2 right-2 badge" style={{ background: 'var(--rose)', color: '#fff' }}>
+            خصم {percentOff}%
+          </span>
+        )}
         <button
           aria-label="أضيفي للمفضلة"
           onClick={(e) => {
@@ -39,12 +45,22 @@ export default function ProductCard({ product }: { product: Product }) {
           {product.name}
         </Link>
         <div className="mt-auto pt-3 flex items-center justify-between">
-          <span className="font-extrabold" style={{ color: 'var(--forest)' }}>
-            {product.sale_price.toLocaleString('ar-EG')} ج.م
+          <span className="flex items-baseline gap-2">
+            <span className="font-extrabold" style={{ color: 'var(--forest)' }}>
+              {(offer?.offer_price ?? product.sale_price).toLocaleString('ar-EG')} ج.م
+            </span>
+            {offer && (
+              <span className="text-[13px] line-through" style={{ color: '#8a8074' }}>
+                {product.sale_price.toLocaleString('ar-EG')} ج.م
+              </span>
+            )}
           </span>
           {product.stock_status === 'low' && <span className="badge" style={{ background: 'rgba(201,134,42,0.15)', color: '#c9862a' }}>كمية محدودة</span>}
         </div>
-        <button className="btn btn-primary mt-3 w-full" onClick={() => add(product, 1)}>
+        <button
+          className="btn btn-primary mt-3 w-full"
+          onClick={() => add(offer ? { ...product, sale_price: offer.offer_price } : product, 1)}
+        >
           أضيفي للسلة
         </button>
       </div>
