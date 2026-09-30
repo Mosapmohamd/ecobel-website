@@ -205,3 +205,29 @@ class ShippingRateOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     city: str
     fee: float
+
+
+# ---------------- Product reviews ----------------
+class ReviewCreate(BaseModel):
+    rating: int = Field(..., ge=1, le=5)
+    comment: Optional[str] = Field(None, max_length=1000)
+
+
+class ReviewOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: str
+    customer_name: str
+    rating: int
+    comment: Optional[str]
+    created_at: datetime
+
+
+class ReviewSummary(BaseModel):
+    average_rating: float
+    review_count: int
+    reviews: List[ReviewOut]
+
+
+class ReviewEligibility(BaseModel):
+    can_review: bool
+    reason: Optional[str] = None
