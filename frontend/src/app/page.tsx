@@ -7,6 +7,7 @@ import ProductCard from '@/components/ProductCard';
 import OfferCard from '@/components/OfferCard';
 import RoutineCard from '@/components/RoutineCard';
 import HeroBanner from '@/components/HeroBanner';
+import CategoryIconRow from '@/components/CategoryIconRow';
 
 export default function HomePage() {
   const [categories, setCategories] = useState<Category[]>([]);
@@ -40,6 +41,8 @@ export default function HomePage() {
           <span>↩️ استبدال خلال 14 يوم</span>
         </div>
       </section>
+
+      <CategoryIconRow categories={categories} />
 
       {/* Offers */}
       {offers.length > 0 && (

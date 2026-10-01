@@ -3,6 +3,7 @@ const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8001';
 export interface Category {
   id: string;
   name: string;
+  product_count: number;
 }
 
 export interface Product {
