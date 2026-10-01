@@ -42,6 +42,34 @@ export default function Header() {
           <nav className="hidden lg:flex items-center gap-6 text-[15px] font-medium flex-none">
             <Link href="/">الرئيسية</Link>
             <Link href="/products">كل المنتجات</Link>
+
+            {categories.length > 0 && (
+              <div className="relative group">
+                <button className="flex items-center gap-1 cursor-default">
+                  الفئات
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                    <path d="m6 9 6 6 6-6" />
+                  </svg>
+                </button>
+                <div
+                  className="absolute top-full right-0 pt-3 hidden group-hover:block z-20"
+                  style={{ minWidth: 220 }}
+                >
+                  <div className="rounded border shadow-lg py-2" style={{ background: '#fff', borderColor: 'var(--line)' }}>
+                    {categories.map((c) => (
+                      <Link
+                        key={c.id}
+                        href={`/products?category=${c.id}`}
+                        className="block px-5 py-2.5 text-[14px] hover:opacity-70"
+                      >
+                        {c.name}
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
             <Link href="/about">عن الشركة</Link>
             <Link href="/track">تتبع طلبك</Link>
           </nav>
@@ -100,19 +128,6 @@ export default function Header() {
           />
         </form>
       </div>
-
-      {categories.length > 0 && (
-        <div className="hidden md:block border-b" style={{ background: 'var(--parchment)', borderColor: 'var(--line)' }}>
-          <nav className="mx-auto max-w-6xl px-5 py-2.5 flex items-center gap-6 text-[13.5px] font-medium overflow-x-auto">
-            <Link href="/products" className="whitespace-nowrap">كل المنتجات</Link>
-            {categories.map((c) => (
-              <Link key={c.id} href={`/products?category=${c.id}`} className="whitespace-nowrap">
-                {c.name}
-              </Link>
-            ))}
-          </nav>
-        </div>
-      )}
     </header>
   );
 }
