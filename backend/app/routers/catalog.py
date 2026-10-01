@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy import func
 from sqlalchemy.orm import Session, joinedload
 
 from .. import models, schemas
@@ -11,7 +12,20 @@ router = APIRouter(prefix="/catalog", tags=["Catalog"])
 
 @router.get("/categories", response_model=List[schemas.CategoryOut])
 def list_categories(db: Session = Depends(get_db)):
-    return db.query(models.Category).order_by(models.Category.name).all()
+    rows = (
+        db.query(models.Category, func.count(models.Product.id))
+        .outerjoin(
+            models.Product,
+            (models.Product.category_id == models.Category.id) & (models.Product.is_active == True),  # noqa: E712
+        )
+        .group_by(models.Category.id)
+        .order_by(models.Category.name)
+        .all()
+    )
+    return [
+        schemas.CategoryOut(id=cat.id, name=cat.name, product_count=count)
+        for cat, count in rows
+    ]
 
 
 @router.get("/products", response_model=List[schemas.ProductOut])

@@ -63,6 +63,7 @@ class CategoryOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: str
     name: str
+    product_count: int = 0
 
 
 class ProductOut(BaseModel):
