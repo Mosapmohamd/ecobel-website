@@ -1,11 +1,12 @@
 'use client';
 
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useCart } from '@/lib/cart';
 import { useWishlist } from '@/lib/wishlist';
 import { useAuth } from '@/lib/auth';
+import { catalogApi, type Category } from '@/lib/api';
 
 export default function Header() {
   const { count } = useCart();
@@ -13,6 +14,11 @@ export default function Header() {
   const { customer } = useAuth();
   const router = useRouter();
   const [query, setQuery] = useState('');
+  const [categories, setCategories] = useState<Category[]>([]);
+
+  useEffect(() => {
+    catalogApi.categories().then(setCategories).catch(() => {});
+  }, []);
 
   function handleSearch(e: FormEvent) {
     e.preventDefault();
@@ -94,6 +100,19 @@ export default function Header() {
           />
         </form>
       </div>
+
+      {categories.length > 0 && (
+        <div className="hidden md:block border-b" style={{ background: 'var(--parchment)', borderColor: 'var(--line)' }}>
+          <nav className="mx-auto max-w-6xl px-5 py-2.5 flex items-center gap-6 text-[13.5px] font-medium overflow-x-auto">
+            <Link href="/products" className="whitespace-nowrap">كل المنتجات</Link>
+            {categories.map((c) => (
+              <Link key={c.id} href={`/products?category=${c.id}`} className="whitespace-nowrap">
+                {c.name}
+              </Link>
+            ))}
+          </nav>
+        </div>
+      )}
     </header>
   );
 }
