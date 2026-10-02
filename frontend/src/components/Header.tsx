@@ -7,6 +7,7 @@ import { useCart } from '@/lib/cart';
 import { useWishlist } from '@/lib/wishlist';
 import { useAuth } from '@/lib/auth';
 import { catalogApi, type Category } from '@/lib/api';
+import { categoryLabel, ROUTINES_CATEGORY_ID, ROUTINES_CATEGORY_LABEL } from '@/lib/categories';
 
 export default function Header() {
   const { count } = useCart();
@@ -15,6 +16,7 @@ export default function Header() {
   const router = useRouter();
   const [query, setQuery] = useState('');
   const [categories, setCategories] = useState<Category[]>([]);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     catalogApi.categories().then(setCategories).catch(() => {});
@@ -29,6 +31,23 @@ export default function Header() {
     <header>
       <div className="border-b" style={{ background: 'var(--cream)', borderColor: 'var(--line)' }}>
         <div className="mx-auto max-w-6xl px-5 py-4 flex items-center justify-between gap-4">
+          <button
+            type="button"
+            aria-label="القائمة"
+            aria-expanded={mobileMenuOpen}
+            onClick={() => setMobileMenuOpen((v) => !v)}
+            className="lg:hidden flex-none flex items-center justify-center"
+            style={{ width: 32, height: 32 }}
+          >
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--forest)" strokeWidth="2">
+              {mobileMenuOpen ? (
+                <path d="M6 6l12 12M18 6 6 18" />
+              ) : (
+                <path d="M4 7h16M4 12h16M4 17h16" />
+              )}
+            </svg>
+          </button>
+
           <Link
             href="/"
             className="flex items-center gap-2 text-2xl font-bold flex-none"
@@ -62,9 +81,16 @@ export default function Header() {
                         href={`/products?category=${c.id}`}
                         className="block px-5 py-2.5 text-[14px] hover:opacity-70"
                       >
-                        {c.name}
+                        {categoryLabel(c.name)}
                       </Link>
                     ))}
+                    <Link
+                      href={`/products?category=${ROUTINES_CATEGORY_ID}`}
+                      className="block px-5 py-2.5 text-[14px] hover:opacity-70 border-t"
+                      style={{ borderColor: 'var(--line)' }}
+                    >
+                      {ROUTINES_CATEGORY_LABEL}
+                    </Link>
                   </div>
                 </div>
               </div>
@@ -127,6 +153,40 @@ export default function Header() {
             style={{ border: '1px solid var(--line)', borderRadius: 6, padding: '8px 12px', fontSize: 13.5, width: '100%', background: '#fff' }}
           />
         </form>
+
+        {/* Mobile menu: primary nav + categories (desktop uses the hover nav above) */}
+        {mobileMenuOpen && (
+          <div className="lg:hidden border-t px-5 py-4" style={{ borderColor: 'var(--line)' }}>
+            <nav className="flex flex-col gap-3 text-[15px] font-medium mb-4">
+              <Link href="/" onClick={() => setMobileMenuOpen(false)}>الرئيسية</Link>
+              <Link href="/products" onClick={() => setMobileMenuOpen(false)}>كل المنتجات</Link>
+              <Link href="/about" onClick={() => setMobileMenuOpen(false)}>عن الشركة</Link>
+              <Link href="/track" onClick={() => setMobileMenuOpen(false)}>تتبع طلبك</Link>
+            </nav>
+            {categories.length > 0 && (
+              <>
+                <div className="text-[12.5px] font-bold mb-2" style={{ color: 'var(--sage)' }}>الفئات</div>
+                <div className="flex flex-col gap-2.5 text-[14px]">
+                  {categories.map((c) => (
+                    <Link
+                      key={c.id}
+                      href={`/products?category=${c.id}`}
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      {categoryLabel(c.name)}
+                    </Link>
+                  ))}
+                  <Link
+                    href={`/products?category=${ROUTINES_CATEGORY_ID}`}
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    {ROUTINES_CATEGORY_LABEL}
+                  </Link>
+                </div>
+              </>
+            )}
+          </div>
+        )}
       </div>
     </header>
   );

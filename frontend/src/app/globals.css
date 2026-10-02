@@ -2,32 +2,44 @@
 @import "tailwindcss";
 
 :root {
-  /* Rebrand — rose/blush palette (Sep 2026), replacing the original forest
-     green + gold. Variable NAMES are kept as-is (they're used in ~150
+  /* Rebrand — olive/sage/cream palette (Oct 2026), replacing the rose/
+     blush palette. Variable NAMES are kept as-is (they're used in ~150
      places across every component) but now map to the new palette — read
      them by role, not by their literal name: --forest is "primary brand /
-     action color" (now a rose), --gold is "soft secondary accent" (now a
-     lighter blush), not literal green/gold anymore. */
-  --forest: #b5566b;        /* primary brand + single action color (was forest green) */
-  --forest-deep: #8e4152;   /* primary hover/pressed */
-  --sage: #a67783;          /* muted secondary text accent (was sage green) */
-  --gold: #e39aa6;          /* soft accent — star ratings, small highlights (was gold) */
-  --gold-soft: #f3d0d6;     /* focus rings, faint highlights */
-  --parchment: #fbf2f4;     /* subtle blush surface tint (was beige) */
-  --parchment-2: #f6e7ea;   /* deeper blush surface tint */
-  --ink: #2b2320;
-  --cream: #ffffff;         /* card/header surfaces — true white now, not warm cream */
-  --line: rgba(43, 35, 32, 0.12);
-  --rose: #dc4c64;          /* sale/discount/error — distinct red-rose, separate from the primary */
+     action color" (now Deep Olive), --sage is "muted secondary text
+     accent" (now literally Sage), --gold is "soft accent — ratings, small
+     highlights" (now Warm Beige), --rose is "discounts, sale labels, and
+     special emphasis ONLY" (now Terracotta — it is not a general
+     error/destructive color anymore, see --error below).
+     Reference palette: Deep Olive #58624D · Sage #7B8970 · Cream #F6F1E7 ·
+     Soft Sage #E5E9DE · Charcoal #242522 · Warm Beige #D8C7AD ·
+     Terracotta #A96550 · White #FFFFFF. */
+  --forest: #58624D;        /* primary brand + single action color (Deep Olive) */
+  --forest-deep: #454C3D;   /* primary hover/pressed (darker olive) */
+  --charcoal: #242522;      /* deep contrast-panel backgrounds (Footer, Brand Story) */
+  --sage: #7B8970;          /* muted secondary text accent */
+  --gold: #D8C7AD;          /* soft accent — star ratings, small highlights (Warm Beige) */
+  --gold-soft: #E5E9DE;     /* faint labels on dark panels, soft highlights (Soft Sage) */
+  --parchment: #E5E9DE;     /* subtle secondary-section tint (Soft Sage) */
+  --parchment-2: #D8C7AD;   /* deeper supporting tint / inactive chips (Warm Beige) */
+  --ink: #242522;           /* body text (Charcoal) */
+  --cream: #ffffff;         /* card/header surfaces — clean White */
+  --line: #D8C7AD;          /* borders (Warm Beige) */
+  --rose: #A96550;          /* discounts / sale labels / special emphasis ONLY (Terracotta) */
   --ok: #6b9c6c;            /* success green — kept: universal UX convention, not a brand color */
+  --error: #B3261E;         /* errors, destructive actions, negative status — kept distinct
+                                from Terracotta, which is reserved for discounts/sale/emphasis */
+  --muted: #74705F;         /* secondary/meta text — prices, captions, empty states */
+  --muted-strong: #4A463C;  /* secondary paragraph/body copy, slightly darker than --muted */
 
-  --background: #ffffff;
+  --background: #F6F1E7;    /* page canvas (Cream) */
   --foreground: var(--ink);
 }
 
 @theme inline {
   --color-forest: var(--forest);
   --color-forest-deep: var(--forest-deep);
+  --color-charcoal: var(--charcoal);
   --color-sage: var(--sage);
   --color-gold: var(--gold);
   --color-gold-soft: var(--gold-soft);
@@ -37,6 +49,9 @@
   --color-cream: var(--cream);
   --color-rose: var(--rose);
   --color-ok: var(--ok);
+  --color-error: var(--error);
+  --color-muted: var(--muted);
+  --color-muted-strong: var(--muted-strong);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-display: 'Markazi Text', serif;
@@ -75,8 +90,8 @@ h1, h2, h3 {
   border: none;
   transition: background .15s;
 }
-/* Single action color across the whole site (forest green) — gold stays
-   an accent (price, small highlights) and is never used on a clickable
+/* Single action color across the whole site (Deep Olive) — gold/terracotta
+   stay accents (ratings, discounts) and are never used on a clickable
    action button, so there's only ever one color the eye learns as "buy". */
 .btn-primary { background: var(--forest); color: var(--cream); }
 .btn-primary:hover { background: var(--forest-deep); }
@@ -101,8 +116,16 @@ h1, h2, h3 {
   font-family: var(--font-body);
 }
 .field input:focus, .field textarea:focus, .field select:focus {
-  outline: 2px solid var(--gold-soft);
+  outline: 2px solid var(--sage);
   outline-offset: 1px;
+}
+
+.scrollbar-hide {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
 }
 
 .badge {

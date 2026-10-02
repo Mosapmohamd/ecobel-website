@@ -36,7 +36,7 @@ export default function RegisterPage() {
       <img src="/logo/ecobel-mark-black.png" alt="Eco Bel" className="mx-auto mb-6" style={{ height: 56, width: 'auto' }} />
       <h1 className="text-3xl mb-8 text-center">حساب جديد</h1>
       {error && (
-        <div className="rounded p-3 mb-5 text-[13.5px]" style={{ background: 'rgba(201,123,138,0.15)', color: 'var(--rose)' }}>
+        <div className="rounded p-3 mb-5 text-[13.5px]" style={{ background: 'rgba(179,38,30,0.15)', color: 'var(--error)' }}>
           {error}
         </div>
       )}
@@ -63,7 +63,7 @@ export default function RegisterPage() {
         </div>
         <button className="btn btn-primary" disabled={loading}>{loading ? 'جاري الإنشاء...' : 'إنشاء الحساب'}</button>
       </form>
-      <p className="mt-5 text-[13.5px] text-center" style={{ color: '#8a8074' }}>
+      <p className="mt-5 text-[13.5px] text-center" style={{ color: 'var(--muted)' }}>
         عندك حساب بالفعل؟ <Link href="/account/login" className="font-bold" style={{ color: 'var(--forest)' }}>سجّلي دخول</Link>
       </p>
     </div>

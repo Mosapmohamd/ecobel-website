@@ -1,6 +1,6 @@
 export default function Footer() {
   return (
-    <footer style={{ background: 'var(--forest-deep)', color: 'rgba(251,249,244,0.75)' }} className="mt-20">
+    <footer style={{ background: 'var(--charcoal)', color: 'rgba(255,255,255,0.75)' }} className="mt-20">
       <div className="mx-auto max-w-6xl px-5 py-12 grid grid-cols-1 sm:grid-cols-4 gap-8">
         <div>
           <div className="flex items-center gap-2 text-2xl font-bold mb-2" style={{ fontFamily: 'var(--font-display)', color: 'var(--cream)' }}>
@@ -8,7 +8,7 @@ export default function Footer() {
             <img src="/logo/ecobel-mark-white.png" alt="" style={{ height: 30, width: 'auto' }} />
             Eco Bel
           </div>
-          <p className="text-[13.5px] leading-relaxed mb-4" style={{ color: 'rgba(251,249,244,0.6)' }}>
+          <p className="text-[13.5px] leading-relaxed mb-4" style={{ color: 'rgba(255,255,255,0.6)' }}>
             علامة مصرية للعناية بالبشرة والشعر، بتركيبات طبيعية وآمنة لجمال حقيقي وصحة مستدامة.
           </p>
           <div className="flex items-center gap-3">
@@ -50,7 +50,7 @@ export default function Footer() {
       </div>
       <div
         className="border-t mx-auto max-w-6xl px-5 py-4 text-[12.5px] flex justify-between"
-        style={{ borderColor: 'rgba(251,249,244,0.12)', color: 'rgba(251,249,244,0.45)' }}
+        style={{ borderColor: 'rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.45)' }}
       >
         <span>© 2026 جميع الحقوق محفوظة لـ Eco Bel</span>
         <span>الدفع عند الاستلام</span>
@@ -66,6 +66,6 @@ const iconStyle: React.CSSProperties = {
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
-  background: 'rgba(251,249,244,0.1)',
+  background: 'rgba(255,255,255,0.1)',
   color: 'var(--gold-soft)',
 };

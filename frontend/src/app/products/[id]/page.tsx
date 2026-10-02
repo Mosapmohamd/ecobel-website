@@ -4,7 +4,8 @@ import { useEffect, useState, use as usePromise } from 'react';
 import Link from 'next/link';
 import { catalogApi, type Product, type Offer } from '@/lib/api';
 import { useCart } from '@/lib/cart';
-import ProductCard, { ProductGlyph } from '@/components/ProductCard';
+import ProductCard from '@/components/ProductCard';
+import ProductImage from '@/components/ProductImage';
 import ReviewsSection from '@/components/ReviewsSection';
 
 export default function ProductDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -39,19 +40,19 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
   if (error) {
     return (
       <div className="mx-auto max-w-6xl px-5 py-16 text-center">
-        <p style={{ color: '#8a8074' }}>{error}</p>
+        <p style={{ color: 'var(--muted)' }}>{error}</p>
         <Link href="/products" className="btn btn-secondary mt-4 inline-flex">الرجوع للمنتجات</Link>
       </div>
     );
   }
 
   if (!product) {
-    return <div className="mx-auto max-w-6xl px-5 py-16" style={{ color: '#8a8074' }}>جاري التحميل...</div>;
+    return <div className="mx-auto max-w-6xl px-5 py-16" style={{ color: 'var(--muted)' }}>جاري التحميل...</div>;
   }
 
   return (
     <div className="mx-auto max-w-6xl px-5 py-12">
-      <nav className="text-[13px] mb-6 flex items-center gap-2 flex-wrap" style={{ color: '#8a8074' }}>
+      <nav className="text-[13px] mb-6 flex items-center gap-2 flex-wrap" style={{ color: 'var(--muted)' }}>
         <Link href="/" className="hover:underline">الرئيسية</Link>
         <span>/</span>
         <Link href={`/products?category=${product.category_id}`} className="hover:underline">{product.category_name}</Link>
@@ -60,8 +61,8 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
       </nav>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
-        <div className="aspect-square rounded flex items-center justify-center" style={{ background: 'var(--parchment-2)' }}>
-          <ProductGlyph name={product.name} />
+        <div className="relative aspect-square rounded overflow-hidden">
+          <ProductImage src={product.image_url} alt={product.name} sizes="(max-width: 768px) 100vw, 50vw" />
         </div>
 
         <div>
@@ -72,7 +73,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
               {(offer?.offer_price ?? product.sale_price).toLocaleString('ar-EG')} ج.م
             </span>
             {offer && (
-              <span className="text-[15px] line-through" style={{ color: '#8a8074' }}>
+              <span className="text-[15px] line-through" style={{ color: 'var(--muted)' }}>
                 {product.sale_price.toLocaleString('ar-EG')} ج.م
               </span>
             )}
@@ -86,11 +87,11 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
           <div className="mt-3">
             {product.stock_status === 'ok' && <span className="badge" style={{ background: 'rgba(91,140,90,0.14)', color: 'var(--ok)' }}>متوفر</span>}
             {product.stock_status === 'low' && <span className="badge" style={{ background: 'rgba(201,134,42,0.15)', color: '#c9862a' }}>كمية محدودة</span>}
-            {product.stock_status === 'out' && <span className="badge" style={{ background: 'rgba(201,123,138,0.18)', color: 'var(--rose)' }}>نفذت الكمية</span>}
+            {product.stock_status === 'out' && <span className="badge" style={{ background: 'rgba(179,38,30,0.14)', color: 'var(--error)' }}>نفذت الكمية</span>}
           </div>
 
           {product.description && (
-            <p className="mt-5 text-[14.5px] leading-relaxed" style={{ color: '#4a453e' }}>
+            <p className="mt-5 text-[14.5px] leading-relaxed" style={{ color: 'var(--muted-strong)' }}>
               {product.description}
             </p>
           )}

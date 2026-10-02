@@ -47,7 +47,7 @@ export default function AccountPage() {
   }
 
   if (loading || !customer) {
-    return <div className="mx-auto max-w-4xl px-5 py-16" style={{ color: '#8a8074' }}>جاري التحميل...</div>;
+    return <div className="mx-auto max-w-4xl px-5 py-16" style={{ color: 'var(--muted)' }}>جاري التحميل...</div>;
   }
 
   return (
@@ -68,18 +68,18 @@ export default function AccountPage() {
       <div className="rounded border p-5 mb-10" style={{ background: 'var(--cream)', borderColor: 'var(--line)' }}>
         <h2 className="text-xl mb-4">بياناتي</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-[14px]">
-          <div><span style={{ color: '#8a8074' }}>الاسم: </span>{customer.name}</div>
-          <div dir="ltr" className="text-right"><span style={{ color: '#8a8074' }}>التليفون: </span>{customer.phone}</div>
-          <div><span style={{ color: '#8a8074' }}>البريد الإلكتروني: </span>{customer.email || '—'}</div>
-          <div><span style={{ color: '#8a8074' }}>العنوان: </span>{customer.address || '—'}</div>
+          <div><span style={{ color: 'var(--muted)' }}>الاسم: </span>{customer.name}</div>
+          <div dir="ltr" className="text-right"><span style={{ color: 'var(--muted)' }}>التليفون: </span>{customer.phone}</div>
+          <div><span style={{ color: 'var(--muted)' }}>البريد الإلكتروني: </span>{customer.email || '—'}</div>
+          <div><span style={{ color: 'var(--muted)' }}>العنوان: </span>{customer.address || '—'}</div>
         </div>
       </div>
 
       <h2 className="text-xl mb-4">طلباتي</h2>
       {loadingOrders ? (
-        <p style={{ color: '#8a8074' }}>جاري التحميل...</p>
+        <p style={{ color: 'var(--muted)' }}>جاري التحميل...</p>
       ) : orders.length === 0 ? (
-        <p style={{ color: '#8a8074' }}>لسه معملتيش أي طلب.</p>
+        <p style={{ color: 'var(--muted)' }}>لسه معملتيش أي طلب.</p>
       ) : (
         <div className="flex flex-col gap-3">
           {orders.map((o) => (
@@ -89,14 +89,14 @@ export default function AccountPage() {
                 <span
                   className="badge"
                   style={{
-                    background: o.status === 'delivered' ? 'rgba(91,140,90,0.14)' : o.status === 'cancelled' ? 'rgba(201,123,138,0.18)' : 'rgba(201,162,39,0.16)',
-                    color: o.status === 'delivered' ? 'var(--ok)' : o.status === 'cancelled' ? 'var(--rose)' : '#9c7a14',
+                    background: o.status === 'delivered' ? 'rgba(91,140,90,0.14)' : o.status === 'cancelled' ? 'rgba(179,38,30,0.18)' : 'rgba(201,162,39,0.16)',
+                    color: o.status === 'delivered' ? 'var(--ok)' : o.status === 'cancelled' ? 'var(--error)' : '#9c7a14',
                   }}
                 >
                   {STATUS_LABEL[o.status]}
                 </span>
               </div>
-              <div className="text-[13px]" style={{ color: '#8a8074' }}>
+              <div className="text-[13px]" style={{ color: 'var(--muted)' }}>
                 {new Date(o.created_at).toLocaleDateString('ar-EG')} · {o.items.length} صنف · {o.total_amount.toLocaleString('ar-EG')} ج.م
               </div>
 
@@ -118,7 +118,7 @@ export default function AccountPage() {
                       </button>
                       <button
                         className="btn"
-                        style={{ padding: '6px 14px', fontSize: 12.5, background: 'rgba(201,123,138,0.15)', color: 'var(--rose)' }}
+                        style={{ padding: '6px 14px', fontSize: 12.5, background: 'rgba(179,38,30,0.15)', color: 'var(--error)' }}
                         onClick={() => handleCancel(o.id)}
                       >
                         إلغاء الطلب

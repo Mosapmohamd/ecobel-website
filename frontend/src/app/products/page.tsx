@@ -2,8 +2,10 @@
 
 import { useEffect, useMemo, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { catalogApi, type Category, type Product, type Offer } from '@/lib/api';
+import { catalogApi, type Category, type Product, type Offer, type Routine } from '@/lib/api';
 import ProductCard from '@/components/ProductCard';
+import RoutineCard from '@/components/RoutineCard';
+import { categoryLabel, ROUTINES_CATEGORY_ID, ROUTINES_CATEGORY_LABEL } from '@/lib/categories';
 
 type SortOption = 'default' | 'price_asc' | 'price_desc' | 'name';
 
@@ -18,10 +20,13 @@ function ProductsContent() {
   const searchParams = useSearchParams();
   const categoryId = searchParams.get('category') || undefined;
   const q = searchParams.get('q') || undefined;
+  const isRoutinesView = categoryId === ROUTINES_CATEGORY_ID;
 
   const [categories, setCategories] = useState<Category[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [offers, setOffers] = useState<Offer[]>([]);
+  const [routines, setRoutines] = useState<Routine[]>([]);
+  const [routinesLoading, setRoutinesLoading] = useState(true);
   const [loading, setLoading] = useState(true);
   const [sort, setSort] = useState<SortOption>('default');
   const [minPrice, setMinPrice] = useState('');
@@ -30,16 +35,21 @@ function ProductsContent() {
   useEffect(() => {
     catalogApi.categories().then(setCategories).catch(() => {});
     catalogApi.offers().then(setOffers).catch(() => {});
+    catalogApi.routines().then(setRoutines).catch(() => {}).finally(() => setRoutinesLoading(false));
   }, []);
 
   useEffect(() => {
+    if (isRoutinesView) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     catalogApi
       .products({ categoryId, q })
       .then(setProducts)
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, [categoryId, q]);
+  }, [categoryId, q, isRoutinesView]);
 
   const offerByProductId = useMemo(() => {
     const map = new Map<string, Offer>();
@@ -73,7 +83,9 @@ function ProductsContent() {
 
   return (
     <div className="mx-auto max-w-6xl px-5 py-12">
-      <h1 className="text-3xl mb-2">{q ? `نتائج البحث عن "${q}"` : 'كل المنتجات'}</h1>
+      <h1 className="text-3xl mb-2">
+        {q ? `نتائج البحث عن "${q}"` : isRoutinesView ? ROUTINES_CATEGORY_LABEL : 'كل المنتجات'}
+      </h1>
       {q && (
         <a href="/products" className="text-sm font-bold mb-6 inline-block" style={{ color: 'var(--forest)' }}>
           ← عرض كل المنتجات
@@ -91,53 +103,83 @@ function ProductsContent() {
             className="btn"
             style={{ background: categoryId === c.id ? 'var(--forest)' : 'var(--parchment-2)', color: categoryId === c.id ? 'var(--cream)' : 'var(--forest)' }}
           >
-            {c.name}
+            {categoryLabel(c.name)}
           </a>
         ))}
-      </div>
-
-      <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
-        <p className="text-[13.5px]" style={{ color: '#8a8074' }}>
-          {loading ? '' : `${visibleProducts.length.toLocaleString('ar-EG')} منتج`}
-        </p>
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="flex items-center gap-1.5">
-            <input
-              type="number" min={0} placeholder="من" value={minPrice}
-              onChange={(e) => setMinPrice(e.target.value)}
-              className="w-20"
-              style={{ border: '1px solid var(--line)', borderRadius: 4, padding: '7px 8px', fontSize: 13 }}
-            />
-            <span className="text-[13px]" style={{ color: '#8a8074' }}>—</span>
-            <input
-              type="number" min={0} placeholder="إلى" value={maxPrice}
-              onChange={(e) => setMaxPrice(e.target.value)}
-              className="w-20"
-              style={{ border: '1px solid var(--line)', borderRadius: 4, padding: '7px 8px', fontSize: 13 }}
-            />
-          </div>
-          <select
-            value={sort}
-            onChange={(e) => setSort(e.target.value as SortOption)}
-            style={{ border: '1px solid var(--line)', borderRadius: 4, padding: '8px 10px', fontSize: 13 }}
+        {routines.length > 0 && (
+          <a
+            href={`/products?category=${ROUTINES_CATEGORY_ID}`}
+            className="btn"
+            style={{ background: isRoutinesView ? 'var(--forest)' : 'var(--parchment-2)', color: isRoutinesView ? 'var(--cream)' : 'var(--forest)' }}
           >
-            {(Object.keys(SORT_LABELS) as SortOption[]).map((key) => (
-              <option key={key} value={key}>{SORT_LABELS[key]}</option>
-            ))}
-          </select>
-        </div>
+            {ROUTINES_CATEGORY_LABEL}
+          </a>
+        )}
       </div>
 
-      {loading ? (
-        <p style={{ color: '#8a8074' }}>جاري التحميل...</p>
-      ) : visibleProducts.length === 0 ? (
-        <p style={{ color: '#8a8074' }}>{q ? 'مفيش منتجات مطابقة للبحث.' : 'لا توجد منتجات مطابقة.'}</p>
+      {isRoutinesView ? (
+        <>
+          <p className="text-[13.5px] mb-6" style={{ color: 'var(--muted)' }}>
+            {routinesLoading ? '' : `${routines.length.toLocaleString('ar-EG')} روتين`}
+          </p>
+          {routinesLoading ? (
+            <p style={{ color: 'var(--muted)' }}>جاري التحميل...</p>
+          ) : routines.length === 0 ? (
+            <p style={{ color: 'var(--muted)' }}>لا توجد روتينات متاحة حاليًا.</p>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              {routines.map((r) => (
+                <RoutineCard key={r.id} routine={r} />
+              ))}
+            </div>
+          )}
+        </>
       ) : (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-5">
-          {visibleProducts.map((p) => (
-            <ProductCard key={p.id} product={p} offer={offerByProductId.get(p.id)} />
-          ))}
-        </div>
+        <>
+          <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
+            <p className="text-[13.5px]" style={{ color: 'var(--muted)' }}>
+              {loading ? '' : `${visibleProducts.length.toLocaleString('ar-EG')} منتج`}
+            </p>
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="flex items-center gap-1.5">
+                <input
+                  type="number" min={0} placeholder="من" value={minPrice}
+                  onChange={(e) => setMinPrice(e.target.value)}
+                  className="w-20"
+                  style={{ border: '1px solid var(--line)', borderRadius: 4, padding: '7px 8px', fontSize: 13 }}
+                />
+                <span className="text-[13px]" style={{ color: 'var(--muted)' }}>—</span>
+                <input
+                  type="number" min={0} placeholder="إلى" value={maxPrice}
+                  onChange={(e) => setMaxPrice(e.target.value)}
+                  className="w-20"
+                  style={{ border: '1px solid var(--line)', borderRadius: 4, padding: '7px 8px', fontSize: 13 }}
+                />
+              </div>
+              <select
+                value={sort}
+                onChange={(e) => setSort(e.target.value as SortOption)}
+                style={{ border: '1px solid var(--line)', borderRadius: 4, padding: '8px 10px', fontSize: 13 }}
+              >
+                {(Object.keys(SORT_LABELS) as SortOption[]).map((key) => (
+                  <option key={key} value={key}>{SORT_LABELS[key]}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {loading ? (
+            <p style={{ color: 'var(--muted)' }}>جاري التحميل...</p>
+          ) : visibleProducts.length === 0 ? (
+            <p style={{ color: 'var(--muted)' }}>{q ? 'مفيش منتجات مطابقة للبحث.' : 'لا توجد منتجات مطابقة.'}</p>
+          ) : (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-5">
+              {visibleProducts.map((p) => (
+                <ProductCard key={p.id} product={p} offer={offerByProductId.get(p.id)} />
+              ))}
+            </div>
+          )}
+        </>
       )}
     </div>
   );

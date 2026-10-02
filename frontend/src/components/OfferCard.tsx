@@ -1,7 +1,7 @@
 'use client';
 
 import { useCart } from '@/lib/cart';
-import { ProductGlyph } from './ProductCard';
+import ProductImage from './ProductImage';
 import type { Offer } from '@/lib/api';
 
 export default function OfferCard({ offer }: { offer: Offer }) {
@@ -9,15 +9,15 @@ export default function OfferCard({ offer }: { offer: Offer }) {
   const percentOff = Math.round((1 - offer.offer_price / offer.original_price) * 100);
 
   return (
-    <div className="rounded overflow-hidden border flex flex-col relative" style={{ background: 'var(--cream)', borderColor: 'var(--line)' }}>
+    <div className="rounded-sm overflow-hidden flex flex-col relative transition-shadow hover:shadow-md" style={{ background: 'var(--cream)', boxShadow: '0 1px 2px rgba(36,37,34,0.06)' }}>
       <span
         className="absolute top-2 right-2 badge z-10"
         style={{ background: 'var(--rose)', color: '#fff' }}
       >
         خصم {percentOff}%
       </span>
-      <div className="aspect-square flex items-center justify-center" style={{ background: 'var(--parchment-2)' }}>
-        <ProductGlyph name={offer.product_name} />
+      <div className="relative aspect-square">
+        <ProductImage src={offer.image_url} alt={offer.product_name} />
       </div>
       <div className="p-4 flex flex-col flex-1">
         <div className="text-[11.5px] font-bold" style={{ color: 'var(--sage)' }}>{offer.title}</div>
@@ -26,7 +26,7 @@ export default function OfferCard({ offer }: { offer: Offer }) {
           <span className="font-extrabold" style={{ color: 'var(--rose)' }}>
             {offer.offer_price.toLocaleString('ar-EG')} ج.م
           </span>
-          <span className="text-[13px] line-through" style={{ color: '#8a8074' }}>
+          <span className="text-[13px] line-through" style={{ color: 'var(--muted)' }}>
             {offer.original_price.toLocaleString('ar-EG')} ج.م
           </span>
         </div>

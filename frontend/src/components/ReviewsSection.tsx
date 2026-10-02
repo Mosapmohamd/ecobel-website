@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useAuth } from '@/lib/auth';
 import { reviewApi, type ReviewSummary } from '@/lib/api';
 
-function Stars({ value, size = 16 }: { value: number; size?: number }) {
+export function Stars({ value, size = 16 }: { value: number; size?: number }) {
   return (
     <span style={{ fontSize: size, letterSpacing: 1, color: 'var(--gold)' }}>
       {'★'.repeat(Math.round(value))}
@@ -70,10 +70,10 @@ export default function ReviewsSection({ productId }: { productId: string }) {
             <div className="flex items-center gap-2">
               <Stars value={summary.average_rating} size={18} />
               <span className="text-[14px] font-bold">{summary.average_rating.toFixed(1)}</span>
-              <span className="text-[13px]" style={{ color: '#8a8074' }}>({summary.review_count.toLocaleString('ar-EG')} تقييم)</span>
+              <span className="text-[13px]" style={{ color: 'var(--muted)' }}>({summary.review_count.toLocaleString('ar-EG')} تقييم)</span>
             </div>
           ) : (
-            <p className="text-[13.5px]" style={{ color: '#8a8074' }}>مفيش تقييمات لسه — كوني أول من يقيّم.</p>
+            <p className="text-[13.5px]" style={{ color: 'var(--muted)' }}>مفيش تقييمات لسه — كوني أول من يقيّم.</p>
           )}
         </div>
 
@@ -86,7 +86,7 @@ export default function ReviewsSection({ productId }: { productId: string }) {
           <button className="btn btn-secondary" onClick={() => setShowForm(true)}>أضيفي تقييمك</button>
         )}
         {customer && !canReview && reason && !submitted && (
-          <span className="text-[13px]" style={{ color: '#8a8074' }}>{reason}</span>
+          <span className="text-[13px]" style={{ color: 'var(--muted)' }}>{reason}</span>
         )}
         {submitted && (
           <span className="text-[13px] font-bold" style={{ color: 'var(--ok)' }}>تم إرسال تقييمك، هيظهر بعد المراجعة ✓</span>
@@ -96,7 +96,7 @@ export default function ReviewsSection({ productId }: { productId: string }) {
       {showForm && (
         <form onSubmit={handleSubmit} className="mb-8 p-5 rounded border" style={{ borderColor: 'var(--line)', background: 'var(--cream)' }}>
           {error && (
-            <div className="rounded p-3 mb-3 text-[13px]" style={{ background: 'rgba(201,123,138,0.15)', color: 'var(--rose)' }}>
+            <div className="rounded p-3 mb-3 text-[13px]" style={{ background: 'rgba(179,38,30,0.15)', color: 'var(--error)' }}>
               {error}
             </div>
           )}
@@ -127,10 +127,10 @@ export default function ReviewsSection({ productId }: { productId: string }) {
             <div key={r.id} className="pb-5 border-b" style={{ borderColor: 'var(--line)' }}>
               <div className="flex items-center justify-between mb-1.5">
                 <span className="font-bold text-[14px]">{r.customer_name}</span>
-                <span className="text-[12px]" style={{ color: '#8a8074' }}>{new Date(r.created_at).toLocaleDateString('ar-EG')}</span>
+                <span className="text-[12px]" style={{ color: 'var(--muted)' }}>{new Date(r.created_at).toLocaleDateString('ar-EG')}</span>
               </div>
               <Stars value={r.rating} />
-              {r.comment && <p className="mt-2 text-[13.5px] leading-relaxed" style={{ color: '#4a453e' }}>{r.comment}</p>}
+              {r.comment && <p className="mt-2 text-[13.5px] leading-relaxed" style={{ color: 'var(--muted-strong)' }}>{r.comment}</p>}
             </div>
           ))}
         </div>

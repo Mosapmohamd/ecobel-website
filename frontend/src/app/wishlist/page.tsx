@@ -18,7 +18,7 @@ export default function WishlistPage() {
     return (
       <div className="mx-auto max-w-6xl px-5 py-20 text-center">
         <h1 className="text-2xl mb-3">المفضلة فاضية</h1>
-        <p style={{ color: '#8a8074' }} className="mb-6">دوسي على أيقونة القلب على أي منتج عشان تضيفيه هنا.</p>
+        <p style={{ color: 'var(--muted)' }} className="mb-6">دوسي على أيقونة القلب على أي منتج عشان تضيفيه هنا.</p>
         <Link href="/products" className="btn btn-primary">تصفّحي المنتجات</Link>
       </div>
     );

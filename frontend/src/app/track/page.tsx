@@ -20,8 +20,8 @@ function StatusBadge({ status }: { status: string }) {
     <span
       className="badge"
       style={{
-        background: status === 'delivered' ? 'rgba(91,140,90,0.14)' : status === 'cancelled' ? 'rgba(201,123,138,0.18)' : 'rgba(201,162,39,0.16)',
-        color: status === 'delivered' ? 'var(--ok)' : status === 'cancelled' ? 'var(--rose)' : '#9c7a14',
+        background: status === 'delivered' ? 'rgba(91,140,90,0.14)' : status === 'cancelled' ? 'rgba(179,38,30,0.18)' : 'rgba(201,162,39,0.16)',
+        color: status === 'delivered' ? 'var(--ok)' : status === 'cancelled' ? 'var(--error)' : '#9c7a14',
       }}
     >
       {STATUS_LABEL[status] || status}
@@ -70,7 +70,7 @@ function TrackContent() {
   return (
     <div className="mx-auto max-w-xl px-5 py-14">
       <h1 className="text-3xl mb-2">تتبعي طلبك</h1>
-      <p style={{ color: '#8a8074' }} className="mb-8">
+      <p style={{ color: 'var(--muted)' }} className="mb-8">
         اكتبي رقم الطلب أو رقم التليفون — مش شرط الاتنين. تفاصيل الطلب كاملة (زي العنوان) بتظهر بس
         لو كتبتي الاتنين مع بعض.
       </p>
@@ -88,7 +88,7 @@ function TrackContent() {
       </form>
 
       {error && (
-        <div className="rounded p-3 mt-6 text-[13.5px]" style={{ background: 'rgba(201,123,138,0.15)', color: 'var(--rose)' }}>
+        <div className="rounded p-3 mt-6 text-[13.5px]" style={{ background: 'rgba(179,38,30,0.15)', color: 'var(--error)' }}>
           {error}
         </div>
       )}
@@ -115,12 +115,12 @@ function TrackContent() {
                   <div className="border-t pt-3 text-[14px] flex justify-between font-extrabold" style={{ borderColor: 'var(--line)', color: 'var(--forest)' }}>
                     <span>الإجمالي</span><span>{r.total_amount.toLocaleString('ar-EG')} ج.م</span>
                   </div>
-                  <div className="mt-4 pt-4 border-t text-[13px]" style={{ borderColor: 'var(--line)', color: '#8a8074' }}>
+                  <div className="mt-4 pt-4 border-t text-[13px]" style={{ borderColor: 'var(--line)', color: 'var(--muted)' }}>
                     <div>عنوان التوصيل: {r.shipping_address}</div>
                   </div>
                 </>
               ) : (
-                <div className="text-[13.5px] flex justify-between" style={{ color: '#8a8074' }}>
+                <div className="text-[13.5px] flex justify-between" style={{ color: 'var(--muted)' }}>
                   <span>{new Date(r.created_at).toLocaleDateString('ar-EG')}</span>
                   <span className="font-bold" style={{ color: 'var(--forest)' }}>{r.total_amount.toLocaleString('ar-EG')} ج.م</span>
                 </div>
@@ -128,7 +128,7 @@ function TrackContent() {
             </div>
           ))}
           {!isFullOrder(results[0]) && (
-            <p className="text-[12.5px] text-center" style={{ color: '#8a8074' }}>
+            <p className="text-[12.5px] text-center" style={{ color: 'var(--muted)' }}>
               اكتبي رقم الطلب ورقم التليفون سوا عشان تشوفي التفاصيل كاملة (العنوان والمنتجات).
             </p>
           )}

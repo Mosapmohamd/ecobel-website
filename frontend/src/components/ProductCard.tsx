@@ -4,6 +4,7 @@ import Link from 'next/link';
 import type { Product, Offer } from '@/lib/api';
 import { useCart } from '@/lib/cart';
 import { useWishlist } from '@/lib/wishlist';
+import ProductImage from './ProductImage';
 
 export default function ProductCard({ product, offer }: { product: Product; offer?: Offer }) {
   const { add } = useCart();
@@ -12,13 +13,10 @@ export default function ProductCard({ product, offer }: { product: Product; offe
   const percentOff = offer ? Math.round((1 - offer.offer_price / product.sale_price) * 100) : 0;
 
   return (
-    <div className="rounded overflow-hidden border flex flex-col" style={{ background: 'var(--cream)', borderColor: 'var(--line)' }}>
+    <div className="rounded-sm overflow-hidden flex flex-col transition-shadow hover:shadow-md" style={{ background: 'var(--cream)', boxShadow: '0 1px 2px rgba(36,37,34,0.06)' }}>
       <Link href={`/products/${product.id}`} className="relative block">
-        <div
-          className="aspect-square flex items-center justify-center"
-          style={{ background: 'var(--parchment-2)' }}
-        >
-          <ProductGlyph name={product.name} />
+        <div className="relative aspect-square">
+          <ProductImage src={product.image_url} alt={product.name} />
         </div>
         {offer && (
           <span className="absolute top-2 right-2 badge" style={{ background: 'var(--rose)', color: '#fff' }}>
@@ -50,7 +48,7 @@ export default function ProductCard({ product, offer }: { product: Product; offe
               {(offer?.offer_price ?? product.sale_price).toLocaleString('ar-EG')} ج.م
             </span>
             {offer && (
-              <span className="text-[13px] line-through" style={{ color: '#8a8074' }}>
+              <span className="text-[13px] line-through" style={{ color: 'var(--muted)' }}>
                 {product.sale_price.toLocaleString('ar-EG')} ج.م
               </span>
             )}
@@ -65,17 +63,5 @@ export default function ProductCard({ product, offer }: { product: Product; offe
         </button>
       </div>
     </div>
-  );
-}
-
-/** Simple generated placeholder glyph until real product photos exist. */
-export function ProductGlyph({ name }: { name: string }) {
-  const hue = Array.from(name).reduce((s, c) => s + c.charCodeAt(0), 0) % 3;
-  const colors = ['#b5566b', '#a67783', '#dc4c64'];
-  return (
-    <svg viewBox="0 0 100 120" width="56%" height="56%">
-      <rect x="30" y="30" width="40" height="70" rx="8" fill={colors[hue]} opacity="0.85" />
-      <rect x="40" y="16" width="20" height="18" rx="4" fill="#e39aa6" />
-    </svg>
   );
 }

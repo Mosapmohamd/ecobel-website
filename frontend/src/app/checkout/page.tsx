@@ -113,7 +113,7 @@ export default function CheckoutPage() {
       <div className="mx-auto max-w-lg px-5 py-20 text-center">
         <div className="text-5xl mb-4">✓</div>
         <h1 className="text-3xl mb-3">تم استلام طلبك!</h1>
-        <p style={{ color: '#8a8074' }} className="mb-6">
+        <p style={{ color: 'var(--muted)' }} className="mb-6">
           رقم الطلب: <strong style={{ color: 'var(--forest)' }}>{confirmedOrder.order_number}</strong>
           <br />
           احتفظي بالرقم ده مع رقم تليفونك عشان تقدري تتابعي حالة الطلب.
@@ -134,7 +134,7 @@ export default function CheckoutPage() {
   if (lines.length === 0) {
     return (
       <div className="mx-auto max-w-6xl px-5 py-20 text-center">
-        <p style={{ color: '#8a8074' }} className="mb-6">السلة فاضية — ضيفي منتجات الأول.</p>
+        <p style={{ color: 'var(--muted)' }} className="mb-6">السلة فاضية — ضيفي منتجات الأول.</p>
         <Link href="/products" className="btn btn-primary">تسوقي الآن</Link>
       </div>
     );
@@ -146,7 +146,7 @@ export default function CheckoutPage() {
         <h1 className="text-3xl mb-8">إتمام الطلب</h1>
 
         {error && (
-          <div className="rounded p-3 mb-5 text-[13.5px]" style={{ background: 'rgba(201,123,138,0.15)', color: 'var(--rose)' }}>
+          <div className="rounded p-3 mb-5 text-[13.5px]" style={{ background: 'rgba(179,38,30,0.15)', color: 'var(--error)' }}>
             {error}
           </div>
         )}
@@ -161,7 +161,7 @@ export default function CheckoutPage() {
               placeholder="مثال: سارة أحمد محمد"
               required
             />
-            {nameError && <p className="text-[12px] mt-1" style={{ color: 'var(--rose)' }}>{nameError}</p>}
+            {nameError && <p className="text-[12px] mt-1" style={{ color: 'var(--error)' }}>{nameError}</p>}
           </div>
           <div className="field">
             <label>رقم التليفون</label>
@@ -173,7 +173,7 @@ export default function CheckoutPage() {
               required
               dir="ltr"
             />
-            {phoneError && <p className="text-[12px] mt-1" style={{ color: 'var(--rose)' }}>{phoneError}</p>}
+            {phoneError && <p className="text-[12px] mt-1" style={{ color: 'var(--error)' }}>{phoneError}</p>}
           </div>
           <div className="field">
             <label>المحافظة</label>
@@ -196,7 +196,7 @@ export default function CheckoutPage() {
 
         <div className="mt-8 p-4 rounded" style={{ background: 'var(--parchment-2)' }}>
           <div className="font-bold mb-2">💵 الدفع عند الاستلام</div>
-          <p className="text-[13.5px]" style={{ color: '#8a8074' }}>هتدفعي كاش للمندوب لما الطلب يوصلك.</p>
+          <p className="text-[13.5px]" style={{ color: 'var(--muted)' }}>هتدفعي كاش للمندوب لما الطلب يوصلك.</p>
         </div>
 
         <button
@@ -234,7 +234,7 @@ export default function CheckoutPage() {
             </button>
           </div>
           {couponStatus && (
-            <p className="text-[12.5px] mb-3" style={{ color: couponStatus.valid ? 'var(--ok)' : 'var(--rose)' }}>
+            <p className="text-[12.5px] mb-3" style={{ color: couponStatus.valid ? 'var(--ok)' : 'var(--error)' }}>
               {couponStatus.valid ? `تم تطبيق الخصم: -${couponStatus.discount.toLocaleString('ar-EG')} ج.م` : couponStatus.reason}
             </p>
           )}
