@@ -70,7 +70,7 @@ export default function OrderEditor({
   return (
     <div className="rounded border p-4 mt-2" style={{ background: 'var(--parchment)', borderColor: 'var(--line)' }}>
       {error && (
-        <div className="rounded p-3 mb-3 text-[13px]" style={{ background: 'rgba(201,123,138,0.15)', color: 'var(--rose)' }}>
+        <div className="rounded p-3 mb-3 text-[13px]" style={{ background: 'rgba(186,26,26,0.08)', color: 'var(--error)' }}>
           {error}
         </div>
       )}
@@ -84,7 +84,7 @@ export default function OrderEditor({
               <span className="px-3">{l.quantity}</span>
               <button className="px-2" onClick={() => setQuantity(l.product_id, l.quantity + 1)}>+</button>
             </div>
-            <button onClick={() => setQuantity(l.product_id, 0)} style={{ color: 'var(--rose)' }} aria-label="حذف">✕</button>
+            <button onClick={() => setQuantity(l.product_id, 0)} style={{ color: 'var(--error)' }} aria-label="حذف">✕</button>
           </div>
         ))}
       </div>

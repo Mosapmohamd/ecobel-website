@@ -28,12 +28,12 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="mx-auto max-w-sm px-5 py-16">
+    <div className="mx-auto max-w-md px-5 py-14"><div className="card p-6 sm:p-8">
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src="/logo/ecobel-mark-black.png" alt="Eco Bel" className="mx-auto mb-6" style={{ height: 56, width: 'auto' }} />
-      <h1 className="text-3xl mb-8 text-center">تسجيل الدخول</h1>
+      <h1 className="text-[30px] mb-8 text-center">تسجيل الدخول</h1>
       {error && (
-        <div className="rounded p-3 mb-5 text-[13.5px]" style={{ background: 'rgba(201,123,138,0.15)', color: 'var(--rose)' }}>
+        <div className="rounded p-3 mb-5 text-[13.5px]" style={{ background: 'rgba(186,26,26,0.08)', color: 'var(--error)' }}>
           {error}
         </div>
       )}
@@ -48,9 +48,10 @@ export default function LoginPage() {
         </div>
         <button className="btn btn-primary" disabled={loading}>{loading ? 'جاري الدخول...' : 'تسجيل الدخول'}</button>
       </form>
-      <p className="mt-5 text-[13.5px] text-center" style={{ color: '#8a8074' }}>
+      <p className="mt-5 text-[13.5px] text-center" style={{ color: 'var(--muted)' }}>
         معندكيش حساب؟ <Link href="/account/register" className="font-bold" style={{ color: 'var(--forest)' }}>سجّلي دلوقتي</Link>
       </p>
+    </div>
     </div>
   );
 }

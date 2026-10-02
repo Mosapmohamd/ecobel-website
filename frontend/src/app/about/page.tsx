@@ -1,3 +1,5 @@
+import Icon from '@/components/Icon';
+
 export default function AboutPage() {
   return (
     <div>
@@ -27,28 +29,28 @@ export default function AboutPage() {
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mt-12">
           <div className="rounded border p-6 text-center" style={{ borderColor: 'var(--line)', background: 'var(--cream)' }}>
-            <div className="text-3xl mb-2">🌿</div>
+            <span className="mx-auto mb-3 w-12 h-12 rounded-full flex items-center justify-center" style={{ background: 'var(--parchment)', color: 'var(--ok)' }}><Icon name="leaf" size={22} /></span>
             <div className="font-bold mb-1">مكونات طبيعية</div>
-            <p className="text-[13.5px]" style={{ color: '#8a8074' }}>تركيبات مدروسة بدون مواد ضارة</p>
+            <p className="text-[13.5px]" style={{ color: 'var(--muted)' }}>تركيبات مدروسة بدون مواد ضارة</p>
           </div>
           <div className="rounded border p-6 text-center" style={{ borderColor: 'var(--line)', background: 'var(--cream)' }}>
-            <div className="text-3xl mb-2">🚚</div>
+            <span className="mx-auto mb-3 w-12 h-12 rounded-full flex items-center justify-center" style={{ background: 'var(--parchment)', color: 'var(--ok)' }}><Icon name="truck" size={22} /></span>
             <div className="font-bold mb-1">شحن لكل المحافظات</div>
-            <p className="text-[13.5px]" style={{ color: '#8a8074' }}>مجانًا فوق 1000 جنيه</p>
+            <p className="text-[13.5px]" style={{ color: 'var(--muted)' }}>مجانًا فوق 1000 جنيه</p>
           </div>
           <div className="rounded border p-6 text-center" style={{ borderColor: 'var(--line)', background: 'var(--cream)' }}>
-            <div className="text-3xl mb-2">💵</div>
+            <span className="mx-auto mb-3 w-12 h-12 rounded-full flex items-center justify-center" style={{ background: 'var(--parchment)', color: 'var(--ok)' }}><Icon name="cash" size={22} /></span>
             <div className="font-bold mb-1">الدفع عند الاستلام</div>
-            <p className="text-[13.5px]" style={{ color: '#8a8074' }}>تدفعي براحتك لما يوصلك الطلب</p>
+            <p className="text-[13.5px]" style={{ color: 'var(--muted)' }}>تدفعي براحتك لما يوصلك الطلب</p>
           </div>
         </div>
       </section>
 
-      <section className="border-t" style={{ borderColor: 'var(--line)', background: 'var(--parchment-2)' }}>
+      <section className="border-t" style={{ borderColor: 'var(--line)', background: 'var(--parchment)' }}>
         <div className="mx-auto max-w-3xl px-5 py-12 text-center">
           <h2 className="text-2xl mb-3">تواصلي معنا</h2>
-          <p style={{ color: '#8a8074' }} className="mb-1">المعادي، القاهرة</p>
-          <p style={{ color: '#8a8074' }}>01508582006</p>
+          <p style={{ color: 'var(--muted)' }} className="mb-1">المعادي، القاهرة</p>
+          <p style={{ color: 'var(--muted)' }}>01508582006</p>
         </div>
       </section>
     </div>

@@ -2,24 +2,29 @@
 @import "tailwindcss";
 
 :root {
-  /* Rebrand — rose/blush palette (Sep 2026), replacing the original forest
-     green + gold. Variable NAMES are kept as-is (they're used in ~150
-     places across every component) but now map to the new palette — read
-     them by role, not by their literal name: --forest is "primary brand /
-     action color" (now a rose), --gold is "soft secondary accent" (now a
-     lighter blush), not literal green/gold anymore. */
-  --forest: #b5566b;        /* primary brand + single action color (was forest green) */
+  /* Stitch "Organic Apothecary" palette (rose/berry on white). Variable
+     NAMES are historical and used across every component — read them by
+     role, not by their literal name: --forest is "primary brand / action
+     color", --sage is "muted kicker text", --gold is "soft accent — ratings,
+     small highlights", --rose is "discounts, sale labels and urgency ONLY"
+     (not a general error color, see --error). */
+  --forest: #b5566b;        /* primary brand + single action color (Deep Rose) */
   --forest-deep: #8e4152;   /* primary hover/pressed */
-  --sage: #a67783;          /* muted secondary text accent (was sage green) */
-  --gold: #e39aa6;          /* soft accent — star ratings, small highlights (was gold) */
-  --gold-soft: #f3d0d6;     /* focus rings, faint highlights */
-  --parchment: #fbf2f4;     /* subtle blush surface tint (was beige) */
-  --parchment-2: #f6e7ea;   /* deeper blush surface tint */
-  --ink: #2b2320;
-  --cream: #ffffff;         /* card/header surfaces — true white now, not warm cream */
-  --line: rgba(43, 35, 32, 0.12);
-  --rose: #dc4c64;          /* sale/discount/error — distinct red-rose, separate from the primary */
-  --ok: #6b9c6c;            /* success green — kept: universal UX convention, not a brand color */
+  --berry: #973e53;         /* deep berry panels — announcement bar, footer */
+  --charcoal: #2b2320;      /* deep espresso contrast panels */
+  --sage: #6c5d58;          /* category kickers, secondary labels */
+  --gold: #e39aa6;          /* soft accent — star ratings, progress, icon fills (Petal Rose) */
+  --gold-soft: #f6e7ea;     /* faint labels on dark panels, soft highlights */
+  --parchment: #fbf2f4;     /* alternating section tint (Pale Blush) */
+  --parchment-2: #f6e7ea;   /* badges, chips, deeper tint (Rose Mist) */
+  --ink: #2b2320;           /* body text (Espresso) */
+  --cream: #ffffff;         /* card/header surfaces */
+  --line: #ede3e5;          /* hairline borders (Pale Rose Quartz) */
+  --rose: #dc4c64;          /* discounts / sale labels / urgency ONLY */
+  --ok: #6b9c6c;            /* success + botanical seals (Olive) */
+  --error: #ba1a1a;         /* errors, destructive actions, negative status */
+  --muted: #6c5d58;         /* secondary/meta text */
+  --muted-strong: #544245;  /* secondary paragraph copy */
 
   --background: #ffffff;
   --foreground: var(--ink);
@@ -28,6 +33,8 @@
 @theme inline {
   --color-forest: var(--forest);
   --color-forest-deep: var(--forest-deep);
+  --color-berry: var(--berry);
+  --color-charcoal: var(--charcoal);
   --color-sage: var(--sage);
   --color-gold: var(--gold);
   --color-gold-soft: var(--gold-soft);
@@ -37,6 +44,9 @@
   --color-cream: var(--cream);
   --color-rose: var(--rose);
   --color-ok: var(--ok);
+  --color-error: var(--error);
+  --color-muted: var(--muted);
+  --color-muted-strong: var(--muted-strong);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-display: 'Markazi Text', serif;
@@ -67,48 +77,112 @@ h1, h2, h3 {
   align-items: center;
   justify-content: center;
   gap: 8px;
+  min-height: 48px;
   border-radius: 4px;
-  padding: 12px 24px;
+  padding: 0 24px;
   font-weight: 700;
-  font-size: 14.5px;
+  font-size: 15px;
   cursor: pointer;
-  border: none;
-  transition: background .15s;
+  border: 1px solid transparent;
+  transition: background-color .2s ease, color .2s ease, border-color .2s ease;
 }
-/* Single action color across the whole site (forest green) — gold stays
-   an accent (price, small highlights) and is never used on a clickable
-   action button, so there's only ever one color the eye learns as "buy". */
+.btn:focus-visible { outline: none; box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--parchment-2); }
+/* One action color across the whole site — rose accents (--rose, --gold)
+   are never used on a clickable action, so "buy" is always this color. */
 .btn-primary { background: var(--forest); color: var(--cream); }
 .btn-primary:hover { background: var(--forest-deep); }
-.btn-secondary { background: var(--parchment-2); color: var(--forest); }
+.btn-secondary { background: transparent; color: var(--forest); border-color: var(--forest); }
+.btn-secondary:hover { background: var(--parchment); }
+.btn-sm { min-height: 40px; padding: 0 16px; font-size: 13.5px; }
 .btn:disabled { opacity: .5; cursor: not-allowed; }
 
-.field label {
+/* Tertiary link — underline grows from the right on hover (RTL). */
+.link-underline {
+  background-image: linear-gradient(var(--forest), var(--forest));
+  background-repeat: no-repeat;
+  background-position: 100% 100%;
+  background-size: 0 1px;
+  transition: background-size .25s ease;
+}
+.link-underline:hover { background-size: 100% 1px; }
+
+/* Small label above a section heading. */
+.kicker {
   display: block;
   font-size: 13px;
   font-weight: 700;
   color: var(--forest);
   margin-bottom: 6px;
 }
-.field input, .field textarea, .field select {
+
+.field label {
+  display: block;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink);
+  margin-bottom: 6px;
+}
+.field input, .field textarea, .field select, .input {
   width: 100%;
   border: 1px solid var(--line);
   border-radius: 4px;
-  padding: 10px 12px;
-  font-size: 14.5px;
+  padding: 11px 12px;
+  font-size: 15px;
   background: #fff;
   color: var(--ink);
   font-family: var(--font-body);
+  transition: border-color .15s, box-shadow .15s;
 }
-.field input:focus, .field textarea:focus, .field select:focus {
-  outline: 2px solid var(--gold-soft);
-  outline-offset: 1px;
+.field input::placeholder, .field textarea::placeholder, .input::placeholder {
+  color: var(--muted);
+  opacity: .65;
+}
+.field input:focus, .field textarea:focus, .field select:focus, .input:focus {
+  outline: none;
+  border-color: var(--forest);
+  box-shadow: 0 0 0 3px var(--parchment);
+}
+
+/* Hairline card surface shared by product/offer/routine cards and panels. */
+.card {
+  background: var(--cream);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  transition: box-shadow .2s ease;
+}
+.card-hover:hover {
+  box-shadow: 0 4px 16px -2px rgba(43, 35, 32, 0.06), 0 1px 3px 0 rgba(43, 35, 32, 0.03);
+}
+
+.scrollbar-hide {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
 }
 
 .badge {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   font-size: 11px;
   font-weight: 800;
   padding: 4px 10px;
   border-radius: 4px;
 }
+
+/* Round social icon buttons on the berry footer (1:1 icon buttons are the
+   one place a circle is allowed). */
+.social {
+  width: 34px;
+  height: 34px;
+  border-radius: 9999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--cream);
+  transition: background-color .2s;
+}
+.social:hover { background: rgba(255, 255, 255, 0.22); }
