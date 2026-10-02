@@ -69,9 +69,14 @@ export default function HomePage() {
       {/* Offers */}
       {offers.length > 0 && (
         <section className="mx-auto max-w-6xl px-5 py-16">
-          <div className="text-sm font-bold mb-2" style={{ color: 'var(--rose)' }}>لفترة محدودة</div>
-          <h2 className="text-3xl mb-8">العروض</h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-5">
+          <div className="mb-8">
+            <span className="kicker" style={{ color: 'var(--rose)' }}>لفترة محدودة</span>
+            <h2 className="text-[28px] lg:text-[40px] leading-tight">العروض والتخفيضات</h2>
+            <p className="mt-2 text-[15px]" style={{ color: 'var(--muted)' }}>
+              أفضل منتجاتنا بأسعار مخفضة لفترة محدودة.
+            </p>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 lg:gap-6">
             {offers.map((o) => (
               <OfferCard key={o.id} offer={o} />
             ))}
@@ -79,14 +84,45 @@ export default function HomePage() {
         </section>
       )}
 
-      {/* Featured products */}
-      <section className="mx-auto max-w-6xl px-5 py-16" style={{ background: 'var(--parchment-2)' }}>
-        <div className="flex items-end justify-between mb-8">
-          <div>
-            <div className="text-sm font-bold mb-2" style={{ color: 'var(--forest)' }}>الأكثر طلبًا</div>
-            <h2 className="text-3xl">منتجات مختارة لكِ</h2>
+      {/* Routines */}
+      {featuredRoutines.length > 0 && (
+        <section style={{ background: 'var(--parchment)' }}>
+          <div className="mx-auto max-w-6xl px-5 py-16">
+            <div className="flex items-end justify-between mb-8 gap-4">
+              <div>
+                <span className="kicker">مجموعات مختارة بعناية</span>
+                <h2 className="text-[28px] lg:text-[40px] leading-tight">روتين العناية المتكامل</h2>
+                <p className="mt-2 text-[15px]" style={{ color: 'var(--muted)' }}>
+                  خطوات متناغمة لنتائج واضحة — أضيفي الروتين كامل للسلة بضغطة واحدة.
+                </p>
+              </div>
+              <Link
+                href={`/products?category=${ROUTINES_CATEGORY_ID}`}
+                className="text-[13.5px] font-bold link-underline flex-none"
+                style={{ color: 'var(--forest)' }}
+              >
+                كل الروتينات
+              </Link>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {featuredRoutines.map((r) => (
+                <RoutineCard key={r.id} routine={r} />
+              ))}
+            </div>
           </div>
-          <Link href="/products" className="text-sm font-bold" style={{ color: 'var(--forest)' }}>عرض الكل ←</Link>
+        </section>
+      )}
+
+      {/* Featured products */}
+      <section className="mx-auto max-w-6xl px-5 py-16">
+        <div className="flex items-end justify-between mb-8 gap-4">
+          <div>
+            <span className="kicker">الأكثر طلبًا</span>
+            <h2 className="text-[28px] lg:text-[40px] leading-tight">منتجات مختارة لكِ</h2>
+          </div>
+          <Link href="/products" className="text-[13.5px] font-bold link-underline flex-none" style={{ color: 'var(--forest)' }}>
+            مشاهدة الكل
+          </Link>
         </div>
 
         {loading ? (
@@ -94,7 +130,7 @@ export default function HomePage() {
         ) : products.length === 0 ? (
           <p style={{ color: 'var(--muted)' }}>لا توجد منتجات متاحة حاليًا.</p>
         ) : (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-5">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 lg:gap-6">
             {products.slice(0, 8).map((p) => (
               <ProductCard key={p.id} product={p} offer={offers.find((o) => o.product_id === p.id)} />
             ))}
@@ -102,35 +138,9 @@ export default function HomePage() {
         )}
       </section>
 
-      {/* Routines */}
-      {featuredRoutines.length > 0 && (
-        <section className="mx-auto max-w-6xl px-5 py-16">
-          <div className="flex items-end justify-between mb-8">
-            <div>
-              <div className="text-sm font-bold mb-2" style={{ color: 'var(--forest)' }}>مجموعات مختارة بعناية</div>
-              <h2 className="text-3xl">الروتين</h2>
-            </div>
-            <Link href={`/products?category=${ROUTINES_CATEGORY_ID}`} className="text-sm font-bold" style={{ color: 'var(--forest)' }}>
-              كل الروتينات ←
-            </Link>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            {featuredRoutines.map((r) => (
-              <RoutineCard key={r.id} routine={r} />
-            ))}
-          </div>
-        </section>
-      )}
-
-      <BrandStory />
-
       <HomeReviews productIds={reviewProductIds} />
 
-      {/* Closing trust/CTA band */}
-      <TrustStrip compact />
-      <section className="mx-auto max-w-6xl px-5 py-10 text-center">
-        <Link href="/products" className="btn btn-primary">تسوقي الآن</Link>
-      </section>
+      <BrandStory />
     </div>
   );
 }

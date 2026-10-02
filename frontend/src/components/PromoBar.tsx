@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { FREE_SHIPPING_THRESHOLD } from '@/lib/constants';
+import Icon from './Icon';
 
 const DISMISS_KEY = 'ecobel_promo_dismissed';
 
@@ -22,17 +23,20 @@ export default function PromoBar() {
   }
 
   return (
-    <div className="relative py-2.5 flex items-center justify-center gap-6 text-sm font-semibold px-10" style={{ background: 'var(--forest)', color: 'var(--cream)' }}>
-      <span>🚚 شحن لكل المحافظات — مجاني فوق {FREE_SHIPPING_THRESHOLD.toLocaleString('ar-EG')} ج.م</span>
-      <span className="hidden sm:inline" style={{ color: 'rgba(255,255,255,0.85)' }} dir="ltr">01508582006</span>
-      <button
-        onClick={dismiss}
-        aria-label="إغلاق"
-        className="absolute left-4 top-1/2 -translate-y-1/2 text-lg leading-none"
-        style={{ color: 'var(--cream)' }}
-      >
-        ✕
-      </button>
+    <div style={{ background: 'var(--berry)', color: 'var(--cream)' }}>
+      <div className="mx-auto max-w-6xl px-5 py-2 flex items-center justify-between gap-4 text-[12.5px] font-medium">
+        <span className="hidden sm:flex items-center gap-1.5" style={{ color: 'rgba(255,255,255,0.85)' }}>
+          <Icon name="phone" size={14} />
+          <span dir="ltr">01508582006</span>
+        </span>
+        <span className="flex items-center gap-1.5 mx-auto sm:mx-0">
+          <Icon name="truck" size={15} />
+          شحن لكل المحافظات — مجاني للطلبات فوق {FREE_SHIPPING_THRESHOLD.toLocaleString('ar-EG')} ج.م
+        </span>
+        <button onClick={dismiss} aria-label="إغلاق" className="flex-none opacity-80 hover:opacity-100 transition-opacity">
+          <Icon name="close" size={15} />
+        </button>
+      </div>
     </div>
   );
 }

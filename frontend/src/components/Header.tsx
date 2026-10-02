@@ -2,18 +2,59 @@
 
 import { useEffect, useState, type FormEvent } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useCart } from '@/lib/cart';
 import { useWishlist } from '@/lib/wishlist';
 import { useAuth } from '@/lib/auth';
 import { catalogApi, type Category } from '@/lib/api';
 import { categoryLabel, ROUTINES_CATEGORY_ID, ROUTINES_CATEGORY_LABEL } from '@/lib/categories';
+import Icon from './Icon';
+
+const NAV = [
+  { href: '/', label: 'الرئيسية', match: (p: string) => p === '/' },
+  { href: '/products', label: 'كل المنتجات', match: (p: string) => p.startsWith('/products') },
+];
+const NAV_AFTER = [
+  { href: '/about', label: 'عن الشركة', match: (p: string) => p.startsWith('/about') },
+  { href: '/track', label: 'تتبع طلبك', match: (p: string) => p.startsWith('/track') },
+];
+
+function NavLink({ href, label, active }: { href: string; label: string; active: boolean }) {
+  return (
+    <Link
+      href={href}
+      className={`relative py-2 transition-colors ${
+        active ? 'font-bold text-[var(--forest)]' : 'font-medium text-[var(--muted-strong)] hover:text-[var(--ink)]'
+      }`}
+    >
+      {label}
+      <span
+        aria-hidden
+        className="absolute bottom-0 inset-x-0 h-[2px] transition-transform origin-right"
+        style={{ background: 'var(--forest)', transform: active ? 'scaleX(1)' : 'scaleX(0)' }}
+      />
+    </Link>
+  );
+}
+
+function CountBadge({ n }: { n: number }) {
+  if (n <= 0) return null;
+  return (
+    <span
+      className="absolute -top-1 -left-1 flex items-center justify-center rounded-full text-[10px] font-bold"
+      style={{ minWidth: 17, height: 17, padding: '0 4px', background: 'var(--forest)', color: 'var(--cream)' }}
+    >
+      {n.toLocaleString('ar-EG')}
+    </span>
+  );
+}
 
 export default function Header() {
   const { count } = useCart();
   const { count: wishCount } = useWishlist();
   const { customer } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
   const [query, setQuery] = useState('');
   const [categories, setCategories] = useState<Category[]>([]);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -27,167 +68,165 @@ export default function Header() {
     if (query.trim()) router.push(`/products?q=${encodeURIComponent(query.trim())}`);
   }
 
+  const searchBox = (
+    <form onSubmit={handleSearch} className="relative w-full" role="search">
+      <span className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: 'var(--muted)' }}>
+        <Icon name="search" size={17} />
+      </span>
+      <input
+        type="search"
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        placeholder="ابحثي عن منتج طبيعي..."
+        aria-label="بحث"
+        className="w-full h-10 pr-9 pl-3 rounded text-[13.5px] outline-none transition-colors focus:bg-white"
+        style={{ background: 'var(--parchment)', border: '1px solid transparent' }}
+        onFocus={(e) => (e.currentTarget.style.borderColor = 'var(--forest)')}
+        onBlur={(e) => (e.currentTarget.style.borderColor = 'transparent')}
+      />
+    </form>
+  );
+
   return (
-    <header>
-      <div className="border-b" style={{ background: 'var(--cream)', borderColor: 'var(--line)' }}>
-        <div className="mx-auto max-w-6xl px-5 py-4 flex items-center justify-between gap-4">
-          <button
-            type="button"
-            aria-label="القائمة"
-            aria-expanded={mobileMenuOpen}
-            onClick={() => setMobileMenuOpen((v) => !v)}
-            className="lg:hidden flex-none flex items-center justify-center"
-            style={{ width: 32, height: 32 }}
-          >
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--forest)" strokeWidth="2">
-              {mobileMenuOpen ? (
-                <path d="M6 6l12 12M18 6 6 18" />
-              ) : (
-                <path d="M4 7h16M4 12h16M4 17h16" />
-              )}
-            </svg>
-          </button>
+    <header
+      className="sticky z-40 border-b"
+      style={{ top: 'env(safe-area-inset-top, 0px)', background: 'var(--cream)', borderColor: 'var(--line)', boxShadow: '0 1px 8px rgba(0,0,0,0.04)' }}
+    >
+      <div className="mx-auto max-w-6xl px-5 h-16 flex items-center justify-between gap-5">
+        <button
+          type="button"
+          aria-label="القائمة"
+          aria-expanded={mobileMenuOpen}
+          onClick={() => setMobileMenuOpen((v) => !v)}
+          className="lg:hidden flex-none flex items-center justify-center w-9 h-9"
+          style={{ color: 'var(--ink)' }}
+        >
+          <Icon name={mobileMenuOpen ? 'close' : 'menu'} size={22} />
+        </button>
 
-          <Link
-            href="/"
-            className="flex items-center gap-2 text-2xl font-bold flex-none"
-            style={{ fontFamily: 'var(--font-display)', color: 'var(--forest)' }}
-          >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/logo/ecobel-mark-black.png" alt="" width={34} height={23} style={{ height: 30, width: 'auto' }} />
-            Eco Bel
-          </Link>
+        <Link href="/" className="flex items-center gap-2 flex-none">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo/ecobel-mark-black.png" alt="" width={34} height={23} style={{ height: 28, width: 'auto' }} />
+          <span className="flex flex-col leading-none">
+            <span className="text-[26px] font-bold" style={{ fontFamily: 'var(--font-display)', color: 'var(--ink)' }}>Eco Bel</span>
+            <span className="text-[10.5px] font-bold mt-0.5" style={{ color: 'var(--forest)' }}>طبيعي 100%</span>
+          </span>
+        </Link>
 
-          <nav className="hidden lg:flex items-center gap-6 text-[15px] font-medium flex-none">
-            <Link href="/">الرئيسية</Link>
-            <Link href="/products">كل المنتجات</Link>
+        <nav className="hidden lg:flex items-center gap-7 text-[15px] h-full flex-none">
+          {NAV.map((n) => <NavLink key={n.href} href={n.href} label={n.label} active={n.match(pathname)} />)}
 
-            {categories.length > 0 && (
-              <div className="relative group">
-                <button className="flex items-center gap-1 cursor-default">
-                  الفئات
-                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                    <path d="m6 9 6 6 6-6" />
-                  </svg>
-                </button>
+          {categories.length > 0 && (
+            <div className="relative group h-full flex items-center">
+              <button className="flex items-center gap-1 cursor-default py-2" style={{ color: 'var(--muted-strong)', fontWeight: 500 }}>
+                الفئات
+                <Icon name="chevronDown" size={14} className="transition-transform group-hover:rotate-180" />
+              </button>
+              <div className="absolute top-full right-0 hidden group-hover:block z-20" style={{ minWidth: 220 }}>
                 <div
-                  className="absolute top-full right-0 pt-3 hidden group-hover:block z-20"
-                  style={{ minWidth: 220 }}
+                  className="rounded border py-2 bg-white"
+                  style={{ borderColor: 'var(--line)', boxShadow: '0 4px 16px -2px rgba(43,35,32,0.06), 0 1px 3px rgba(43,35,32,0.03)' }}
                 >
-                  <div className="rounded border shadow-lg py-2" style={{ background: '#fff', borderColor: 'var(--line)' }}>
-                    {categories.map((c) => (
-                      <Link
-                        key={c.id}
-                        href={`/products?category=${c.id}`}
-                        className="block px-5 py-2.5 text-[14px] hover:opacity-70"
-                      >
-                        {categoryLabel(c.name)}
-                      </Link>
-                    ))}
-                    <Link
-                      href={`/products?category=${ROUTINES_CATEGORY_ID}`}
-                      className="block px-5 py-2.5 text-[14px] hover:opacity-70 border-t"
-                      style={{ borderColor: 'var(--line)' }}
-                    >
-                      {ROUTINES_CATEGORY_LABEL}
-                    </Link>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            <Link href="/about">عن الشركة</Link>
-            <Link href="/track">تتبع طلبك</Link>
-          </nav>
-
-          <form onSubmit={handleSearch} className="hidden sm:flex flex-1 max-w-xs">
-            <input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="ابحثي عن منتج..."
-              style={{ border: '1px solid var(--line)', borderRadius: 6, padding: '8px 12px', fontSize: 13.5, width: '100%', background: '#fff' }}
-            />
-          </form>
-
-          <div className="flex items-center gap-5 flex-none">
-            <Link href={customer ? '/account' : '/account/login'} className="text-[14px] font-medium hidden sm:inline" style={{ color: 'var(--forest)' }}>
-              {customer ? `أهلًا ${customer.name.split(' ')[0]}` : 'تسجيل الدخول'}
-            </Link>
-            <Link href="/wishlist" className="relative flex items-center" aria-label="المفضلة">
-              <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="var(--forest)" strokeWidth="2">
-                <path d="M12 21s-7-4.5-9.5-9A5.5 5.5 0 0 1 12 6a5.5 5.5 0 0 1 9.5 6c-2.5 4.5-9.5 9-9.5 9Z" />
-              </svg>
-              {wishCount > 0 && (
-                <span
-                  className="absolute -top-2 -left-2 flex items-center justify-center rounded-full text-[10px] font-extrabold"
-                  style={{ width: 17, height: 17, background: 'var(--gold)', color: 'var(--forest-deep)' }}
-                >
-                  {wishCount}
-                </span>
-              )}
-            </Link>
-            <Link href="/cart" className="relative flex items-center" aria-label="السلة">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--forest)" strokeWidth="2">
-                <path d="M3 6h2l2.4 12.2a2 2 0 0 0 2 1.8h7.6a2 2 0 0 0 2-1.6L21 8H6" />
-                <circle cx="10" cy="21" r="1" />
-                <circle cx="17" cy="21" r="1" />
-              </svg>
-              {count > 0 && (
-                <span
-                  className="absolute -top-2 -left-2 flex items-center justify-center rounded-full text-[10px] font-extrabold"
-                  style={{ width: 17, height: 17, background: 'var(--gold)', color: 'var(--forest-deep)' }}
-                >
-                  {count}
-                </span>
-              )}
-            </Link>
-          </div>
-        </div>
-
-        {/* Search on small screens */}
-        <form onSubmit={handleSearch} className="sm:hidden px-5 pb-3">
-          <input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="ابحثي عن منتج..."
-            style={{ border: '1px solid var(--line)', borderRadius: 6, padding: '8px 12px', fontSize: 13.5, width: '100%', background: '#fff' }}
-          />
-        </form>
-
-        {/* Mobile menu: primary nav + categories (desktop uses the hover nav above) */}
-        {mobileMenuOpen && (
-          <div className="lg:hidden border-t px-5 py-4" style={{ borderColor: 'var(--line)' }}>
-            <nav className="flex flex-col gap-3 text-[15px] font-medium mb-4">
-              <Link href="/" onClick={() => setMobileMenuOpen(false)}>الرئيسية</Link>
-              <Link href="/products" onClick={() => setMobileMenuOpen(false)}>كل المنتجات</Link>
-              <Link href="/about" onClick={() => setMobileMenuOpen(false)}>عن الشركة</Link>
-              <Link href="/track" onClick={() => setMobileMenuOpen(false)}>تتبع طلبك</Link>
-            </nav>
-            {categories.length > 0 && (
-              <>
-                <div className="text-[12.5px] font-bold mb-2" style={{ color: 'var(--sage)' }}>الفئات</div>
-                <div className="flex flex-col gap-2.5 text-[14px]">
                   {categories.map((c) => (
                     <Link
                       key={c.id}
                       href={`/products?category=${c.id}`}
-                      onClick={() => setMobileMenuOpen(false)}
+                      className="block px-4 py-2 text-[14px] text-[var(--muted-strong)] transition-colors hover:bg-[var(--parchment)] hover:text-[var(--forest)]"
                     >
                       {categoryLabel(c.name)}
                     </Link>
                   ))}
                   <Link
                     href={`/products?category=${ROUTINES_CATEGORY_ID}`}
-                    onClick={() => setMobileMenuOpen(false)}
+                    className="block px-4 py-2 text-[14px] text-[var(--muted-strong)] border-t transition-colors hover:bg-[var(--parchment)] hover:text-[var(--forest)]"
+                    style={{ borderColor: 'var(--line)' }}
                   >
                     {ROUTINES_CATEGORY_LABEL}
                   </Link>
                 </div>
-              </>
+              </div>
+            </div>
+          )}
+
+          {NAV_AFTER.map((n) => <NavLink key={n.href} href={n.href} label={n.label} active={n.match(pathname)} />)}
+        </nav>
+
+        <div className="hidden sm:block flex-1 max-w-[260px]">{searchBox}</div>
+
+        <div className="flex items-center gap-1 flex-none" style={{ color: 'var(--muted-strong)' }}>
+          <Link href="/wishlist" className="relative p-2 transition-colors hover:text-[var(--forest)]" aria-label="المفضلة">
+            <Icon name="heart" size={22} />
+            <CountBadge n={wishCount} />
+          </Link>
+          <Link href="/cart" className="relative p-2 transition-colors hover:text-[var(--forest)]" aria-label="السلة">
+            <Icon name="bag" size={22} />
+            <CountBadge n={count} />
+          </Link>
+          <Link
+            href={customer ? '/account' : '/account/login'}
+            className="relative p-2 flex items-center gap-1.5 transition-colors hover:text-[var(--forest)]"
+            aria-label={customer ? 'حسابي' : 'تسجيل الدخول'}
+          >
+            <Icon name="user" size={22} />
+            {customer && (
+              <span className="hidden xl:inline text-[13.5px] font-medium">أهلًا {customer.name.split(' ')[0]}</span>
             )}
-          </div>
-        )}
+          </Link>
+        </div>
       </div>
+
+      <div className="sm:hidden px-5 pb-3">{searchBox}</div>
+
+      {/* Mobile menu: primary nav + categories (desktop uses the hover nav above) */}
+      {mobileMenuOpen && (
+        <div
+          className="lg:hidden border-t px-5 py-4 max-h-[70vh] overflow-y-auto"
+          style={{ borderColor: 'var(--line)' }}
+          onClick={(e) => {
+            if ((e.target as HTMLElement).closest('a')) setMobileMenuOpen(false);
+          }}
+        >
+          <nav className="flex flex-col text-[15px] font-medium mb-4">
+            {[...NAV, ...NAV_AFTER].map((n) => (
+              <Link
+                key={n.href}
+                href={n.href}
+                className="py-2.5 border-b"
+                style={{ borderColor: 'var(--line)', color: n.match(pathname) ? 'var(--forest)' : 'var(--ink)' }}
+              >
+                {n.label}
+              </Link>
+            ))}
+            <Link href={customer ? '/account' : '/account/login'} className="py-2.5 border-b" style={{ borderColor: 'var(--line)' }}>
+              {customer ? 'حسابي' : 'تسجيل الدخول'}
+            </Link>
+          </nav>
+          {categories.length > 0 && (
+            <>
+              <div className="text-[12.5px] font-bold mb-2" style={{ color: 'var(--sage)' }}>الفئات</div>
+              <div className="flex flex-wrap gap-2 text-[13.5px]">
+                {categories.map((c) => (
+                  <Link
+                    key={c.id}
+                    href={`/products?category=${c.id}`}
+                    className="px-3 py-1.5 rounded border"
+                    style={{ borderColor: 'var(--line)' }}
+                  >
+                    {categoryLabel(c.name)}
+                  </Link>
+                ))}
+                <Link
+                  href={`/products?category=${ROUTINES_CATEGORY_ID}`}
+                  className="px-3 py-1.5 rounded border"
+                  style={{ borderColor: 'var(--line)' }}
+                >
+                  {ROUTINES_CATEGORY_LABEL}
+                </Link>
+              </div>
+            </>
+          )}
+        </div>
+      )}
     </header>
   );
 }

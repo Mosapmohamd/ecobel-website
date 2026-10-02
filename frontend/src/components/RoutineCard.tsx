@@ -2,6 +2,7 @@
 
 import { useCart } from '@/lib/cart';
 import ProductImage from './ProductImage';
+import Icon from './Icon';
 import type { Routine } from '@/lib/api';
 
 export default function RoutineCard({ routine }: { routine: Routine }) {
@@ -28,47 +29,52 @@ export default function RoutineCard({ routine }: { routine: Routine }) {
   }
 
   return (
-    <div className="rounded-sm overflow-hidden flex flex-col" style={{ background: 'var(--cream)', boxShadow: '0 1px 2px rgba(36,37,34,0.06)' }}>
-      <div className="p-5 pb-0">
-        <span className="badge mb-3 inline-block" style={{ background: 'var(--parchment-2)', color: 'var(--forest-deep)' }}>
-          روتين كامل
-        </span>
-        <div className="text-[17px] font-bold mb-1">{routine.name}</div>
-        {routine.description && (
-          <p className="text-[13px] mb-4 leading-relaxed" style={{ color: 'var(--muted)' }}>{routine.description}</p>
-        )}
-      </div>
-
-      <div className="flex items-center gap-2 px-5 mb-3">
-        {routine.items.map((it) => (
-          <div
-            key={it.product_id}
-            className="relative flex-1 aspect-square rounded-sm overflow-hidden"
-            title={it.product_name}
-          >
-            <ProductImage src={it.image_url} alt={it.product_name} sizes="120px" />
+    <div className="card card-hover overflow-hidden flex flex-col">
+      <div className="grid gap-px" style={{ gridTemplateColumns: `repeat(${Math.min(routine.items.length, 3) || 1}, 1fr)`, background: 'var(--line)' }}>
+        {routine.items.slice(0, 3).map((it) => (
+          <div key={it.product_id} className="relative aspect-square" style={{ background: 'var(--parchment)' }} title={it.product_name}>
+            <ProductImage src={it.image_url} alt={it.product_name} sizes="160px" />
           </div>
         ))}
       </div>
 
-      <div className="px-5 text-[12.5px] font-bold mb-4" style={{ color: 'var(--sage)' }}>
-        {routine.items.length.toLocaleString('ar-EG')} منتجات
-      </div>
-
-      <div className="mt-auto px-5 py-4 flex items-center justify-between gap-3 border-t" style={{ borderColor: 'var(--line)' }}>
-        <div>
-          <div className="font-extrabold text-[16px]" style={{ color: 'var(--forest)' }}>
-            الإجمالي: {total.toLocaleString('ar-EG')} ج.م
-          </div>
+      <div className="p-5 flex flex-col flex-1">
+        <div className="flex items-center justify-between gap-3 mb-2">
+          <span className="badge flex items-center gap-1" style={{ background: 'var(--parchment-2)', color: 'var(--forest)' }}>
+            <Icon name="checkCircle" size={13} />
+            روتين من {routine.items.length.toLocaleString('ar-EG')} خطوات
+          </span>
           {savings !== undefined && savings > 0 && (
-            <div className="text-[12.5px] font-bold mt-0.5" style={{ color: 'var(--rose)' }}>
-              وفّري {savings.toLocaleString('ar-EG')} ج.م
-            </div>
+            <span className="badge" style={{ background: 'var(--rose)', color: '#fff' }}>
+              توفير {savings.toLocaleString('ar-EG')} ج.م
+            </span>
           )}
         </div>
-        <button className="btn btn-primary flex-none" onClick={addRoutineToCart}>
-          أضيفي الروتين كامل
-        </button>
+        <h3 className="text-[22px] leading-snug">{routine.name}</h3>
+        {routine.description && (
+          <p className="text-[13.5px] mt-1 leading-relaxed" style={{ color: 'var(--muted)' }}>{routine.description}</p>
+        )}
+
+        <ol className="mt-4 flex flex-col gap-2 text-[13.5px]">
+          {routine.items.map((it, i) => (
+            <li key={it.product_id} className="flex items-baseline gap-2">
+              <span className="font-bold flex-none" style={{ color: 'var(--forest)' }}>{(i + 1).toLocaleString('ar-EG')}.</span>
+              <span className="flex-1">{it.product_name}</span>
+              <span className="flex-none" style={{ color: 'var(--muted)' }}>{it.sale_price.toLocaleString('ar-EG')} ج.م</span>
+            </li>
+          ))}
+        </ol>
+
+        <div className="mt-auto pt-5">
+          <div className="flex items-baseline justify-between mb-3 pt-4 border-t" style={{ borderColor: 'var(--line)' }}>
+            <span className="text-[13.5px]" style={{ color: 'var(--muted)' }}>سعر الروتين كامل:</span>
+            <span className="text-[18px] font-bold">{total.toLocaleString('ar-EG')} ج.م</span>
+          </div>
+          <button className="btn btn-primary w-full" onClick={addRoutineToCart}>
+            <Icon name="bag" size={18} />
+            أضيفي الروتين كامل للسلة
+          </button>
+        </div>
       </div>
     </div>
   );

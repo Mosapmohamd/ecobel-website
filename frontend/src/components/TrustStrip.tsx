@@ -1,57 +1,32 @@
-const ITEMS: { label: string; icon: (color: string) => React.ReactNode }[] = [
-  {
-    label: 'شحن لكل المحافظات',
-    icon: (c) => (
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2">
-        <path d="M3 7h11v9H3zM14 10h4l3 3v3h-7z" />
-        <circle cx="7" cy="18" r="1.6" />
-        <circle cx="17.5" cy="18" r="1.6" />
-      </svg>
-    ),
-  },
-  {
-    label: 'الدفع عند الاستلام',
-    icon: (c) => (
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2">
-        <rect x="2.5" y="6" width="19" height="12" rx="2" />
-        <path d="M2.5 10h19" />
-        <circle cx="7" cy="14.2" r="1.1" fill={c} stroke="none" />
-      </svg>
-    ),
-  },
-  {
-    label: 'مكونات طبيعية 100%',
-    icon: (c) => (
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2">
-        <path d="M12 21c-4-2-7-6-7-11a9 9 0 0 1 9-5c0 6-2 11-2 16Z" />
-        <path d="M12 21c4-2 7-6 7-11" />
-      </svg>
-    ),
-  },
-  {
-    label: 'استبدال خلال 14 يوم',
-    icon: (c) => (
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2">
-        <path d="M3 12a9 9 0 1 1 3 6.7" />
-        <path d="M3 21v-5h5" />
-      </svg>
-    ),
-  },
+import { FREE_SHIPPING_THRESHOLD } from '@/lib/constants';
+import Icon, { type IconName } from './Icon';
+
+const ITEMS: { icon: IconName; title: string; text: string }[] = [
+  { icon: 'truck', title: 'شحن لكل المحافظات', text: `مجاني للطلبات فوق ${FREE_SHIPPING_THRESHOLD.toLocaleString('ar-EG')} ج.م` },
+  { icon: 'leaf', title: 'مكونات طبيعية 100%', text: 'تركيبات آمنة بدون مواد ضارة' },
+  { icon: 'cash', title: 'الدفع عند الاستلام', text: 'ادفعي لما الطلب يوصلك' },
+  { icon: 'return', title: 'استبدال خلال 14 يوم', text: 'استبدال سهل بدون تعقيد' },
 ];
 
 export default function TrustStrip({ compact = false }: { compact?: boolean }) {
   return (
     <section
-      className="border-b"
-      style={{ background: compact ? 'var(--cream)' : 'var(--parchment-2)', borderColor: 'var(--line)' }}
+      className="border-y"
+      style={{ background: compact ? 'var(--parchment)' : 'var(--cream)', borderColor: 'var(--line)' }}
     >
-      <div
-        className={`mx-auto max-w-6xl px-5 ${compact ? 'py-8' : 'py-5'} grid grid-cols-2 sm:flex sm:flex-wrap sm:justify-between gap-y-4 gap-x-3`}
-      >
+      <div className={`mx-auto max-w-6xl px-5 ${compact ? 'py-10' : 'py-7'} grid grid-cols-2 lg:grid-cols-4 gap-x-4 gap-y-6`}>
         {ITEMS.map((item) => (
-          <div key={item.label} className="flex items-center gap-2.5 text-[13.5px] font-medium" style={{ color: 'var(--forest-deep)' }}>
-            {item.icon('var(--forest)')}
-            <span>{item.label}</span>
+          <div key={item.title} className="flex items-center gap-3">
+            <span
+              className="flex-none w-11 h-11 rounded-full flex items-center justify-center"
+              style={{ background: compact ? 'var(--cream)' : 'var(--parchment)', color: 'var(--forest)' }}
+            >
+              <Icon name={item.icon} size={21} />
+            </span>
+            <div className="min-w-0">
+              <div className="text-[14px] font-bold">{item.title}</div>
+              <div className="text-[12.5px] mt-0.5" style={{ color: 'var(--muted)' }}>{item.text}</div>
+            </div>
           </div>
         ))}
       </div>

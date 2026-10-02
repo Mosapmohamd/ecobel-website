@@ -59,11 +59,12 @@ export default function HomeReviews({ productIds }: { productIds: string[] }) {
   if (status !== 'ready') return null;
 
   return (
-    <section className="mx-auto max-w-6xl px-5 py-16">
+    <section style={{ background: 'var(--parchment)' }}>
+      <div className="mx-auto max-w-6xl px-5 py-16">
       <div className="flex items-end justify-between mb-8 flex-wrap gap-3">
         <div>
-          <div className="text-sm font-bold mb-2" style={{ color: 'var(--forest)' }}>عميلاتنا بيحكوا</div>
-          <h2 className="text-3xl">آراء حقيقية من عميلاتنا</h2>
+          <span className="kicker">عميلاتنا بيحكوا</span>
+          <h2 className="text-[28px] lg:text-[34px] leading-tight">آراء حقيقية من عميلاتنا</h2>
         </div>
         {total > 0 && (
           <div className="flex items-center gap-2">
@@ -76,18 +77,19 @@ export default function HomeReviews({ productIds }: { productIds: string[] }) {
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
         {reviews.map((r) => (
-          <div key={r.id} className="p-5 rounded-sm" style={{ background: 'var(--parchment)' }}>
+          <div key={r.id} className="card p-6">
             <Stars value={r.rating} />
             {r.comment && (
               <p className="mt-3 text-[14px] leading-relaxed" style={{ color: 'var(--ink)' }}>
                 {r.comment}
               </p>
             )}
-            <div className="mt-4 text-[13px] font-bold" style={{ color: 'var(--forest-deep)' }}>
+            <div className="mt-4 pt-3 border-t text-[13.5px] font-bold" style={{ borderColor: 'var(--line)' }}>
               {r.customer_name}
             </div>
           </div>
         ))}
+      </div>
       </div>
     </section>
   );
