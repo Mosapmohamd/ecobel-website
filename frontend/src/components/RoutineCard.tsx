@@ -1,81 +1,78 @@
 'use client';
 
-import { useCart } from '@/lib/cart';
+import Link from 'next/link';
+import { egp, ROUTINES_PATH } from '@/lib/constants';
+import type { Routine } from '@/lib/api';
 import ProductImage from './ProductImage';
 import Icon from './Icon';
-import type { Routine } from '@/lib/api';
+import AddRoutineButton from './AddRoutineButton';
 
+/** "روتين من ٣ خطوات" / "روتين من خطوتين" — Arabic dual and plural. */
+export function stepsLabel(n: number): string {
+  if (n === 1) return 'خطوة واحدة';
+  if (n === 2) return 'خطوتين';
+  if (n <= 10) return `${n.toLocaleString('ar-EG')} خطوات`;
+  return `${n.toLocaleString('ar-EG')} خطوة`;
+}
+
+/** Routine tile — homepage featured routines and the routines catalog. */
 export default function RoutineCard({ routine }: { routine: Routine }) {
-  const { add } = useCart();
-  const total = routine.items.reduce((sum, it) => sum + it.sale_price, 0);
-  // The backend has no bundle-discount concept for routines today (each
-  // item is just its normal sale_price) — there is no real "savings"
-  // figure to show yet. This stays wired so a real discount field, if one
-  // is ever added to the Routine API, renders automatically without a
-  // template change; until then it's intentionally never populated rather
-  // than showing an invented number.
-  let savings: number | undefined;
-
-  function addRoutineToCart() {
-    for (const it of routine.items) {
-      add({
-        id: it.product_id,
-        name: it.product_name,
-        category_id: '', category_name: '', sku: null,
-        sale_price: it.sale_price, quantity: 999, stock_status: 'ok',
-        image_url: it.image_url, description: null,
-      }, 1);
-    }
-  }
+  const href = `${ROUTINES_PATH}/${routine.id}`;
 
   return (
-    <div className="card card-hover overflow-hidden flex flex-col">
-      <div className="grid gap-px" style={{ gridTemplateColumns: `repeat(${Math.min(routine.items.length, 3) || 1}, 1fr)`, background: 'var(--line)' }}>
-        {routine.items.slice(0, 3).map((it) => (
-          <div key={it.product_id} className="relative aspect-square" style={{ background: 'var(--parchment)' }} title={it.product_name}>
-            <ProductImage src={it.image_url} alt={it.product_name} sizes="160px" />
-          </div>
-        ))}
-      </div>
-
-      <div className="p-5 flex flex-col flex-1">
-        <div className="flex items-center justify-between gap-3 mb-2">
-          <span className="badge flex items-center gap-1" style={{ background: 'var(--parchment-2)', color: 'var(--forest)' }}>
-            <Icon name="checkCircle" size={13} />
-            روتين من {routine.items.length.toLocaleString('ar-EG')} خطوات
-          </span>
-          {savings !== undefined && savings > 0 && (
-            <span className="badge" style={{ background: 'var(--rose)', color: '#fff' }}>
-              توفير {savings.toLocaleString('ar-EG')} ج.م
-            </span>
-          )}
-        </div>
-        <h3 className="text-[22px] leading-snug">{routine.name}</h3>
-        {routine.description && (
-          <p className="text-[13.5px] mt-1 leading-relaxed" style={{ color: 'var(--muted)' }}>{routine.description}</p>
+    <article className="card card-hover p-5 sm:p-6 flex flex-col">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <span className="inline-flex items-center gap-1.5 text-label font-bold text-success-strong">
+          <Icon name="checkCircle" size={16} />
+          روتين من {stepsLabel(routine.items.length)}
+        </span>
+        {routine.savings > 0 && (
+          <span className="badge bg-surface-muted text-sale">وفّري {egp(routine.savings)}</span>
         )}
-
-        <ol className="mt-4 flex flex-col gap-2 text-[13.5px]">
-          {routine.items.map((it, i) => (
-            <li key={it.product_id} className="flex items-baseline gap-2">
-              <span className="font-bold flex-none" style={{ color: 'var(--forest)' }}>{(i + 1).toLocaleString('ar-EG')}.</span>
-              <span className="flex-1">{it.product_name}</span>
-              <span className="flex-none" style={{ color: 'var(--muted)' }}>{it.sale_price.toLocaleString('ar-EG')} ج.م</span>
-            </li>
-          ))}
-        </ol>
-
-        <div className="mt-auto pt-5">
-          <div className="flex items-baseline justify-between mb-3 pt-4 border-t" style={{ borderColor: 'var(--line)' }}>
-            <span className="text-[13.5px]" style={{ color: 'var(--muted)' }}>سعر الروتين كامل:</span>
-            <span className="text-[18px] font-bold">{total.toLocaleString('ar-EG')} ج.م</span>
-          </div>
-          <button className="btn btn-primary w-full" onClick={addRoutineToCart}>
-            <Icon name="bag" size={18} />
-            أضيفي الروتين كامل للسلة
-          </button>
-        </div>
       </div>
-    </div>
+
+      <Link
+        href={href}
+        tabIndex={-1}
+        aria-hidden="true"
+        className="grid gap-2 mt-4"
+        style={{ gridTemplateColumns: `repeat(${Math.min(routine.items.length, 3) || 1}, minmax(0, 1fr))` }}
+      >
+        {routine.items.slice(0, 3).map((it) => (
+          <span key={it.product.id} className="relative block aspect-square rounded overflow-hidden bg-surface-tint">
+            <ProductImage src={it.product.image_url} alt="" sizes="(max-width: 768px) 30vw, 180px" />
+          </span>
+        ))}
+      </Link>
+
+      <h3 className="mt-5 text-headline-sm leading-snug">
+        <Link href={href} className="transition-colors hover:text-primary">{routine.name}</Link>
+      </h3>
+      {routine.description && <p className="mt-1.5 text-body-sm text-ink-muted line-clamp-2">{routine.description}</p>}
+
+      <ol className="mt-4 flex flex-col gap-2.5">
+        {routine.items.map((it, i) => (
+          <li key={it.product.id} className="flex items-center gap-3 text-body-sm">
+            <span className="w-6 h-6 flex-none rounded-full bg-surface-muted text-primary text-label-sm font-bold flex items-center justify-center">
+              {(i + 1).toLocaleString('ar-EG')}
+            </span>
+            <span className="flex-1 min-w-0">{it.product.name}</span>
+            <span className={`flex-none ${it.price < it.regular_price ? 'text-sale' : 'text-ink-muted'}`}>{egp(it.price)}</span>
+          </li>
+        ))}
+      </ol>
+
+      <div className="mt-auto pt-5">
+        <div className="pt-4 mb-4 border-t border-line flex flex-wrap items-end justify-between gap-2">
+          <div>
+            <span className="block text-label text-ink-muted">سعر الروتين كامل</span>
+            <span className="text-headline-sm font-bold text-primary">{egp(routine.total)}</span>
+            {routine.savings > 0 && <span className="mr-2 text-body-sm line-through text-ink-muted">{egp(routine.regular_total)}</span>}
+          </div>
+          <Link href={href} className="text-label font-bold text-primary link-underline">تفاصيل الروتين</Link>
+        </div>
+        <AddRoutineButton routine={routine} className="w-full" />
+      </div>
+    </article>
   );
 }

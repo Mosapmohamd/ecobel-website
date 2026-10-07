@@ -1,5 +1,6 @@
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException, Request
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, joinedload
 
 from .. import models, schemas, auth
@@ -12,29 +13,31 @@ router = APIRouter(prefix="/account", tags=["Customer Account"])
 @router.post("/register", response_model=schemas.Token, status_code=201)
 @limiter.limit("5/minute")
 def register(request: Request, payload: schemas.CustomerRegister, db: Session = Depends(get_db)):
-    existing = db.query(models.Customer).filter(models.Customer.phone == payload.phone).first()
-    if existing and existing.hashed_password:
+    # A new account never takes over an existing guest profile (or its
+    # orders): owning a phone number isn't proven by typing it. Past guest
+    # orders stay trackable with order number + phone.
+    taken = (
+        db.query(models.Customer)
+        .filter(models.Customer.phone == payload.phone)
+        .filter(models.Customer.hashed_password.isnot(None))
+        .first()
+    )
+    if taken:
         raise HTTPException(400, "في حساب بالفعل بنفس رقم التليفون ده — سجّلي دخول بدل كده")
 
-    if existing:
-        # A guest Customer row already exists from a previous phone-only
-        # checkout — upgrade it into a real account instead of duplicating.
-        existing.name = payload.name
-        existing.email = payload.email
-        existing.address = payload.address
-        existing.hashed_password = auth.hash_password(payload.password)
-        customer = existing
-    else:
-        customer = models.Customer(
-            name=payload.name,
-            phone=payload.phone,
-            email=payload.email,
-            address=payload.address,
-            hashed_password=auth.hash_password(payload.password),
-        )
-        db.add(customer)
-
-    db.commit()
+    customer = models.Customer(
+        name=payload.name,
+        phone=payload.phone,
+        email=payload.email,
+        address=payload.address,
+        hashed_password=auth.hash_password(payload.password),
+    )
+    db.add(customer)
+    try:
+        db.commit()
+    except IntegrityError:  # registered concurrently with the same phone
+        db.rollback()
+        raise HTTPException(400, "في حساب بالفعل بنفس رقم التليفون ده — سجّلي دخول بدل كده")
     db.refresh(customer)
     access_token = auth.create_access_token(data={"sub": customer.id, "type": "customer"})
     return {"access_token": access_token, "token_type": "bearer"}

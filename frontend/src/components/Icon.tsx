@@ -97,6 +97,18 @@ const PATHS: Record<string, React.ReactNode> = {
       <path d="M10 8l-4 4 4 4M6 12h10" />
     </>
   ),
+  info: (
+    <>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 11v5M12 8h.01" />
+    </>
+  ),
+  alert: (
+    <>
+      <path d="M10.3 4.2 2.6 17.5A2 2 0 0 0 4.3 20.5h15.4a2 2 0 0 0 1.7-3L13.7 4.2a2 2 0 0 0-3.4 0Z" />
+      <path d="M12 9.5v4M12 17h.01" />
+    </>
+  ),
   tag: (
     <>
       <path d="M3 11V5a2 2 0 0 1 2-2h6l10 10a2 2 0 0 1 0 2.83l-6.34 6.34a2 2 0 0 1-2.82 0L3 12.83" />

@@ -1,226 +1,235 @@
 'use client';
 
-import { useEffect, useMemo, useState, Suspense } from 'react';
+import { Suspense, useEffect, useMemo, useState, type FormEvent } from 'react';
 import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
-import { catalogApi, type Category, type Product, type Offer, type Routine } from '@/lib/api';
-import ProductCard from '@/components/ProductCard';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { catalogApi, type Category, type ProductPage, type ProductSort, type Routine } from '@/lib/api';
+import ProductCard, { ProductCardSkeleton } from '@/components/ProductCard';
 import RoutineCard from '@/components/RoutineCard';
 import Icon from '@/components/Icon';
-import { categoryLabel, ROUTINES_CATEGORY_ID, ROUTINES_CATEGORY_LABEL } from '@/lib/categories';
+import { errorProps } from '@/components/FieldError';
+import { ROUTINES_LABEL, ROUTINES_PATH } from '@/lib/constants';
 
-type SortOption = 'default' | 'price_asc' | 'price_desc' | 'name';
-
-const SORT_LABELS: Record<SortOption, string> = {
-  default: 'الترتيب الافتراضي',
+const PAGE_SIZE = 24;
+const SORT_LABELS: Record<ProductSort, string> = {
+  newest: 'الأحدث',
   price_asc: 'السعر: من الأقل للأعلى',
   price_desc: 'السعر: من الأعلى للأقل',
   name: 'الاسم (أ - ي)',
 };
+const grid = 'grid grid-cols-1 min-[360px]:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 lg:gap-6';
+
+const num = (v: string | null) => (v && !Number.isNaN(Number(v)) && Number(v) >= 0 ? Number(v) : undefined);
+
+/** Everything about the listing lives in the URL, so results are linkable
+ * and survive refresh/back. */
+function useCatalogQuery() {
+  const sp = useSearchParams();
+  const sort = sp.get('sort') as ProductSort | null;
+  return {
+    categoryId: sp.get('category') || undefined,
+    q: sp.get('q')?.trim() || undefined,
+    minPrice: num(sp.get('min')),
+    maxPrice: num(sp.get('max')),
+    onOffer: sp.get('offers') === '1',
+    sort: sort && sort in SORT_LABELS ? sort : 'newest',
+    page: Math.max(1, Math.floor(num(sp.get('page')) ?? 1)),
+  };
+}
+
+type Query = ReturnType<typeof useCatalogQuery>;
+
+function toSearch(q: Partial<Query>): string {
+  const p = new URLSearchParams();
+  if (q.categoryId) p.set('category', q.categoryId);
+  if (q.q) p.set('q', q.q);
+  if (q.minPrice !== undefined) p.set('min', String(q.minPrice));
+  if (q.maxPrice !== undefined) p.set('max', String(q.maxPrice));
+  if (q.onOffer) p.set('offers', '1');
+  if (q.sort && q.sort !== 'newest') p.set('sort', q.sort);
+  if (q.page && q.page > 1) p.set('page', String(q.page));
+  const s = p.toString();
+  return s ? `?${s}` : '';
+}
+
+function chipClass(active: boolean) {
+  return `inline-flex items-center gap-1.5 h-10 px-4 rounded border text-label-lg font-bold whitespace-nowrap transition-colors ${
+    active
+      ? 'bg-primary border-primary text-surface'
+      : 'bg-surface border-line text-ink-secondary hover:border-primary hover:text-primary'
+  }`;
+}
 
 function ProductsContent() {
-  const searchParams = useSearchParams();
-  const categoryId = searchParams.get('category') || undefined;
-  const q = searchParams.get('q') || undefined;
-  const isRoutinesView = categoryId === ROUTINES_CATEGORY_ID;
-
+  const query = useCatalogQuery();
+  const router = useRouter();
+  const pathname = usePathname();
   const [categories, setCategories] = useState<Category[]>([]);
-  const [products, setProducts] = useState<Product[]>([]);
-  const [offers, setOffers] = useState<Offer[]>([]);
-  const [routines, setRoutines] = useState<Routine[]>([]);
-  const [routinesLoading, setRoutinesLoading] = useState(true);
-  const [loading, setLoading] = useState(true);
-  const [sort, setSort] = useState<SortOption>('default');
-  const [minPrice, setMinPrice] = useState('');
-  const [maxPrice, setMaxPrice] = useState('');
+  const [routineCount, setRoutineCount] = useState(0);
+  const [attempt, setAttempt] = useState(0);
+  const key = toSearch(query);
+  const [result, setResult] = useState<{ key: string; page: ProductPage | null; error: string | null } | null>(null);
 
   useEffect(() => {
     catalogApi.categories().then(setCategories).catch(() => {});
-    catalogApi.offers().then(setOffers).catch(() => {});
-    catalogApi.routines().then(setRoutines).catch(() => {}).finally(() => setRoutinesLoading(false));
+    catalogApi.routines().then((r) => setRoutineCount(r.length)).catch(() => {});
   }, []);
 
   useEffect(() => {
-    if (isRoutinesView) {
-      setLoading(false);
-      return;
-    }
-    setLoading(true);
+    let cancelled = false;
     catalogApi
-      .products({ categoryId, q })
-      .then(setProducts)
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, [categoryId, q, isRoutinesView]);
+      .products({
+        categoryId: query.categoryId,
+        q: query.q,
+        minPrice: query.minPrice,
+        maxPrice: query.maxPrice,
+        onOffer: query.onOffer,
+        sort: query.sort,
+        limit: PAGE_SIZE,
+        offset: (query.page - 1) * PAGE_SIZE,
+      })
+      .then((page) => !cancelled && setResult({ key, page, error: null }))
+      .catch((err) => !cancelled && setResult({ key, page: null, error: err instanceof Error ? err.message : 'تعذر تحميل المنتجات' }));
+    return () => {
+      cancelled = true;
+    };
+    // `key` encodes every query field.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key, attempt]);
 
-  const offerByProductId = useMemo(() => {
-    const map = new Map<string, Offer>();
-    offers.forEach((o) => map.set(o.product_id, o));
-    return map;
-  }, [offers]);
+  const productsLoading = result?.key !== key;
 
-  const visibleProducts = useMemo(() => {
-    const min = minPrice ? Number(minPrice) : null;
-    const max = maxPrice ? Number(maxPrice) : null;
-    let list = products.filter((p) => {
-      const effectivePrice = offerByProductId.get(p.id)?.offer_price ?? p.sale_price;
-      if (min !== null && effectivePrice < min) return false;
-      if (max !== null && effectivePrice > max) return false;
-      return true;
-    });
-    const effective = (p: Product) => offerByProductId.get(p.id)?.offer_price ?? p.sale_price;
-    switch (sort) {
-      case 'price_asc':
-        list = [...list].sort((a, b) => effective(a) - effective(b));
-        break;
-      case 'price_desc':
-        list = [...list].sort((a, b) => effective(b) - effective(a));
-        break;
-      case 'name':
-        list = [...list].sort((a, b) => a.name.localeCompare(b.name, 'ar'));
-        break;
-    }
-    return list;
-  }, [products, sort, minPrice, maxPrice, offerByProductId]);
+  // A search also finds routines — unless a product-only filter (category,
+  // price, offers) narrows it, since routines have none of those.
+  const routineQuery = query.q && !query.categoryId && query.minPrice === undefined && query.maxPrice === undefined && !query.onOffer ? query.q : null;
+  const [routineResult, setRoutineResult] = useState<{ q: string; routines: Routine[] } | null>(null);
+  useEffect(() => {
+    if (!routineQuery) return;
+    let cancelled = false;
+    catalogApi
+      .routines(routineQuery)
+      .then((routines) => !cancelled && setRoutineResult({ q: routineQuery, routines }))
+      // Routine matches are a bonus to the product results — if they can't
+      // load, the products still show (and carry their own error state).
+      .catch(() => !cancelled && setRoutineResult({ q: routineQuery, routines: [] }));
+    return () => {
+      cancelled = true;
+    };
+  }, [routineQuery, attempt]);
+  const routinesLoading = !!routineQuery && routineResult?.q !== routineQuery;
+  const matchedRoutines = routineQuery && !routinesLoading ? routineResult?.routines ?? [] : [];
+  // Show results only once both have arrived, so nothing jumps around.
+  const loading = productsLoading || routinesLoading;
+  const page = loading ? null : result?.page ?? null;
+  const error = productsLoading ? null : result?.error ?? null;
 
-  const activeCategory = categories.find((c) => c.id === categoryId);
-  const title = q ? `نتائج البحث عن "${q}"` : isRoutinesView ? ROUTINES_CATEGORY_LABEL : activeCategory ? categoryLabel(activeCategory.name) : 'كل المنتجات';
-  const qSuffix = q ? `&q=${encodeURIComponent(q)}` : '';
-  const hasFilters = !!minPrice || !!maxPrice || sort !== 'default';
-
-  function chipClass(active: boolean) {
-    return `inline-flex items-center gap-1.5 h-10 px-4 rounded border text-[14px] font-bold transition-colors whitespace-nowrap ${
-      active
-        ? 'bg-[var(--forest)] border-[var(--forest)] text-white'
-        : 'bg-white border-[var(--line)] text-[var(--muted-strong)] hover:border-[var(--forest)] hover:text-[var(--forest)]'
-    }`;
+  function update(changes: Partial<Query>) {
+    // Any filter change starts again from page 1.
+    router.push(`${pathname}${toSearch({ ...query, page: 1, ...changes })}`, { scroll: changes.page !== undefined });
   }
+
+  const activeCategory = categories.find((c) => c.id === query.categoryId);
+  const totalAll = useMemo(() => categories.reduce((sum, c) => sum + c.product_count, 0), [categories]);
+  const title = query.q ? `نتائج البحث عن "${query.q}"` : activeCategory ? activeCategory.name : query.onOffer ? 'العروض والتخفيضات' : 'كل المنتجات';
+  const hasFilters = query.minPrice !== undefined || query.maxPrice !== undefined || query.onOffer || query.sort !== 'newest';
+  const pages = page ? Math.max(1, Math.ceil(page.total / PAGE_SIZE)) : 1;
 
   return (
     <div>
-      <section className="border-b" style={{ background: 'var(--parchment)', borderColor: 'var(--line)' }}>
-        <div className="mx-auto max-w-6xl px-5 py-8">
-          <nav aria-label="مسار التصفح" className="flex items-center gap-1.5 text-[13px] mb-3" style={{ color: 'var(--muted)' }}>
-            <Link href="/" className="hover:text-[var(--forest)] transition-colors">الرئيسية</Link>
+      <section className="border-b border-line bg-surface-tint">
+        <div className="page-container py-8">
+          <nav aria-label="مسار التصفح" className="flex flex-wrap items-center gap-1.5 text-body-sm text-ink-muted mb-3">
+            <Link href="/" className="hover:text-primary transition-colors">الرئيسية</Link>
             <Icon name="chevronLeft" size={14} />
-            {activeCategory || isRoutinesView || q ? (
+            {activeCategory || query.q || query.onOffer ? (
               <>
-                <Link href="/products" className="hover:text-[var(--forest)] transition-colors">كل المنتجات</Link>
+                <Link href="/products" className="hover:text-primary transition-colors">كل المنتجات</Link>
                 <Icon name="chevronLeft" size={14} />
-                <span style={{ color: 'var(--ink)' }}>{q ? 'البحث' : title}</span>
+                <span className="text-ink" aria-current="page">{query.q ? 'البحث' : title}</span>
               </>
             ) : (
-              <span style={{ color: 'var(--ink)' }}>كل المنتجات</span>
+              <span className="text-ink" aria-current="page">كل المنتجات</span>
             )}
           </nav>
-          <h1 className="text-[30px] lg:text-[40px] leading-tight">{title}</h1>
-          {q && (
-            <Link href="/products" className="text-[13.5px] font-bold link-underline mt-2 inline-block" style={{ color: 'var(--forest)' }}>
-              عرض كل المنتجات
-            </Link>
+          <h1 className="text-headline-md lg:text-headline-lg">{title}</h1>
+          {page && (
+            <p className="mt-1 text-body-sm text-ink-muted" role="status">
+              {page.total.toLocaleString('ar-EG')} منتج
+              {matchedRoutines.length > 0 && ` و${matchedRoutines.length.toLocaleString('ar-EG')} روتين`}
+            </p>
           )}
         </div>
       </section>
 
-      <div className="mx-auto max-w-6xl px-5 py-8">
-        <div className="flex gap-2 overflow-x-auto scrollbar-hide -mx-5 px-5 sm:mx-0 sm:px-0 sm:flex-wrap mb-6">
-          <Link href={q ? `/products?q=${encodeURIComponent(q)}` : '/products'} className={chipClass(!categoryId)}>
+      <div className="page-container py-8">
+        <nav aria-label="الفئات" className="flex gap-2 overflow-x-auto scrollbar-hide -mx-5 px-5 lg:mx-0 lg:px-0 lg:flex-wrap mb-6">
+          <Link href={`/products${toSearch({ q: query.q })}`} className={chipClass(!query.categoryId)} aria-current={!query.categoryId ? 'page' : undefined}>
             الكل
+            {totalAll > 0 && <span className="text-label font-medium opacity-75">({totalAll.toLocaleString('ar-EG')})</span>}
           </Link>
           {categories.map((c) => (
-            <Link key={c.id} href={`/products?category=${c.id}${qSuffix}`} className={chipClass(categoryId === c.id)}>
-              {categoryLabel(c.name)}
-              <span className="text-[12px] font-medium opacity-75">({c.product_count.toLocaleString('ar-EG')})</span>
+            <Link
+              key={c.id}
+              href={`/products${toSearch({ categoryId: c.id, q: query.q })}`}
+              className={chipClass(query.categoryId === c.id)}
+              aria-current={query.categoryId === c.id ? 'page' : undefined}
+            >
+              {c.name}
+              <span className="text-label font-medium opacity-75">({c.product_count.toLocaleString('ar-EG')})</span>
             </Link>
           ))}
-          {routines.length > 0 && (
-            <Link href={`/products?category=${ROUTINES_CATEGORY_ID}`} className={chipClass(isRoutinesView)}>
-              {ROUTINES_CATEGORY_LABEL}
-              <span className="text-[12px] font-medium opacity-75">({routines.length.toLocaleString('ar-EG')})</span>
+          {routineCount > 0 && (
+            <Link href={ROUTINES_PATH} className={chipClass(false)}>
+              {ROUTINES_LABEL}
+              <span className="text-label font-medium opacity-75">({routineCount.toLocaleString('ar-EG')})</span>
             </Link>
           )}
-        </div>
+        </nav>
 
-        {isRoutinesView ? (
-          <>
-            <p className="text-[13.5px] mb-6" style={{ color: 'var(--muted)' }}>
-              {routinesLoading ? '' : `${routines.length.toLocaleString('ar-EG')} روتين`}
+        <Filters query={query} onApply={update} hasFilters={hasFilters} />
+
+        {loading ? (
+          <div className={grid} aria-busy="true">
+            <span className="sr-only" role="status">جاري تحميل المنتجات...</span>
+            {Array.from({ length: 8 }, (_, i) => <ProductCardSkeleton key={i} />)}
+          </div>
+        ) : error ? (
+          <div role="alert" className="notice notice-error flex flex-wrap items-center justify-between gap-3">
+            <span>{error}</span>
+            <button type="button" className="btn btn-secondary btn-sm" onClick={() => setAttempt((n) => n + 1)}>حاولي تاني</button>
+          </div>
+        ) : (!page || page.items.length === 0) && matchedRoutines.length === 0 ? (
+          <div className="text-center py-16">
+            <p className="text-body text-ink-muted mb-5">
+              {query.q ? `مفيش منتجات مطابقة لـ "${query.q}".` : 'مفيش منتجات مطابقة للاختيارات دي.'}
             </p>
-            {routinesLoading ? (
-              <p style={{ color: 'var(--muted)' }}>جاري التحميل...</p>
-            ) : routines.length === 0 ? (
-              <p style={{ color: 'var(--muted)' }}>لا توجد روتينات متاحة حاليًا.</p>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {routines.map((r) => (
-                  <RoutineCard key={r.id} routine={r} />
-                ))}
-              </div>
-            )}
-          </>
+            <Link href="/products" className="btn btn-secondary">عرض كل المنتجات</Link>
+          </div>
         ) : (
           <>
-            <div
-              className="flex flex-wrap items-center justify-between gap-3 mb-6 p-3 rounded border"
-              style={{ borderColor: 'var(--line)', background: 'var(--cream)' }}
-            >
-              <p className="text-[13.5px] px-1" style={{ color: 'var(--muted)' }}>
-                {loading ? '' : `عرض ${visibleProducts.length.toLocaleString('ar-EG')} منتج`}
-              </p>
-              <div className="flex flex-wrap items-center gap-3">
-                <div className="flex items-center gap-1.5 text-[13px]">
-                  <span style={{ color: 'var(--muted-strong)' }}>السعر:</span>
-                  <input
-                    type="number" min={0} placeholder="من" value={minPrice} aria-label="أقل سعر"
-                    onChange={(e) => setMinPrice(e.target.value)}
-                    className="input !w-20 !py-2 !text-[13px] text-center"
-                  />
-                  <span style={{ color: 'var(--muted)' }}>—</span>
-                  <input
-                    type="number" min={0} placeholder="إلى" value={maxPrice} aria-label="أعلى سعر"
-                    onChange={(e) => setMaxPrice(e.target.value)}
-                    className="input !w-20 !py-2 !text-[13px] text-center"
-                  />
-                  <span style={{ color: 'var(--muted)' }}>ج.م</span>
+            {matchedRoutines.length > 0 && (
+              <section aria-labelledby="search-routines" className="mb-10">
+                <h2 id="search-routines" className="text-headline-sm mb-4">
+                  روتينات مطابقة <span className="text-body-sm text-ink-muted">({matchedRoutines.length.toLocaleString('ar-EG')})</span>
+                </h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {matchedRoutines.map((r) => <RoutineCard key={r.id} routine={r} />)}
                 </div>
-                <label className="flex items-center gap-1.5 text-[13px]">
-                  <span style={{ color: 'var(--muted-strong)' }}>ترتيب:</span>
-                  <select
-                    value={sort}
-                    onChange={(e) => setSort(e.target.value as SortOption)}
-                    className="input !w-auto !py-2 !text-[13px]"
-                  >
-                    {(Object.keys(SORT_LABELS) as SortOption[]).map((key) => (
-                      <option key={key} value={key}>{SORT_LABELS[key]}</option>
-                    ))}
-                  </select>
-                </label>
-                {hasFilters && (
-                  <button
-                    type="button"
-                    onClick={() => { setMinPrice(''); setMaxPrice(''); setSort('default'); }}
-                    className="text-[12.5px] underline transition-colors text-[var(--muted)] hover:text-[var(--forest)]"
-                  >
-                    إعادة تعيين
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {loading ? (
-              <p style={{ color: 'var(--muted)' }}>جاري التحميل...</p>
-            ) : visibleProducts.length === 0 ? (
-              <div className="text-center py-16">
-                <p className="mb-5" style={{ color: 'var(--muted)' }}>{q ? 'مفيش منتجات مطابقة للبحث.' : 'لا توجد منتجات مطابقة.'}</p>
-                <Link href="/products" className="btn btn-secondary">عرض كل المنتجات</Link>
+              </section>
+            )}
+            {matchedRoutines.length > 0 && (
+              <h2 className="text-headline-sm mb-4">
+                منتجات مطابقة <span className="text-body-sm text-ink-muted">({(page?.total ?? 0).toLocaleString('ar-EG')})</span>
+              </h2>
+            )}
+            {page && page.items.length > 0 ? (
+              <div className={grid}>
+                {page.items.map((p) => <ProductCard key={p.id} product={p} />)}
               </div>
             ) : (
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 lg:gap-6">
-                {visibleProducts.map((p) => (
-                  <ProductCard key={p.id} product={p} offer={offerByProductId.get(p.id)} />
-                ))}
-              </div>
+              <p className="text-body text-ink-muted">مفيش منتجات مطابقة لـ &quot;{query.q}&quot;.</p>
             )}
+            {page && pages > 1 && <Pagination current={query.page} pages={pages} total={page.total} onPage={(n) => update({ page: n })} />}
           </>
         )}
       </div>
@@ -228,9 +237,117 @@ function ProductsContent() {
   );
 }
 
+/** Sort, price range and "offers only" — the same controls on every
+ * screen size; price applies on submit, the rest immediately. */
+function Filters({ query, onApply, hasFilters }: { query: Query; onApply: (c: Partial<Query>) => void; hasFilters: boolean }) {
+  const [min, setMin] = useState(query.minPrice?.toString() ?? '');
+  const [max, setMax] = useState(query.maxPrice?.toString() ?? '');
+  // Keep the inputs in step with the URL (back/forward, reset).
+  const [synced, setSynced] = useState(`${query.minPrice}|${query.maxPrice}`);
+  const urlPrice = `${query.minPrice}|${query.maxPrice}`;
+  if (urlPrice !== synced) {
+    setSynced(urlPrice);
+    setMin(query.minPrice?.toString() ?? '');
+    setMax(query.maxPrice?.toString() ?? '');
+  }
+
+  const [priceError, setPriceError] = useState<string | null>(null);
+
+  function applyPrice(e: FormEvent) {
+    e.preventDefault();
+    const lo = num(min.trim() || null);
+    const hi = num(max.trim() || null);
+    if ((min.trim() && lo === undefined) || (max.trim() && hi === undefined)) {
+      setPriceError('اكتبي السعر بالأرقام (صفر أو أكتر)');
+      return;
+    }
+    setPriceError(null);
+    onApply(lo !== undefined && hi !== undefined && lo > hi ? { minPrice: hi, maxPrice: lo } : { minPrice: lo, maxPrice: hi });
+  }
+
+  return (
+    <div className="mb-6 rounded bg-surface-tint p-4 flex flex-col lg:flex-row lg:items-center gap-4 lg:gap-6">
+      <label className="flex items-center gap-2 text-body-sm">
+        <span className="flex-none font-bold text-ink-secondary">ترتيب حسب</span>
+        <select
+          value={query.sort}
+          onChange={(e) => onApply({ sort: e.target.value as ProductSort })}
+          className="input !w-auto !py-2 !text-body-sm flex-1 lg:flex-none"
+        >
+          {(Object.keys(SORT_LABELS) as ProductSort[]).map((k) => (
+            <option key={k} value={k}>{SORT_LABELS[k]}</option>
+          ))}
+        </select>
+      </label>
+
+      <form onSubmit={applyPrice} noValidate className="flex flex-wrap items-center gap-2 text-body-sm">
+        <span className="font-bold text-ink-secondary">السعر</span>
+        <input type="number" inputMode="numeric" min={0} placeholder="من" value={min} onChange={(e) => setMin(e.target.value)} aria-label="أقل سعر بالجنيه" {...errorProps('price-err', priceError)} className="input !w-24 !py-2 !text-body-sm text-center" />
+        <span className="text-ink-muted">—</span>
+        <input type="number" inputMode="numeric" min={0} placeholder="إلى" value={max} onChange={(e) => setMax(e.target.value)} aria-label="أعلى سعر بالجنيه" {...errorProps('price-err', priceError)} className="input !w-24 !py-2 !text-body-sm text-center" />
+        <span className="text-ink-muted">ج.م</span>
+        <button type="submit" className="btn btn-primary btn-sm !min-h-10">تطبيق</button>
+        {priceError && <p id="price-err" role="alert" className="basis-full text-[12px] text-error">{priceError}</p>}
+      </form>
+
+      <label className="flex items-center gap-2 text-body-sm font-bold text-ink-secondary cursor-pointer">
+        <input
+          type="checkbox"
+          checked={query.onOffer}
+          onChange={(e) => onApply({ onOffer: e.target.checked })}
+          className="w-4 h-4 accent-[var(--color-primary)]"
+        />
+        العروض فقط
+      </label>
+
+      {hasFilters && (
+        <button
+          type="button"
+          onClick={() => onApply({ minPrice: undefined, maxPrice: undefined, onOffer: false, sort: 'newest' })}
+          className="lg:mr-auto self-start text-body-sm underline text-ink-muted hover:text-primary transition-colors"
+        >
+          إعادة تعيين الفلاتر
+        </button>
+      )}
+    </div>
+  );
+}
+
+function Pagination({ current, pages, total, onPage }: { current: number; pages: number; total: number; onPage: (n: number) => void }) {
+  const from = (current - 1) * PAGE_SIZE + 1;
+  const to = Math.min(current * PAGE_SIZE, total);
+  const btn = 'min-w-10 h-10 px-3 rounded border text-label-lg font-bold transition-colors disabled:opacity-40 disabled:cursor-not-allowed';
+  return (
+    <nav aria-label="صفحات النتائج" className="mt-10 pt-6 border-t border-line flex flex-col sm:flex-row items-center justify-between gap-4">
+      <p className="text-body-sm text-ink-muted">
+        عرض {from.toLocaleString('ar-EG')}–{to.toLocaleString('ar-EG')} من {total.toLocaleString('ar-EG')} منتج
+      </p>
+      <div className="flex flex-wrap items-center gap-2">
+        <button type="button" className={`${btn} border-line bg-surface`} disabled={current <= 1} onClick={() => onPage(current - 1)}>
+          السابق
+        </button>
+        {Array.from({ length: pages }, (_, i) => i + 1).map((n) => (
+          <button
+            key={n}
+            type="button"
+            aria-current={n === current ? 'page' : undefined}
+            className={`${btn} ${n === current ? 'bg-primary border-primary text-surface' : 'border-line bg-surface hover:border-primary'}`}
+            onClick={() => onPage(n)}
+          >
+            {n.toLocaleString('ar-EG')}
+          </button>
+        ))}
+        <button type="button" className={`${btn} border-line bg-surface`} disabled={current >= pages} onClick={() => onPage(current + 1)}>
+          التالي
+        </button>
+      </div>
+    </nav>
+  );
+}
+
 export default function ProductsPage() {
   return (
-    <Suspense fallback={<div className="mx-auto max-w-6xl px-5 py-12">جاري التحميل...</div>}>
+    <Suspense fallback={<div className="page-container py-12 text-body text-ink-muted">جاري التحميل...</div>}>
       <ProductsContent />
     </Suspense>
   );

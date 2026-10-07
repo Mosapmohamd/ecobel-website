@@ -1,13 +1,13 @@
 import type { ReactElement } from 'react';
 import Link from 'next/link';
 import type { Category } from '@/lib/api';
-import { categoryLabel, ROUTINES_CATEGORY_ID, ROUTINES_CATEGORY_LABEL } from '@/lib/categories';
+import { ROUTINES_LABEL, ROUTINES_PATH } from '@/lib/constants';
+import SectionHeader from './SectionHeader';
 
 type IconFn = (p: { color: string }) => ReactElement;
 
-// Catalog category names come back in English from the API (e.g. "Skin
-// Care") — matched case-insensitively, with the original Arabic terms kept
-// as a fallback in case any category is ever named in Arabic.
+// Icon per category, matched on the catalog's (Arabic) category name;
+// the English terms keep older category names matching too.
 const ICONS: { match: RegExp; icon: IconFn }[] = [
   {
     match: /skin|بشرة/i,
@@ -93,12 +93,13 @@ function iconFor(name: string): IconFn {
 export default function CategoryIconRow({
   categories,
   routinesCount = 0,
+  tone = 'tint',
 }: {
   categories: Category[];
-  /** Pass routines.length from the homepage to surface "الروتين" as a
-   * first-class entry alongside real categories — no backend category
-   * exists for it, so this stays purely presentational. */
+  /** Pass routines.length to surface "الروتين" as a first-class entry
+   * alongside the real categories. */
   routinesCount?: number;
+  tone?: 'surface' | 'tint';
 }) {
   if (categories.length === 0) return null;
 
@@ -106,15 +107,15 @@ export default function CategoryIconRow({
     ...categories.map((c) => ({
       key: c.id,
       href: `/products?category=${c.id}`,
-      label: categoryLabel(c.name),
+      label: c.name,
       meta: `${c.product_count.toLocaleString('ar-EG')} منتج`,
       Icon: iconFor(c.name),
     })),
     ...(routinesCount > 0
       ? [{
-          key: ROUTINES_CATEGORY_ID,
-          href: `/products?category=${ROUTINES_CATEGORY_ID}`,
-          label: ROUTINES_CATEGORY_LABEL,
+          key: 'routines',
+          href: ROUTINES_PATH,
+          label: ROUTINES_LABEL,
           meta: `${routinesCount.toLocaleString('ar-EG')} روتين`,
           Icon: ROUTINES_ICON,
         }]
@@ -122,37 +123,32 @@ export default function CategoryIconRow({
   ];
 
   return (
-    <section style={{ background: 'var(--parchment)' }}>
-      <div className="mx-auto max-w-6xl px-5 py-12">
-        <div className="flex items-end justify-between mb-8">
-          <div>
-            <span className="kicker">فئات مختارة بعناية</span>
-            <h2 className="text-[28px] leading-tight">تسوّقي حسب الفئة</h2>
-          </div>
-          <Link href="/products" className="text-[13.5px] font-bold link-underline" style={{ color: 'var(--forest)' }}>
-            عرض كل المنتجات
-          </Link>
-        </div>
-        <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-7 gap-3 sm:gap-4">
+    <section aria-labelledby="home-categories" className={`section ${tone === 'tint' ? 'bg-surface-tint' : 'bg-surface'}`}>
+      <div className="page-container">
+        <SectionHeader
+          id="home-categories"
+          kicker="فئات مختارة بعناية"
+          title="تسوّقي حسب الفئة"
+          link={{ href: '/products', label: 'كل المنتجات' }}
+        />
+        <ul className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-3 sm:gap-4">
           {tiles.map(({ key, href, label, meta, Icon }) => (
-            <Link
-              key={key}
-              href={href}
-              className="card card-hover group flex flex-col items-center text-center gap-3 px-2 py-5"
-            >
-              <span
-                className="w-14 h-14 rounded-full flex items-center justify-center transition-colors group-hover:bg-[var(--parchment-2)]"
-                style={{ background: 'var(--parchment)' }}
+            <li key={key}>
+              <Link
+                href={href}
+                className="card card-hover group h-full flex flex-col items-center text-center gap-3 px-3 py-5"
               >
-                <Icon color="var(--forest)" />
-              </span>
-              <div>
-                <div className="text-[13.5px] sm:text-[14.5px] font-bold leading-snug">{label}</div>
-                <div className="text-[12px] mt-0.5" style={{ color: 'var(--muted)' }}>{meta}</div>
-              </div>
-            </Link>
+                <span className="w-16 h-16 rounded-full flex items-center justify-center bg-surface-tint transition-transform group-hover:scale-105">
+                  <Icon color="var(--color-primary)" />
+                </span>
+                <span>
+                  <span className="block text-label-lg font-bold leading-snug transition-colors group-hover:text-primary">{label}</span>
+                  <span className="block text-label-sm mt-1 text-ink-muted">{meta}</span>
+                </span>
+              </Link>
+            </li>
           ))}
-        </div>
+        </ul>
       </div>
     </section>
   );

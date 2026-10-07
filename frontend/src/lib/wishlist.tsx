@@ -1,61 +1,44 @@
 'use client';
 
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
-import type { Product } from './api';
+import { createContext, useContext, type ReactNode } from 'react';
+import { createPersistedStore } from './persistedStore';
+
+/** The wishlist remembers product ids only; the wishlist page loads each
+ * product fresh, so prices and availability are never stale. */
+function parseIds(raw: unknown): string[] {
+  if (!Array.isArray(raw)) return [];
+  const ids = raw.flatMap((item) => {
+    if (typeof item === 'string') return [item];
+    // Older wishlists stored whole product snapshots.
+    if (item && typeof item === 'object' && typeof (item as { id?: unknown }).id === 'string') return [(item as { id: string }).id];
+    return [];
+  });
+  return Array.from(new Set(ids));
+}
+
+const store = createPersistedStore<string[]>('ecobel_wishlist', [], parseIds);
 
 interface WishlistContextValue {
-  items: Product[];
+  ids: string[];
   has: (productId: string) => boolean;
-  toggle: (product: Product) => void;
+  toggle: (productId: string) => void;
   remove: (productId: string) => void;
   count: number;
 }
 
 const WishlistContext = createContext<WishlistContextValue | null>(null);
-const STORAGE_KEY = 'ecobel_wishlist';
 
 export function WishlistProvider({ children }: { children: ReactNode }) {
-  const [items, setItems] = useState<Product[]>([]);
-  const [loaded, setLoaded] = useState(false);
-
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) setItems(JSON.parse(raw));
-    } catch {
-      // ignore corrupt storage
-    }
-    setLoaded(true);
-  }, []);
-
-  useEffect(() => {
-    if (!loaded) return;
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
-    } catch {
-      // storage full/unavailable
-    }
-  }, [items, loaded]);
-
-  function has(productId: string) {
-    return items.some((p) => p.id === productId);
-  }
-
-  function toggle(product: Product) {
-    setItems((prev) =>
-      prev.some((p) => p.id === product.id) ? prev.filter((p) => p.id !== product.id) : [...prev, product]
-    );
-  }
-
-  function remove(productId: string) {
-    setItems((prev) => prev.filter((p) => p.id !== productId));
-  }
-
-  return (
-    <WishlistContext.Provider value={{ items, has, toggle, remove, count: items.length }}>
-      {children}
-    </WishlistContext.Provider>
-  );
+  const ids = store.useValue();
+  const value: WishlistContextValue = {
+    ids,
+    has: (productId) => ids.includes(productId),
+    toggle: (productId) =>
+      store.set((prev) => (prev.includes(productId) ? prev.filter((id) => id !== productId) : [...prev, productId])),
+    remove: (productId) => store.set((prev) => prev.filter((id) => id !== productId)),
+    count: ids.length,
+  };
+  return <WishlistContext.Provider value={value}>{children}</WishlistContext.Provider>;
 }
 
 export function useWishlist() {

@@ -11,7 +11,7 @@ type Status = 'loading' | 'ready' | 'empty' | 'error';
  * of the homepage so a slow/failed request never blocks page render, and
  * renders nothing (not an error, not a fake empty-state banner) unless it
  * has real reviews to show. */
-export default function HomeReviews({ productIds }: { productIds: string[] }) {
+export default function HomeReviews({ productIds, tone = 'tint' }: { productIds: string[]; tone?: 'surface' | 'tint' }) {
   const ids = useMemo(() => productIds.slice(0, 3), [productIds]);
   const [status, setStatus] = useState<Status>(ids.length === 0 ? 'empty' : 'loading');
   const [reviews, setReviews] = useState<Review[]>([]);
@@ -59,37 +59,33 @@ export default function HomeReviews({ productIds }: { productIds: string[] }) {
   if (status !== 'ready') return null;
 
   return (
-    <section style={{ background: 'var(--parchment)' }}>
-      <div className="mx-auto max-w-6xl px-5 py-16">
-      <div className="flex items-end justify-between mb-8 flex-wrap gap-3">
-        <div>
-          <span className="kicker">عميلاتنا بيحكوا</span>
-          <h2 className="text-[28px] lg:text-[34px] leading-tight">آراء حقيقية من عميلاتنا</h2>
-        </div>
-        {total > 0 && (
-          <div className="flex items-center gap-2">
-            <Stars value={average} size={18} />
-            <span className="text-[14px] font-bold">{average.toFixed(1)}</span>
-            <span className="text-[13px]" style={{ color: 'var(--muted)' }}>({total.toLocaleString('ar-EG')} تقييم)</span>
+    <section aria-labelledby="home-reviews" className={`section ${tone === 'tint' ? 'bg-surface-tint' : 'bg-surface'}`}>
+      <div className="page-container">
+        <div className="mb-8 flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <span className="kicker">عميلاتنا بيحكوا</span>
+            <h2 id="home-reviews" className="text-headline-md lg:text-headline-lg">آراء حقيقية من عميلاتنا</h2>
           </div>
-        )}
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-        {reviews.map((r) => (
-          <div key={r.id} className="card p-6">
-            <Stars value={r.rating} />
-            {r.comment && (
-              <p className="mt-3 text-[14px] leading-relaxed" style={{ color: 'var(--ink)' }}>
-                {r.comment}
-              </p>
-            )}
-            <div className="mt-4 pt-3 border-t text-[13.5px] font-bold" style={{ borderColor: 'var(--line)' }}>
-              {r.customer_name}
+          {total > 0 && (
+            <div className="flex items-center gap-2">
+              <Stars value={average} size={18} />
+              <span className="text-label-lg font-bold">{average.toFixed(1)}</span>
+              <span className="text-body-sm text-ink-muted">({total.toLocaleString('ar-EG')} تقييم)</span>
             </div>
-          </div>
-        ))}
-      </div>
+          )}
+        </div>
+
+        <ul className="grid grid-cols-1 md:grid-cols-3 gap-5">
+          {reviews.map((r) => (
+            <li key={r.id} className="card p-6 flex flex-col">
+              <Stars value={r.rating} />
+              {r.comment && <p className="mt-3 text-body text-ink">{r.comment}</p>}
+              <div className="mt-auto pt-4">
+                <div className="pt-3 border-t border-line text-label font-bold">{r.customer_name}</div>
+              </div>
+            </li>
+          ))}
+        </ul>
       </div>
     </section>
   );

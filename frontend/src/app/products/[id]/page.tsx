@@ -1,241 +1,264 @@
 'use client';
 
-import { useEffect, useState, use as usePromise } from 'react';
+import { useCallback, useEffect, useState, use as usePromise } from 'react';
 import Link from 'next/link';
-import { catalogApi, type Product, type Offer } from '@/lib/api';
+import { catalogApi, reviewApi, type Product, type ReviewSummary } from '@/lib/api';
 import { useCart } from '@/lib/cart';
+import { useWishlist } from '@/lib/wishlist';
+import { useToast } from '@/lib/toast';
 import ProductCard from '@/components/ProductCard';
 import ProductImage from '@/components/ProductImage';
-import ReviewsSection from '@/components/ReviewsSection';
+import ReviewsSection, { Stars } from '@/components/ReviewsSection';
 import Icon, { type IconName } from '@/components/Icon';
-import { useWishlist } from '@/lib/wishlist';
-import { categoryLabel } from '@/lib/categories';
-import { FREE_SHIPPING_THRESHOLD } from '@/lib/constants';
+import { egp, FREE_SHIPPING_THRESHOLD } from '@/lib/constants';
 
+/** Store-wide policies (the same ones the trust strip states). */
 const GUARANTEES: { icon: IconName; title: string; text: string }[] = [
   { icon: 'truck', title: 'شحن لكل المحافظات', text: `مجاني للطلبات فوق ${FREE_SHIPPING_THRESHOLD.toLocaleString('ar-EG')} ج.م` },
   { icon: 'cash', title: 'الدفع عند الاستلام', text: 'ادفعي لما الطلب يوصلك' },
   { icon: 'return', title: 'استبدال خلال 14 يوم', text: 'استبدال سهل بدون تعقيد' },
-  { icon: 'leaf', title: 'مكونات طبيعية 100%', text: 'تركيبات آمنة بدون مواد ضارة' },
+  { icon: 'leaf', title: 'مكونات طبيعية', text: 'تركيبات آمنة بدون مواد ضارة' },
 ];
 
 export default function ProductDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = usePromise(params);
-  const [product, setProduct] = useState<Product | null>(null);
-  const [offer, setOffer] = useState<Offer | undefined>(undefined);
+  const [state, setState] = useState<{ id: string; product: Product | null; error: string | null } | null>(null);
   const [related, setRelated] = useState<Product[]>([]);
-  const [error, setError] = useState<string | null>(null);
-  const [quantity, setQuantity] = useState(1);
+  const [reviews, setReviews] = useState<{ id: string; summary: ReviewSummary } | null>(null);
+  const [qty, setQty] = useState<{ id: string; value: number }>({ id, value: 1 });
   const [added, setAdded] = useState(false);
   const { add } = useCart();
   const { has, toggle } = useWishlist();
+  const toast = useToast();
 
   useEffect(() => {
-    setProduct(null);
-    setError(null);
-    setQuantity(1);
+    let cancelled = false;
     catalogApi
       .product(id)
-      .then(setProduct)
-      .catch(() => setError('المنتج غير موجود'));
-    catalogApi.offers().then((offers) => setOffer(offers.find((o) => o.product_id === id))).catch(() => {});
+      .then((product) => !cancelled && setState({ id, product, error: null }))
+      .catch((err) => !cancelled && setState({ id, product: null, error: err instanceof Error ? err.message : 'المنتج غير موجود' }));
+    catalogApi.related(id).then((r) => !cancelled && setRelated(r)).catch(() => !cancelled && setRelated([]));
+    return () => {
+      cancelled = true;
+    };
   }, [id]);
 
-  useEffect(() => {
-    if (!product) return;
-    catalogApi
-      .products({ categoryId: product.category_id })
-      .then((list) => setRelated(list.filter((p) => p.id !== product.id).slice(0, 4)))
-      .catch(() => {});
-  }, [product]);
+  const loadReviews = useCallback(() => {
+    reviewApi.list(id).then((summary) => setReviews({ id, summary })).catch(() => {});
+  }, [id]);
+  useEffect(loadReviews, [loadReviews]);
 
-  if (error) {
+  const current = state?.id === id ? state : null;
+  const summary = reviews?.id === id ? reviews.summary : null;
+  const quantity = qty.id === id ? qty.value : 1;
+
+  if (current?.error || (current && !current.product)) {
     return (
-      <div className="mx-auto max-w-6xl px-5 py-16 text-center">
-        <p style={{ color: 'var(--muted)' }}>{error}</p>
+      <div className="page-container py-16 text-center">
+        <p className="text-body text-ink-muted">{current.error ?? 'المنتج غير موجود'}</p>
         <Link href="/products" className="btn btn-secondary mt-4 inline-flex">الرجوع للمنتجات</Link>
       </div>
     );
   }
 
+  const product = current?.product;
   if (!product) {
-    return <div className="mx-auto max-w-6xl px-5 py-16" style={{ color: 'var(--muted)' }}>جاري التحميل...</div>;
-  }
-
-  const wished = has(product.id);
-  const price = offer?.offer_price ?? product.sale_price;
-  const percentOff = offer ? Math.round((1 - offer.offer_price / product.sale_price) * 100) : 0;
-
-  return (
-    <div className="mx-auto max-w-6xl px-5 py-8 lg:py-10">
-      <nav aria-label="مسار التصفح" className="text-[13px] mb-6 flex items-center gap-1.5 flex-wrap" style={{ color: 'var(--muted)' }}>
-        <Link href="/" className="hover:text-[var(--forest)] transition-colors">الرئيسية</Link>
-        <Icon name="chevronLeft" size={14} />
-        <Link href={`/products?category=${product.category_id}`} className="hover:text-[var(--forest)] transition-colors">
-          {categoryLabel(product.category_name)}
-        </Link>
-        <Icon name="chevronLeft" size={14} />
-        <span className="line-clamp-1" style={{ color: 'var(--ink)' }}>{product.name}</span>
-      </nav>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-14 items-start">
-        <div className="md:sticky md:top-24">
-          <div className="relative aspect-square rounded overflow-hidden border" style={{ borderColor: 'var(--line)', background: 'var(--parchment)' }}>
-            <ProductImage src={product.image_url} alt={product.name} sizes="(max-width: 768px) 100vw, 50vw" />
-            <div className="absolute top-3 right-3 flex flex-col items-start gap-2">
-              {offer && (
-                <span className="badge" style={{ background: 'var(--rose)', color: '#fff' }}>
-                  خصم {percentOff.toLocaleString('ar-EG')}%
-                </span>
-              )}
-              <span className="badge flex items-center gap-1" style={{ background: 'rgba(255,255,255,0.92)', color: 'var(--ok)' }}>
-                <Icon name="leaf" size={13} />
-                طبيعي 100%
-              </span>
-            </div>
-          </div>
-        </div>
-
-        <div>
-          <div className="text-[12.5px] font-bold" style={{ color: 'var(--sage)' }}>{categoryLabel(product.category_name)}</div>
-          <h1 className="text-[28px] lg:text-[36px] leading-[1.35] mt-1">{product.name}</h1>
-
-          <div className="mt-3">
-            {product.stock_status === 'ok' && (
-              <span className="inline-flex items-center gap-1.5 text-[13px] font-bold" style={{ color: 'var(--ok)' }}>
-                <Icon name="checkCircle" size={16} />
-                متوفر وجاهز للشحن
-              </span>
-            )}
-            {product.stock_status === 'low' && (
-              <span className="inline-flex items-center gap-1.5 text-[13px] font-bold" style={{ color: 'var(--rose)' }}>
-                <Icon name="box" size={16} />
-                كمية محدودة — اطلبيه قبل ما يخلص
-              </span>
-            )}
-            {product.stock_status === 'out' && (
-              <span className="inline-flex items-center gap-1.5 text-[13px] font-bold" style={{ color: 'var(--error)' }}>
-                <Icon name="close" size={16} />
-                نفدت الكمية
-              </span>
-            )}
-          </div>
-
-          <div className="mt-5 pb-5 border-b flex items-baseline flex-wrap gap-3" style={{ borderColor: 'var(--line)' }}>
-            <span className="text-[30px] font-bold" style={{ color: offer ? 'var(--rose)' : 'var(--ink)' }}>
-              {price.toLocaleString('ar-EG')} ج.م
-            </span>
-            {offer && (
-              <>
-                <span className="text-[16px] line-through" style={{ color: 'var(--muted)' }}>
-                  {product.sale_price.toLocaleString('ar-EG')} ج.م
-                </span>
-                <span className="badge" style={{ background: 'var(--parchment-2)', color: 'var(--rose)' }}>
-                  وفّري {(product.sale_price - offer.offer_price).toLocaleString('ar-EG')} ج.م
-                </span>
-              </>
-            )}
-          </div>
-
-          {product.description && (
-            <p className="mt-5 text-[15.5px] leading-[1.9] whitespace-pre-line" style={{ color: 'var(--muted-strong)' }}>
-              {product.description}
-            </p>
-          )}
-
-          {product.stock_status !== 'out' && (
-            <div className="mt-7 flex items-stretch gap-3">
-              <div className="flex items-center border rounded flex-none" style={{ borderColor: 'var(--line)' }}>
-                <button
-                  className="w-11 h-12 flex items-center justify-center disabled:opacity-40"
-                  aria-label="زيادة الكمية"
-                  disabled={quantity >= product.quantity}
-                  onClick={() => setQuantity((q) => Math.min(product.quantity, q + 1))}
-                >
-                  <Icon name="plus" size={16} />
-                </button>
-                <span className="w-9 text-center font-bold">{quantity.toLocaleString('ar-EG')}</span>
-                <button
-                  className="w-11 h-12 flex items-center justify-center disabled:opacity-40"
-                  aria-label="تقليل الكمية"
-                  disabled={quantity <= 1}
-                  onClick={() => setQuantity((q) => Math.max(1, q - 1))}
-                >
-                  <Icon name="minus" size={16} />
-                </button>
-              </div>
-              <button
-                className="btn btn-primary flex-1"
-                onClick={() => {
-                  add(offer ? { ...product, sale_price: offer.offer_price } : product, quantity);
-                  setAdded(true);
-                  setTimeout(() => setAdded(false), 1800);
-                }}
-              >
-                {added ? (
-                  <>
-                    <Icon name="check" size={18} strokeWidth={2.5} />
-                    تمت الإضافة للسلة
-                  </>
-                ) : (
-                  <>
-                    <Icon name="bag" size={18} />
-                    أضيفي للسلة — {(price * quantity).toLocaleString('ar-EG')} ج.م
-                  </>
-                )}
-              </button>
-              <button
-                className="btn btn-secondary flex-none !px-0 w-12"
-                aria-label={wished ? 'إزالة من المفضلة' : 'أضيفي للمفضلة'}
-                aria-pressed={wished}
-                onClick={() => toggle(product)}
-                style={wished ? { color: 'var(--rose)', borderColor: 'var(--rose)' } : undefined}
-              >
-                <Icon name="heart" size={20} style={{ fill: wished ? 'currentColor' : 'none' }} />
-              </button>
-            </div>
-          )}
-
-          <div className="mt-7 grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {GUARANTEES.map((g) => (
-              <div key={g.title} className="flex items-center gap-3 rounded border p-3" style={{ borderColor: 'var(--line)', background: 'var(--parchment)' }}>
-                <span className="w-9 h-9 rounded-full bg-white flex items-center justify-center flex-none" style={{ color: 'var(--ok)' }}>
-                  <Icon name={g.icon} size={18} />
-                </span>
-                <div>
-                  <div className="text-[13.5px] font-bold">{g.title}</div>
-                  <div className="text-[12px]" style={{ color: 'var(--muted)' }}>{g.text}</div>
-                </div>
-              </div>
-            ))}
+    return (
+      <div className="page-container py-12" aria-busy="true">
+        <span className="sr-only" role="status">جاري التحميل...</span>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-14 animate-pulse motion-reduce:animate-none" aria-hidden="true">
+          <div className="aspect-square rounded bg-surface-tint" />
+          <div className="flex flex-col gap-4">
+            <div className="h-4 w-1/4 rounded bg-surface-muted" />
+            <div className="h-9 w-3/4 rounded bg-surface-muted" />
+            <div className="h-24 rounded bg-surface-tint" />
+            <div className="h-12 rounded bg-surface-muted" />
           </div>
         </div>
       </div>
+    );
+  }
 
-      <ReviewsSection productId={product.id} />
+  const wished = has(product.id);
+  const onOffer = product.price < product.sale_price;
+  const percentOff = onOffer ? Math.round((1 - product.price / product.sale_price) * 100) : 0;
+  const available = product.max_quantity > 0;
+  const setQuantity = (value: number) => setQty({ id, value: Math.max(1, Math.min(product.max_quantity, value)) });
+
+  return (
+    <div>
+      <section className="border-b border-line bg-surface-tint">
+        <nav aria-label="مسار التصفح" className="page-container py-4 flex flex-wrap items-center gap-1.5 text-body-sm text-ink-muted">
+          <Link href="/" className="hover:text-primary transition-colors">الرئيسية</Link>
+          <Icon name="chevronLeft" size={14} />
+          <Link href={`/products?category=${product.category_id}`} className="hover:text-primary transition-colors">{product.category_name}</Link>
+          <Icon name="chevronLeft" size={14} />
+          <span className="text-ink line-clamp-1" aria-current="page">{product.name}</span>
+        </nav>
+      </section>
+
+      <div className="page-container py-8 lg:py-12">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-14 items-start">
+          <div className="md:sticky md:top-28">
+            <div className="relative aspect-square rounded overflow-hidden border border-line bg-surface-tint">
+              <ProductImage src={product.image_url} alt={product.name} sizes="(max-width: 767px) 100vw, 580px" preload />
+              {percentOff > 0 && (
+                <span className="absolute top-3 right-3 badge bg-sale text-surface">خصم {percentOff.toLocaleString('ar-EG')}%</span>
+              )}
+            </div>
+          </div>
+
+          <div>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <Link href={`/products?category=${product.category_id}`} className="text-label font-bold text-primary hover:underline">
+                {product.category_name}
+              </Link>
+              {available ? (
+                <span className={`badge ${product.stock_status === 'low' ? 'bg-surface-muted text-sale' : 'bg-success/15 text-success-strong'}`}>
+                  <Icon name={product.stock_status === 'low' ? 'box' : 'checkCircle'} size={13} />
+                  {product.stock_status === 'low' ? 'كمية محدودة' : 'متوفر وجاهز للشحن'}
+                </span>
+              ) : (
+                <span className="badge bg-error/10 text-error">
+                  <Icon name="close" size={13} />
+                  نفدت الكمية
+                </span>
+              )}
+            </div>
+            <h1 className="mt-2 text-headline-md lg:text-headline-lg">{product.name}</h1>
+
+            {summary && summary.review_count > 0 && (
+              <a href="#reviews" className="mt-3 inline-flex items-center gap-2 text-body-sm">
+                <Stars value={summary.average_rating} />
+                <span className="font-bold">{summary.average_rating.toFixed(1)}</span>
+                <span className="text-ink-muted underline">{summary.review_count.toLocaleString('ar-EG')} تقييم</span>
+              </a>
+            )}
+
+            <div className="mt-6 rounded bg-surface-tint p-5">
+              <div className="flex flex-wrap items-baseline gap-3">
+                <span className={`text-headline-md font-bold ${onOffer ? 'text-sale' : 'text-ink'}`}>{egp(product.price)}</span>
+                {onOffer && (
+                  <>
+                    <span className="text-body line-through text-ink-muted">{egp(product.sale_price)}</span>
+                    <span className="badge bg-sale text-surface">وفّري {egp(product.sale_price - product.price)}</span>
+                  </>
+                )}
+              </div>
+              {product.offer && <p className="mt-1 text-body-sm font-bold text-sale">{product.offer.title}</p>}
+            </div>
+
+            {product.description && (
+              <p className="mt-6 text-body-lg text-ink-secondary whitespace-pre-line">{product.description}</p>
+            )}
+
+            {available ? (
+              <div className="mt-7 flex items-stretch gap-3">
+                <div className="flex items-center border border-line rounded flex-none">
+                  <button
+                    type="button"
+                    className="w-11 h-12 flex items-center justify-center disabled:opacity-40"
+                    aria-label="زيادة الكمية"
+                    disabled={quantity >= product.max_quantity}
+                    onClick={() => setQuantity(quantity + 1)}
+                  >
+                    <Icon name="plus" size={16} />
+                  </button>
+                  <span className="w-9 text-center font-bold" aria-live="polite">{quantity.toLocaleString('ar-EG')}</span>
+                  <button
+                    type="button"
+                    className="w-11 h-12 flex items-center justify-center disabled:opacity-40"
+                    aria-label="تقليل الكمية"
+                    disabled={quantity <= 1}
+                    onClick={() => setQuantity(quantity - 1)}
+                  >
+                    <Icon name="minus" size={16} />
+                  </button>
+                </div>
+                <button
+                  type="button"
+                  className="btn btn-primary flex-1 min-w-0"
+                  onClick={() => {
+                    add(product.id, quantity);
+                    setAdded(true);
+                    setTimeout(() => setAdded(false), 1800);
+                    toast.show(`تمت إضافة ${product.name} للسلة`, { action: { label: 'عرض السلة', href: '/cart' } });
+                  }}
+                >
+                  {added ? (
+                    <>
+                      <Icon name="check" size={18} strokeWidth={2.5} />
+                      تمت الإضافة للسلة
+                    </>
+                  ) : (
+                    <>
+                      <Icon name="bag" size={18} />
+                      <span className="truncate">أضيفي للسلة — {egp(product.price * quantity)}</span>
+                    </>
+                  )}
+                </button>
+                <WishlistButton wished={wished} name={product.name} onToggle={() => toggle(product.id)} />
+              </div>
+            ) : (
+              <div className="mt-7 flex items-stretch gap-3">
+                <p className="flex-1 notice notice-info">المنتج ده نفد حاليًا — ضيفيه للمفضلة عشان ترجعيله بسهولة.</p>
+                <WishlistButton wished={wished} name={product.name} onToggle={() => toggle(product.id)} />
+              </div>
+            )}
+
+            <ul className="mt-7 grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {GUARANTEES.map((g) => (
+                <li key={g.title} className="flex items-center gap-3 rounded bg-surface-tint p-3">
+                  <span className="w-9 h-9 rounded-full bg-surface flex items-center justify-center flex-none text-success">
+                    <Icon name={g.icon} size={18} />
+                  </span>
+                  <span>
+                    <span className="block text-label font-bold">{g.title}</span>
+                    <span className="block text-label-sm text-ink-muted">{g.text}</span>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+
+        <div className="mt-16">
+          <ReviewsSection productId={product.id} summary={summary} onSubmitted={loadReviews} />
+        </div>
+      </div>
 
       {related.length > 0 && (
-        <section className="mt-20">
-          <div className="flex items-end justify-between mb-8 gap-4">
-            <div>
-              <span className="kicker">قد يعجبك أيضًا</span>
-              <h2 className="text-[28px] leading-tight">منتجات مشابهة</h2>
+        <section aria-labelledby="related-title" className="section bg-surface-tint">
+          <div className="page-container">
+            <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
+              <div>
+                <span className="kicker">من نفس الفئة</span>
+                <h2 id="related-title" className="text-headline-md lg:text-headline-lg">منتجات مشابهة</h2>
+              </div>
+              <Link href={`/products?category=${product.category_id}`} className="text-label font-bold text-primary link-underline">
+                كل {product.category_name}
+              </Link>
             </div>
-            <Link
-              href={`/products?category=${product.category_id}`}
-              className="text-[13.5px] font-bold link-underline flex-none"
-              style={{ color: 'var(--forest)' }}
-            >
-              كل {categoryLabel(product.category_name)}
-            </Link>
-          </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 lg:gap-6">
-            {related.map((p) => (
-              <ProductCard key={p.id} product={p} />
-            ))}
+            <div className="grid grid-cols-1 min-[360px]:grid-cols-2 md:grid-cols-4 gap-4 lg:gap-6">
+              {related.map((p) => <ProductCard key={p.id} product={p} />)}
+            </div>
           </div>
         </section>
       )}
     </div>
+  );
+}
+
+function WishlistButton({ wished, name, onToggle }: { wished: boolean; name: string; onToggle: () => void }) {
+  return (
+    <button
+      type="button"
+      className={`btn btn-secondary flex-none !px-0 w-12 ${wished ? '!text-sale !border-sale' : ''}`}
+      aria-label={wished ? `إزالة ${name} من المفضلة` : `إضافة ${name} للمفضلة`}
+      aria-pressed={wished}
+      onClick={onToggle}
+    >
+      <Icon name="heart" size={20} style={{ fill: wished ? 'currentColor' : 'none' }} />
+    </button>
   );
 }

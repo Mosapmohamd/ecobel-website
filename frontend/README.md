@@ -8,7 +8,7 @@ API. Same brand identity as the rest of the Eco Bel project (forest green
 
 ```bash
 npm install
-cp .env.local.example .env.local   # set NEXT_PUBLIC_API_BASE if the backend isn't on :8001
+cp .env.local.example .env.local   # set NEXT_PUBLIC_API_BASE if the backend isn't on :8002
 npm run dev
 ```
 
