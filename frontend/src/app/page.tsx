@@ -2,145 +2,165 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { catalogApi, type Category, type Product, type Offer, type Routine } from '@/lib/api';
-import ProductCard from '@/components/ProductCard';
-import OfferCard from '@/components/OfferCard';
+import { catalogApi, type Category, type Product, type Routine } from '@/lib/api';
+import ProductCard, { ProductCardSkeleton } from '@/components/ProductCard';
 import RoutineCard from '@/components/RoutineCard';
-import HeroBanner from '@/components/HeroBanner';
+import HeroCarousel from '@/components/HeroCarousel';
 import CategoryIconRow from '@/components/CategoryIconRow';
 import TrustStrip from '@/components/TrustStrip';
 import BrandStory from '@/components/BrandStory';
 import HomeReviews from '@/components/HomeReviews';
-import { ROUTINES_CATEGORY_ID } from '@/lib/categories';
+import ClosingCta from '@/components/ClosingCta';
+import SectionHeader from '@/components/SectionHeader';
+import { ROUTINES_PATH } from '@/lib/constants';
+import { HERO_SLIDES, buildHeroSlides } from '@/lib/heroSlides';
+
+type Tone = 'surface' | 'tint';
+const OFFERS_SHOWN = 8;
+const productGrid = 'grid grid-cols-1 min-[360px]:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6';
+
+interface HomeData {
+  categories: Category[];
+  /** Exactly what staff featured in the accounting system, in order. */
+  featured: Product[];
+  featuredRoutines: Routine[];
+  offers: Product[];
+  routineCount: number;
+}
 
 export default function HomePage() {
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [products, setProducts] = useState<Product[]>([]);
-  const [offers, setOffers] = useState<Offer[]>([]);
-  const [routines, setRoutines] = useState<Routine[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [data, setData] = useState<HomeData | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
-    Promise.all([catalogApi.categories(), catalogApi.products(), catalogApi.offers(), catalogApi.routines()])
-      .then(([c, p, o, r]) => {
-        setCategories(c);
-        setProducts(p);
-        setOffers(o);
-        setRoutines(r);
+    let cancelled = false;
+    Promise.all([
+      catalogApi.categories(),
+      catalogApi.featuredProducts(),
+      catalogApi.featuredRoutines(),
+      catalogApi.products({ onOffer: true, limit: OFFERS_SHOWN }),
+      catalogApi.routines(),
+    ])
+      .then(([categories, featured, featuredRoutines, offers, routines]) => {
+        if (cancelled) return;
+        setData({ categories, featured, featuredRoutines, offers: offers.items, routineCount: routines.length });
+        setLoadError(null);
       })
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, []);
-
-  // Prefer a real offer/product photo for the hero; otherwise the hero
-  // renders its no-image layout. Computed from data already being fetched
-  // above — no extra request.
-  const heroImage = useMemo(() => {
-    const withPhoto = offers.find((o) => o.image_url) ?? products.find((p) => p.image_url);
-    if (!withPhoto) return null;
-    return {
-      url: withPhoto.image_url as string,
-      alt: 'product_name' in withPhoto ? withPhoto.product_name : withPhoto.name,
+      .catch((err) => !cancelled && setLoadError(err instanceof Error ? err.message : 'تعذر تحميل المنتجات'));
+    return () => {
+      cancelled = true;
     };
-  }, [offers, products]);
+  }, [attempt]);
 
-  const reviewProductIds = useMemo(() => {
-    const ids = [...offers.map((o) => o.product_id), ...products.map((p) => p.id)];
-    return Array.from(new Set(ids)).slice(0, 3);
-  }, [offers, products]);
+  const heroSlides = useMemo(() => buildHeroSlides(HERO_SLIDES, data?.categories ?? []), [data]);
+  const reviewProductIds = useMemo(() => (data?.featured ?? []).map((p) => p.id).slice(0, 3), [data]);
 
-  // Homepage merchandising shows only 2 routines — chosen by total bundle
-  // value (highest first), the one signal in the real routine data that's
-  // a reasonable "feature this" proxy. The rest stay fully browsable via
-  // the "الروتين" category on /products.
-  const featuredRoutines = useMemo(() => {
-    const total = (r: Routine) => r.items.reduce((sum, it) => sum + it.sale_price, 0);
-    return [...routines].sort((a, b) => total(b) - total(a)).slice(0, 2);
-  }, [routines]);
+  const loading = data === null && loadError === null;
+  const featured = data?.featured ?? [];
+  const offers = data?.offers ?? [];
+  const featuredRoutines = data?.featuredRoutines ?? [];
+
+  // Alternate section backgrounds over the sections actually shown, so two
+  // tinted sections never sit next to each other.
+  const shownSections = [
+    'categories',
+    ...(offers.length > 0 ? ['offers'] : []),
+    ...(loading || loadError || featured.length > 0 ? ['featured'] : []),
+    ...(featuredRoutines.length > 0 ? ['routines'] : []),
+    'brand',
+    'reviews',
+  ];
+  const toneOf = (key: string): Tone => (shownSections.indexOf(key) % 2 === 0 ? 'tint' : 'surface');
+  const bg = (t: Tone) => (t === 'tint' ? 'bg-surface-tint' : 'bg-surface');
 
   return (
     <div>
-      <HeroBanner imageUrl={heroImage?.url} imageAlt={heroImage?.alt} />
+      <HeroCarousel slides={heroSlides} />
 
       <TrustStrip />
 
-      <CategoryIconRow categories={categories} routinesCount={routines.length} />
+      <CategoryIconRow categories={data?.categories ?? []} routinesCount={data?.routineCount ?? 0} tone={toneOf('categories')} />
 
-      {/* Offers */}
       {offers.length > 0 && (
-        <section className="mx-auto max-w-6xl px-5 py-16">
-          <div className="mb-8">
-            <span className="kicker" style={{ color: 'var(--rose)' }}>لفترة محدودة</span>
-            <h2 className="text-[28px] lg:text-[40px] leading-tight">العروض والتخفيضات</h2>
-            <p className="mt-2 text-[15px]" style={{ color: 'var(--muted)' }}>
-              أفضل منتجاتنا بأسعار مخفضة لفترة محدودة.
-            </p>
-          </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 lg:gap-6">
-            {offers.map((o) => (
-              <OfferCard key={o.id} offer={o} />
-            ))}
+        <section id="offers" aria-labelledby="home-offers" className={`section scroll-mt-24 ${bg(toneOf('offers'))}`}>
+          <div className="page-container">
+            <SectionHeader
+              id="home-offers"
+              kicker="لفترة محدودة"
+              kickerTone="sale"
+              title="العروض والتخفيضات"
+              description="أسعار مخفضة على مختارات من منتجاتنا لفترة محدودة."
+              link={{ href: '/products?offers=1', label: 'كل العروض' }}
+            />
+            <div className={productGrid}>
+              {offers.map((p) => <ProductCard key={p.id} product={p} />)}
+            </div>
           </div>
         </section>
       )}
 
-      {/* Routines */}
-      {featuredRoutines.length > 0 && (
-        <section style={{ background: 'var(--parchment)' }}>
-          <div className="mx-auto max-w-6xl px-5 py-16">
-            <div className="flex items-end justify-between mb-8 gap-4">
-              <div>
-                <span className="kicker">مجموعات مختارة بعناية</span>
-                <h2 className="text-[28px] lg:text-[40px] leading-tight">روتين العناية المتكامل</h2>
-                <p className="mt-2 text-[15px]" style={{ color: 'var(--muted)' }}>
-                  خطوات متناغمة لنتائج واضحة — أضيفي الروتين كامل للسلة بضغطة واحدة.
-                </p>
+      {/* Featured products — only the staff selection. Fewer than 8 → fewer
+          cards; none → the section is hidden (never filled automatically). */}
+      {(loading || loadError || featured.length > 0) && (
+        <section aria-labelledby="home-featured" className={`section ${bg(toneOf('featured'))}`}>
+          <div className="page-container">
+            <SectionHeader
+              id="home-featured"
+              kicker="مختارات Eco Bel"
+              title="منتجات مختارة لكِ"
+              link={{ href: '/products', label: 'مشاهدة الكل' }}
+            />
+            {loading ? (
+              <div className={productGrid} aria-busy="true">
+                <span className="sr-only" role="status">جاري تحميل المنتجات...</span>
+                {Array.from({ length: 4 }, (_, i) => <ProductCardSkeleton key={i} />)}
               </div>
-              <Link
-                href={`/products?category=${ROUTINES_CATEGORY_ID}`}
-                className="text-[13.5px] font-bold link-underline flex-none"
-                style={{ color: 'var(--forest)' }}
-              >
-                كل الروتينات
-              </Link>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {featuredRoutines.map((r) => (
-                <RoutineCard key={r.id} routine={r} />
-              ))}
-            </div>
+            ) : loadError ? (
+              <div role="alert" className="notice notice-error flex flex-wrap items-center justify-between gap-3">
+                <span>{loadError}</span>
+                <button type="button" className="btn btn-secondary btn-sm" onClick={() => { setLoadError(null); setAttempt((n) => n + 1); }}>
+                  حاولي تاني
+                </button>
+              </div>
+            ) : (
+              <div className={productGrid}>
+                {featured.map((p) => <ProductCard key={p.id} product={p} />)}
+              </div>
+            )}
           </div>
         </section>
       )}
 
-      {/* Featured products */}
-      <section className="mx-auto max-w-6xl px-5 py-16">
-        <div className="flex items-end justify-between mb-8 gap-4">
-          <div>
-            <span className="kicker">الأكثر طلبًا</span>
-            <h2 className="text-[28px] lg:text-[40px] leading-tight">منتجات مختارة لكِ</h2>
+      {featuredRoutines.length > 0 && (
+        <section aria-labelledby="home-routines" className={`section ${bg(toneOf('routines'))}`}>
+          <div className="page-container">
+            <SectionHeader
+              id="home-routines"
+              align="center"
+              kicker="مجموعات مختارة بعناية"
+              title="روتين العناية المتكامل"
+              description="خطوات متناغمة لنتيجة أوضح — أضيفي الروتين كامل للسلة بضغطة واحدة."
+            />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8">
+              {featuredRoutines.map((r) => <RoutineCard key={r.id} routine={r} />)}
+            </div>
+            {(data?.routineCount ?? 0) > featuredRoutines.length && (
+              <div className="mt-8 text-center">
+                <Link href={ROUTINES_PATH} className="btn btn-secondary">
+                  كل الروتينات ({(data?.routineCount ?? 0).toLocaleString('ar-EG')})
+                </Link>
+              </div>
+            )}
           </div>
-          <Link href="/products" className="text-[13.5px] font-bold link-underline flex-none" style={{ color: 'var(--forest)' }}>
-            مشاهدة الكل
-          </Link>
-        </div>
+        </section>
+      )}
 
-        {loading ? (
-          <p style={{ color: 'var(--muted)' }}>جاري التحميل...</p>
-        ) : products.length === 0 ? (
-          <p style={{ color: 'var(--muted)' }}>لا توجد منتجات متاحة حاليًا.</p>
-        ) : (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 lg:gap-6">
-            {products.slice(0, 8).map((p) => (
-              <ProductCard key={p.id} product={p} offer={offers.find((o) => o.product_id === p.id)} />
-            ))}
-          </div>
-        )}
-      </section>
+      <BrandStory tone={toneOf('brand')} />
 
-      <HomeReviews productIds={reviewProductIds} />
+      <HomeReviews productIds={reviewProductIds} tone={toneOf('reviews')} />
 
-      <BrandStory />
+      <ClosingCta />
     </div>
   );
 }

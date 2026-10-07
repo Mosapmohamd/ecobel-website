@@ -1,50 +1,42 @@
 import Link from 'next/link';
-import { FREE_SHIPPING_THRESHOLD } from '@/lib/constants';
+import { SITE_CONTACT } from '@/lib/constants';
 import Icon, { type IconName } from './Icon';
 
-const SEALS: { icon: IconName; title: string; text: string }[] = [
-  { icon: 'leaf', title: 'مكونات طبيعية', text: 'تركيبات مدروسة بدون مواد ضارة' },
-  { icon: 'truck', title: 'شحن لكل المحافظات', text: `مجانًا فوق ${FREE_SHIPPING_THRESHOLD.toLocaleString('ar-EG')} جنيه` },
-  { icon: 'cash', title: 'الدفع عند الاستلام', text: 'تدفعي براحتك لما يوصلك الطلب' },
+/** Only facts the brand already states about itself (About page). */
+const SEALS: { icon: IconName; label: string }[] = [
+  { icon: 'pin', label: 'علامة مصرية' },
+  { icon: 'leaf', label: 'بدون بارابين أو مواد ضارة' },
 ];
 
-export default function BrandStory() {
+export default function BrandStory({ tone = 'surface' }: { tone?: 'surface' | 'tint' }) {
   return (
-    <section style={{ background: 'var(--cream)' }}>
-      <div className="mx-auto max-w-6xl px-5 py-16">
-        <div
-          className="rounded border grid grid-cols-1 md:grid-cols-[1.2fr_1fr] gap-10 items-center p-8 md:p-12"
-          style={{ background: 'var(--parchment)', borderColor: 'var(--line)' }}
-        >
-          <div>
-            <span className="kicker">قصة Eco Bel</span>
-            <h2 className="text-[28px] lg:text-[34px] leading-[1.35]">
-              علامة مصرية، بمكونات طبيعية وآمنة
-            </h2>
-            <p className="mt-4 text-[15.5px] leading-[1.9]" style={{ color: 'var(--muted-strong)' }}>
-              كل منتج بنقدّمه بيتصمم بعناية عشان يجمع بين الفعالية والأمان على بشرتك وشعرك — من غير
-              بارابين أو مواد ضارة. مقرّنا في المعادي، القاهرة، وبنشحن لكل محافظات مصر مع الدفع عند
-              الاستلام.
+    <section aria-labelledby="home-brand-story" className={`section ${tone === 'tint' ? 'bg-surface-tint' : 'bg-surface'}`}>
+      <div className="page-container">
+        <div className={`rounded p-6 sm:p-8 lg:p-10 flex flex-col lg:flex-row lg:items-center justify-between gap-8 ${tone === 'tint' ? 'bg-surface' : 'bg-surface-tint'}`}>
+          <div className="max-w-2xl">
+            <span className="inline-flex items-center gap-2 rounded bg-surface px-3 py-1 text-label font-bold text-primary shadow-soft">
+              <Icon name="leaf" size={16} />
+              قصة Eco Bel
+            </span>
+            <h2 id="home-brand-story" className="mt-4 text-headline-md lg:text-headline-lg">علامة مصرية، بمكونات طبيعية وآمنة</h2>
+            <p className="mt-3 text-body-lg text-ink-secondary">
+              كل منتج بنقدّمه بيتصمم بعناية عشان يجمع بين الفعالية والأمان على بشرتك وشعرك — من غير بارابين أو مواد ضارة.
+              مقرّنا في {SITE_CONTACT.address}، وبنشحن لكل محافظات مصر مع الدفع عند الاستلام.
             </p>
-            <Link href="/about" className="btn btn-secondary mt-7">
+            <Link href="/about" className="btn btn-secondary mt-6">
               تعرفي على قصتنا أكتر
               <Icon name="arrowLeft" size={17} />
             </Link>
           </div>
 
-          <div className="flex flex-col gap-3">
-            {SEALS.map((item) => (
-              <div key={item.title} className="flex items-center gap-3 rounded border bg-white px-4 py-3.5" style={{ borderColor: 'var(--line)' }}>
-                <span className="flex-none w-10 h-10 rounded-full flex items-center justify-center" style={{ background: 'var(--parchment)', color: 'var(--ok)' }}>
-                  <Icon name={item.icon} size={19} />
-                </span>
-                <div>
-                  <div className="font-bold text-[14.5px]">{item.title}</div>
-                  <p className="text-[12.5px] mt-0.5" style={{ color: 'var(--muted)' }}>{item.text}</p>
-                </div>
-              </div>
+          <ul className="flex flex-wrap lg:flex-col gap-3 flex-none">
+            {SEALS.map((s) => (
+              <li key={s.label} className="flex items-center gap-3 rounded bg-surface px-4 py-3 shadow-soft">
+                <Icon name={s.icon} size={22} className="text-success flex-none" />
+                <span className="text-label font-bold">{s.label}</span>
+              </li>
             ))}
-          </div>
+          </ul>
         </div>
       </div>
     </section>

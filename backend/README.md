@@ -32,22 +32,22 @@ pip install -r requirements.txt
 cp .env.example .env            # DATABASE_URL must match ecobel-accounting-system's
 ```
 
-### Database — no separate migration step
+### Database schema — migrated by ecobel-accounting-system
 
-The app creates any tables it doesn't find yet the moment it starts
-(`Base.metadata.create_all` in `app/main.py`) — there's no `alembic
-upgrade` or similar command to run. It's safe against a database that
-already has data: it only creates missing tables and never touches
-existing ones.
+This service never creates or alters tables. The shared database's schema
+has one migration history, owned and applied by ecobel-accounting-system
+(start it first, or together). On startup this service logs a warning if
+the database isn't at `EXPECTED_SCHEMA_REVISION` (`app/database.py`) —
+bump that when a new migration changes a table this service maps.
 
 Run the server:
 
 ```bash
-uvicorn app.main:app --reload --port 8001
+uvicorn app.main:app --reload --port 8002
 ```
 
-(`--port 8001` avoids colliding with the accounting system's backend on
-8000 if you run both locally.) Interactive API docs: http://localhost:8001/docs
+(`--port 8002` avoids colliding with the accounting system's backend on
+8000 if you run both locally.) Interactive API docs: http://localhost:8002/docs
 
 ## API overview
 

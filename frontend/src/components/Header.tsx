@@ -1,18 +1,19 @@
 'use client';
 
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useCart } from '@/lib/cart';
 import { useWishlist } from '@/lib/wishlist';
 import { useAuth } from '@/lib/auth';
 import { catalogApi, type Category } from '@/lib/api';
-import { categoryLabel, ROUTINES_CATEGORY_ID, ROUTINES_CATEGORY_LABEL } from '@/lib/categories';
+import { ROUTINES_LABEL, ROUTINES_PATH } from '@/lib/constants';
 import Icon from './Icon';
 
 const NAV = [
   { href: '/', label: 'الرئيسية', match: (p: string) => p === '/' },
   { href: '/products', label: 'كل المنتجات', match: (p: string) => p.startsWith('/products') },
+  { href: ROUTINES_PATH, label: ROUTINES_LABEL, match: (p: string) => p.startsWith(ROUTINES_PATH) },
 ];
 const NAV_AFTER = [
   { href: '/about', label: 'عن الشركة', match: (p: string) => p.startsWith('/about') },
@@ -23,15 +24,15 @@ function NavLink({ href, label, active }: { href: string; label: string; active:
   return (
     <Link
       href={href}
-      className={`relative py-2 transition-colors ${
-        active ? 'font-bold text-[var(--forest)]' : 'font-medium text-[var(--muted-strong)] hover:text-[var(--ink)]'
+      aria-current={active ? 'page' : undefined}
+      className={`relative py-2 text-label-lg transition-colors ${
+        active ? 'font-bold text-primary' : 'font-medium text-ink-secondary hover:text-ink'
       }`}
     >
       {label}
       <span
         aria-hidden
-        className="absolute bottom-0 inset-x-0 h-[2px] transition-transform origin-right"
-        style={{ background: 'var(--forest)', transform: active ? 'scaleX(1)' : 'scaleX(0)' }}
+        className={`absolute bottom-0 inset-x-0 h-[2px] bg-primary origin-right transition-transform ${active ? 'scale-x-100' : 'scale-x-0'}`}
       />
     </Link>
   );
@@ -40,19 +41,69 @@ function NavLink({ href, label, active }: { href: string; label: string; active:
 function CountBadge({ n }: { n: number }) {
   if (n <= 0) return null;
   return (
-    <span
-      className="absolute -top-1 -left-1 flex items-center justify-center rounded-full text-[10px] font-bold"
-      style={{ minWidth: 17, height: 17, padding: '0 4px', background: 'var(--forest)', color: 'var(--cream)' }}
-    >
+    <span className="absolute top-0.5 left-0.5 min-w-[17px] h-[17px] px-1 flex items-center justify-center rounded-full bg-primary text-surface text-[10px] font-bold leading-none">
       {n.toLocaleString('ar-EG')}
     </span>
+  );
+}
+
+/** Desktop "الفئات" menu: opens on hover, on keyboard focus and on click/tap
+ * (so touch screens wide enough for the desktop nav can open it too). */
+function CategoriesMenu({ categories }: { categories: Category[] }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: PointerEvent) => {
+      if (!ref.current?.contains(e.target as Node)) setOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setOpen(false);
+    document.addEventListener('pointerdown', onDown);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('pointerdown', onDown);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [open]);
+
+  const itemClass = 'block px-4 py-2.5 text-body-sm text-ink-secondary transition-colors hover:bg-surface-tint hover:text-primary';
+
+  return (
+    <div ref={ref} className="relative group h-full flex items-center" onMouseLeave={() => setOpen(false)}>
+      <button
+        type="button"
+        aria-haspopup="true"
+        aria-expanded={open}
+        onClick={() => setOpen((v) => !v)}
+        className="flex items-center gap-1 py-2 text-label-lg font-medium text-ink-secondary hover:text-ink transition-colors"
+      >
+        الفئات
+        <Icon name="chevronDown" size={15} className={`transition-transform group-hover:rotate-180 ${open ? 'rotate-180' : ''}`} />
+      </button>
+      <div
+        className={`absolute top-full right-0 z-20 w-60 pt-2 ${open ? 'block' : 'hidden'} group-hover:block group-focus-within:block`}
+        onClick={(e) => (e.target as HTMLElement).closest('a') && setOpen(false)}
+      >
+        <div className="rounded border border-line bg-surface py-2 shadow-raised">
+          {categories.map((c) => (
+            <Link key={c.id} href={`/products?category=${c.id}`} className={itemClass}>
+              {c.name}
+            </Link>
+          ))}
+          <Link href={ROUTINES_PATH} className={`${itemClass} border-t border-line`}>
+            {ROUTINES_LABEL}
+          </Link>
+        </div>
+      </div>
+    </div>
   );
 }
 
 export default function Header() {
   const { count } = useCart();
   const { count: wishCount } = useWishlist();
-  const { customer } = useAuth();
+  const { customer, token } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
   const [query, setQuery] = useState('');
@@ -63,14 +114,23 @@ export default function Header() {
     catalogApi.categories().then(setCategories).catch(() => {});
   }, []);
 
+  useEffect(() => {
+    if (!mobileMenuOpen) return;
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setMobileMenuOpen(false);
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [mobileMenuOpen]);
+
   function handleSearch(e: FormEvent) {
     e.preventDefault();
-    if (query.trim()) router.push(`/products?q=${encodeURIComponent(query.trim())}`);
+    if (!query.trim()) return;
+    setMobileMenuOpen(false);
+    router.push(`/products?q=${encodeURIComponent(query.trim())}`);
   }
 
   const searchBox = (
     <form onSubmit={handleSearch} className="relative w-full" role="search">
-      <span className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: 'var(--muted)' }}>
+      <span className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-ink-muted">
         <Icon name="search" size={17} />
       </span>
       <input
@@ -78,153 +138,114 @@ export default function Header() {
         value={query}
         onChange={(e) => setQuery(e.target.value)}
         placeholder="ابحثي عن منتج طبيعي..."
-        aria-label="بحث"
-        className="w-full h-10 pr-9 pl-3 rounded text-[13.5px] outline-none transition-colors focus:bg-white"
-        style={{ background: 'var(--parchment)', border: '1px solid transparent' }}
-        onFocus={(e) => (e.currentTarget.style.borderColor = 'var(--forest)')}
-        onBlur={(e) => (e.currentTarget.style.borderColor = 'transparent')}
+        aria-label="بحث في المنتجات"
+        className="w-full h-10 pr-9 pl-3 rounded border border-transparent bg-surface-tint text-body-sm text-ink outline-none transition-colors placeholder:text-ink-muted focus:bg-surface focus:border-primary"
       />
     </form>
   );
 
+  // A kept session counts even while its profile is still loading/unavailable.
+  const accountHref = token ? '/account' : '/account/login';
+  const accountLabel = token ? 'حسابي' : 'تسجيل الدخول';
+
   return (
-    <header
-      className="sticky z-40 border-b"
-      style={{ top: 'env(safe-area-inset-top, 0px)', background: 'var(--cream)', borderColor: 'var(--line)', boxShadow: '0 1px 8px rgba(0,0,0,0.04)' }}
-    >
-      <div className="mx-auto max-w-6xl px-5 h-16 flex items-center justify-between gap-5">
-        <button
-          type="button"
-          aria-label="القائمة"
-          aria-expanded={mobileMenuOpen}
-          onClick={() => setMobileMenuOpen((v) => !v)}
-          className="lg:hidden flex-none flex items-center justify-center w-9 h-9"
-          style={{ color: 'var(--ink)' }}
-        >
-          <Icon name={mobileMenuOpen ? 'close' : 'menu'} size={22} />
-        </button>
+    <header className="sticky top-0 z-40 border-b border-line bg-surface shadow-soft">
+      <div className="page-container h-16 lg:h-20 flex items-center justify-between gap-4 lg:gap-6">
+        <div className="flex items-center gap-2 flex-none">
+          <button
+            type="button"
+            aria-label={mobileMenuOpen ? 'إغلاق القائمة' : 'فتح القائمة'}
+            aria-expanded={mobileMenuOpen}
+            aria-controls="mobile-menu"
+            onClick={() => setMobileMenuOpen((v) => !v)}
+            className="xl:hidden flex items-center justify-center w-10 h-10 -mr-2 text-ink"
+          >
+            <Icon name={mobileMenuOpen ? 'close' : 'menu'} size={22} />
+          </button>
 
-        <Link href="/" className="flex items-center gap-2 flex-none">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo/ecobel-mark-black.png" alt="" width={34} height={23} style={{ height: 28, width: 'auto' }} />
-          <span className="flex flex-col leading-none">
-            <span className="text-[26px] font-bold" style={{ fontFamily: 'var(--font-display)', color: 'var(--ink)' }}>Eco Bel</span>
-            <span className="text-[10.5px] font-bold mt-0.5" style={{ color: 'var(--forest)' }}>طبيعي 100%</span>
-          </span>
-        </Link>
+          <Link href="/" className="flex items-center gap-2.5" aria-label="Eco Bel — الصفحة الرئيسية">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/logo/ecobel-mark-black.png" alt="" width={42} height={28} className="h-7 w-auto" />
+            <span className="flex flex-col leading-none">
+              <span className="font-display text-[26px] font-bold text-primary">Eco Bel</span>
+              <span className="text-label-sm font-bold text-ink-muted mt-0.5">طبيعي 100%</span>
+            </span>
+          </Link>
+        </div>
 
-        <nav className="hidden lg:flex items-center gap-7 text-[15px] h-full flex-none">
+        <nav aria-label="القائمة الرئيسية" className="hidden xl:flex items-center gap-7 h-full flex-none">
           {NAV.map((n) => <NavLink key={n.href} href={n.href} label={n.label} active={n.match(pathname)} />)}
-
-          {categories.length > 0 && (
-            <div className="relative group h-full flex items-center">
-              <button className="flex items-center gap-1 cursor-default py-2" style={{ color: 'var(--muted-strong)', fontWeight: 500 }}>
-                الفئات
-                <Icon name="chevronDown" size={14} className="transition-transform group-hover:rotate-180" />
-              </button>
-              <div className="absolute top-full right-0 hidden group-hover:block z-20" style={{ minWidth: 220 }}>
-                <div
-                  className="rounded border py-2 bg-white"
-                  style={{ borderColor: 'var(--line)', boxShadow: '0 4px 16px -2px rgba(43,35,32,0.06), 0 1px 3px rgba(43,35,32,0.03)' }}
-                >
-                  {categories.map((c) => (
-                    <Link
-                      key={c.id}
-                      href={`/products?category=${c.id}`}
-                      className="block px-4 py-2 text-[14px] text-[var(--muted-strong)] transition-colors hover:bg-[var(--parchment)] hover:text-[var(--forest)]"
-                    >
-                      {categoryLabel(c.name)}
-                    </Link>
-                  ))}
-                  <Link
-                    href={`/products?category=${ROUTINES_CATEGORY_ID}`}
-                    className="block px-4 py-2 text-[14px] text-[var(--muted-strong)] border-t transition-colors hover:bg-[var(--parchment)] hover:text-[var(--forest)]"
-                    style={{ borderColor: 'var(--line)' }}
-                  >
-                    {ROUTINES_CATEGORY_LABEL}
-                  </Link>
-                </div>
-              </div>
-            </div>
-          )}
-
+          {categories.length > 0 && <CategoriesMenu categories={categories} />}
           {NAV_AFTER.map((n) => <NavLink key={n.href} href={n.href} label={n.label} active={n.match(pathname)} />)}
         </nav>
 
-        <div className="hidden sm:block flex-1 max-w-[260px]">{searchBox}</div>
-
-        <div className="flex items-center gap-1 flex-none" style={{ color: 'var(--muted-strong)' }}>
-          <Link href="/wishlist" className="relative p-2 transition-colors hover:text-[var(--forest)]" aria-label="المفضلة">
-            <Icon name="heart" size={22} />
-            <CountBadge n={wishCount} />
-          </Link>
-          <Link href="/cart" className="relative p-2 transition-colors hover:text-[var(--forest)]" aria-label="السلة">
-            <Icon name="bag" size={22} />
-            <CountBadge n={count} />
-          </Link>
-          <Link
-            href={customer ? '/account' : '/account/login'}
-            className="relative p-2 flex items-center gap-1.5 transition-colors hover:text-[var(--forest)]"
-            aria-label={customer ? 'حسابي' : 'تسجيل الدخول'}
-          >
-            <Icon name="user" size={22} />
-            {customer && (
-              <span className="hidden xl:inline text-[13.5px] font-medium">أهلًا {customer.name.split(' ')[0]}</span>
-            )}
-          </Link>
+        <div className="flex items-center justify-end gap-3 flex-1 min-w-0">
+          <div className="hidden md:block w-full max-w-[240px]">{searchBox}</div>
+          <div className="flex items-center gap-0.5 flex-none text-ink-secondary">
+            <Link href="/wishlist" className="relative p-2 transition-colors hover:text-primary" aria-label={`المفضلة${wishCount ? ` (${wishCount})` : ''}`}>
+              <Icon name="heart" size={22} />
+              <CountBadge n={wishCount} />
+            </Link>
+            <Link href="/cart" className="relative p-2 transition-colors hover:text-primary" aria-label={`السلة${count ? ` (${count})` : ''}`}>
+              <Icon name="bag" size={22} />
+              <CountBadge n={count} />
+            </Link>
+            <Link href={accountHref} aria-label={accountLabel} className="flex items-center gap-2 p-1.5 mr-1 transition-colors hover:text-primary">
+              <span
+                className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                  customer ? 'bg-primary text-surface' : 'border border-line text-ink-secondary'
+                }`}
+              >
+                <Icon name="user" size={17} />
+              </span>
+              {customer && (
+                <span className="hidden 2xl:inline text-body-sm font-medium">أهلًا {customer.name.split(' ')[0]}</span>
+              )}
+            </Link>
+          </div>
         </div>
       </div>
 
-      <div className="sm:hidden px-5 pb-3">{searchBox}</div>
+      <div className="md:hidden page-container pb-3">{searchBox}</div>
 
-      {/* Mobile menu: primary nav + categories (desktop uses the hover nav above) */}
       {mobileMenuOpen && (
         <div
-          className="lg:hidden border-t px-5 py-4 max-h-[70vh] overflow-y-auto"
-          style={{ borderColor: 'var(--line)' }}
-          onClick={(e) => {
-            if ((e.target as HTMLElement).closest('a')) setMobileMenuOpen(false);
-          }}
+          id="mobile-menu"
+          className="xl:hidden border-t border-line bg-surface max-h-[calc(100dvh-8rem)] overflow-y-auto"
+          onClick={(e) => (e.target as HTMLElement).closest('a') && setMobileMenuOpen(false)}
         >
-          <nav className="flex flex-col text-[15px] font-medium mb-4">
-            {[...NAV, ...NAV_AFTER].map((n) => (
-              <Link
-                key={n.href}
-                href={n.href}
-                className="py-2.5 border-b"
-                style={{ borderColor: 'var(--line)', color: n.match(pathname) ? 'var(--forest)' : 'var(--ink)' }}
-              >
-                {n.label}
-              </Link>
-            ))}
-            <Link href={customer ? '/account' : '/account/login'} className="py-2.5 border-b" style={{ borderColor: 'var(--line)' }}>
-              {customer ? 'حسابي' : 'تسجيل الدخول'}
-            </Link>
-          </nav>
-          {categories.length > 0 && (
-            <>
-              <div className="text-[12.5px] font-bold mb-2" style={{ color: 'var(--sage)' }}>الفئات</div>
-              <div className="flex flex-wrap gap-2 text-[13.5px]">
-                {categories.map((c) => (
-                  <Link
-                    key={c.id}
-                    href={`/products?category=${c.id}`}
-                    className="px-3 py-1.5 rounded border"
-                    style={{ borderColor: 'var(--line)' }}
-                  >
-                    {categoryLabel(c.name)}
-                  </Link>
-                ))}
+          <div className="page-container py-4">
+            <nav aria-label="القائمة الرئيسية" className="flex flex-col text-label-lg font-medium mb-5">
+              {[...NAV, ...NAV_AFTER].map((n) => (
                 <Link
-                  href={`/products?category=${ROUTINES_CATEGORY_ID}`}
-                  className="px-3 py-1.5 rounded border"
-                  style={{ borderColor: 'var(--line)' }}
+                  key={n.href}
+                  href={n.href}
+                  aria-current={n.match(pathname) ? 'page' : undefined}
+                  className={`py-3 border-b border-line ${n.match(pathname) ? 'text-primary font-bold' : 'text-ink'}`}
                 >
-                  {ROUTINES_CATEGORY_LABEL}
+                  {n.label}
                 </Link>
-              </div>
-            </>
-          )}
+              ))}
+              <Link href={accountHref} className="py-3 border-b border-line text-ink">
+                {accountLabel}
+              </Link>
+            </nav>
+            {categories.length > 0 && (
+              <>
+                <div className="text-label font-bold text-ink-muted mb-2.5">الفئات</div>
+                <div className="flex flex-wrap gap-2 text-body-sm">
+                  {categories.map((c) => (
+                    <Link key={c.id} href={`/products?category=${c.id}`} className="px-3.5 py-2 rounded border border-line text-ink-secondary">
+                      {c.name}
+                    </Link>
+                  ))}
+                  <Link href={ROUTINES_PATH} className="px-3.5 py-2 rounded border border-line text-ink-secondary">
+                    {ROUTINES_LABEL}
+                  </Link>
+                </div>
+              </>
+            )}
+          </div>
         </div>
       )}
     </header>

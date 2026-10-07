@@ -3,93 +3,84 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { orderApi, type Order, type OrderTrackSummary } from '@/lib/api';
-
-const STATUS_LABEL: Record<string, string> = {
-  pending: 'قيد التجهيز',
-  shipped: 'في الطريق',
-  delivered: 'تم التوصيل',
-  cancelled: 'ملغي',
-};
+import { egp } from '@/lib/constants';
+import OrderStatusBadge, { OrderTotals } from '@/components/OrderStatusBadge';
 
 function isFullOrder(r: Order | OrderTrackSummary): r is Order {
   return 'items' in r;
 }
 
-function StatusBadge({ status }: { status: string }) {
-  return (
-    <span
-      className="badge"
-      style={{
-        background: status === 'delivered' || status === 'shipped' ? 'rgba(107,156,108,0.14)' : status === 'cancelled' ? 'rgba(186,26,26,0.08)' : 'var(--parchment-2)',
-        color: status === 'delivered' || status === 'shipped' ? '#3f6b40' : status === 'cancelled' ? 'var(--error)' : 'var(--forest-deep)',
-      }}
-    >
-      {STATUS_LABEL[status] || status}
-    </span>
-  );
+interface Search {
+  orderNumber: string;
+  phone: string;
+  /** Bumped on every submit, so searching the same values again re-runs it. */
+  attempt: number;
 }
+
+type Outcome = { search: Search; results: (Order | OrderTrackSummary)[] | null; error: string | null };
 
 function TrackContent() {
   const searchParams = useSearchParams();
   const [orderNumber, setOrderNumber] = useState(searchParams.get('order_number') || '');
   const [phone, setPhone] = useState(searchParams.get('phone') || '');
-  const [results, setResults] = useState<(Order | OrderTrackSummary)[] | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-
-  async function runSearch(on: string, ph: string) {
-    setError(null);
-    setLoading(true);
-    setResults(null);
-    try {
-      const result = await orderApi.track({ orderNumber: on.trim() || undefined, phone: ph.trim() || undefined });
-      setResults(Array.isArray(result) ? result : [result]);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'تعذر إيجاد الطلب');
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!orderNumber.trim() && !phone.trim()) {
-      setError('اكتبي رقم الطلب أو رقم التليفون على الأقل');
-      return;
-    }
-    runSearch(orderNumber, phone);
-  }
+  // Arriving with ?order_number=…&phone=… (e.g. from the order confirmation)
+  // searches straight away.
+  const [search, setSearch] = useState<Search | null>(() =>
+    orderNumber || phone ? { orderNumber, phone, attempt: 0 } : null,
+  );
+  const [outcome, setOutcome] = useState<Outcome | null>(null);
+  const [formError, setFormError] = useState<string | null>(null);
 
   useEffect(() => {
-    const on = searchParams.get('order_number');
-    const ph = searchParams.get('phone');
-    if (on || ph) runSearch(on || '', ph || '');
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    if (!search) return;
+    let cancelled = false;
+    orderApi
+      .track({ orderNumber: search.orderNumber.trim() || undefined, phone: search.phone.trim() || undefined })
+      .then((r) => !cancelled && setOutcome({ search, results: Array.isArray(r) ? r : [r], error: null }))
+      .catch((err) => !cancelled && setOutcome({ search, results: null, error: err instanceof Error ? err.message : 'تعذر إيجاد الطلب' }));
+    return () => {
+      cancelled = true;
+    };
+  }, [search]);
+
+  const current = outcome && outcome.search === search ? outcome : null;
+  const loading = search !== null && current === null;
+  const error = formError ?? current?.error ?? null;
+  const results = current?.results ?? null;
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!orderNumber.trim() && !phone.trim()) {
+      setFormError('اكتبي رقم الطلب أو رقم التليفون على الأقل');
+      return;
+    }
+    setFormError(null);
+    setSearch((prev) => ({ orderNumber, phone, attempt: (prev?.attempt ?? 0) + 1 }));
+  }
 
   return (
     <div className="mx-auto max-w-xl px-5 py-14">
       <span className="kicker">تتبع الطلبات</span>
       <h1 className="text-[30px] lg:text-[36px] leading-tight mb-2">تتبعي طلبك</h1>
-      <p style={{ color: 'var(--muted)' }} className="mb-8">
+      <p style={{ color: 'var(--color-ink-muted)' }} className="mb-8">
         اكتبي رقم الطلب أو رقم التليفون — مش شرط الاتنين. تفاصيل الطلب كاملة (زي العنوان) بتظهر بس
         لو كتبتي الاتنين مع بعض.
       </p>
 
       <form onSubmit={handleSubmit} className="card p-6 flex flex-col gap-4">
         <div className="field">
-          <label>رقم الطلب (اختياري)</label>
-          <input value={orderNumber} onChange={(e) => setOrderNumber(e.target.value)} placeholder="مثال: EB123456" dir="ltr" />
+          <label htmlFor="track-order">رقم الطلب (اختياري)</label>
+          <input id="track-order" value={orderNumber} onChange={(e) => setOrderNumber(e.target.value)} placeholder="مثال: EB123456" dir="ltr" />
         </div>
         <div className="field">
-          <label>رقم التليفون (اختياري)</label>
-          <input value={phone} onChange={(e) => setPhone(e.target.value)} dir="ltr" />
+          <label htmlFor="track-phone">رقم التليفون (اختياري)</label>
+          <input id="track-phone" type="tel" inputMode="numeric" autoComplete="tel" value={phone} onChange={(e) => setPhone(e.target.value)} dir="ltr" />
         </div>
         <button className="btn btn-primary" disabled={loading}>{loading ? 'جاري البحث...' : 'تتبّع'}</button>
       </form>
 
       {error && (
-        <div className="rounded p-3 mt-6 text-[13.5px]" style={{ background: 'rgba(186,26,26,0.08)', color: 'var(--error)' }}>
+        <div role="alert" className="notice notice-error mt-6">
           {error}
         </div>
       )}
@@ -97,39 +88,39 @@ function TrackContent() {
       {results && results.length > 0 && (
         <div className="flex flex-col gap-4 mt-8">
           {results.map((r) => (
-            <div key={r.order_number} className="rounded border p-5" style={{ background: 'var(--cream)', borderColor: 'var(--line)' }}>
-              <div className="flex justify-between items-center mb-3">
-                <div className="font-bold text-lg">طلب #{r.order_number}</div>
-                <StatusBadge status={r.status} />
+            <div key={r.order_number} className="rounded border p-5" style={{ background: 'var(--color-surface)', borderColor: 'var(--color-line)' }}>
+              <div className="flex justify-between items-center gap-3 mb-3">
+                <div className="font-bold text-lg">طلب <span dir="ltr">#{r.order_number}</span></div>
+                <OrderStatusBadge status={r.status} />
               </div>
 
               {isFullOrder(r) ? (
                 <>
-                  <div className="flex flex-col gap-2 text-[13.5px] mb-4">
+                  <ul className="flex flex-col gap-2 text-[13.5px] mb-4">
                     {r.items.map((it) => (
-                      <div key={it.product_id} className="flex justify-between">
-                        <span>{it.product_name} × {it.quantity}</span>
-                        <span>{it.line_total.toLocaleString('ar-EG')} ج.م</span>
-                      </div>
+                      <li key={it.product_id} className="flex justify-between gap-3">
+                        <span>{it.product_name} <span className="text-ink-muted">× {it.quantity.toLocaleString('ar-EG')}</span></span>
+                        <span className="flex-none">{egp(it.line_total)}</span>
+                      </li>
                     ))}
+                  </ul>
+                  <div className="border-t border-line pt-3">
+                    <OrderTotals order={r} />
                   </div>
-                  <div className="border-t pt-3 text-[15px] flex justify-between font-bold" style={{ borderColor: 'var(--line)' }}>
-                    <span>الإجمالي</span><span>{r.total_amount.toLocaleString('ar-EG')} ج.م</span>
-                  </div>
-                  <div className="mt-4 pt-4 border-t text-[13px]" style={{ borderColor: 'var(--line)', color: 'var(--muted)' }}>
-                    <div>عنوان التوصيل: {r.shipping_address}</div>
+                  <div className="mt-4 pt-4 border-t text-[13px]" style={{ borderColor: 'var(--color-line)', color: 'var(--color-ink-muted)' }}>
+                    <div>عنوان التوصيل: {r.city ? `${r.city} — ` : ''}{r.shipping_address}</div>
                   </div>
                 </>
               ) : (
-                <div className="text-[13.5px] flex justify-between" style={{ color: 'var(--muted)' }}>
+                <div className="text-[13.5px] flex justify-between" style={{ color: 'var(--color-ink-muted)' }}>
                   <span>{new Date(r.created_at).toLocaleDateString('ar-EG')}</span>
-                  <span className="font-bold" style={{ color: 'var(--forest)' }}>{r.total_amount.toLocaleString('ar-EG')} ج.م</span>
+                  <span className="font-bold" style={{ color: 'var(--color-primary)' }}>{egp(r.total_amount)}</span>
                 </div>
               )}
             </div>
           ))}
           {!isFullOrder(results[0]) && (
-            <p className="text-[12.5px] text-center" style={{ color: 'var(--muted)' }}>
+            <p className="text-[12.5px] text-center" style={{ color: 'var(--color-ink-muted)' }}>
               اكتبي رقم الطلب ورقم التليفون سوا عشان تشوفي التفاصيل كاملة (العنوان والمنتجات).
             </p>
           )}

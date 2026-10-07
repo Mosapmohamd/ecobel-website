@@ -1,4 +1,5 @@
 import os
+import secrets
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
@@ -14,7 +15,10 @@ from .database import get_db, DATABASE_URL
 SECRET_KEY = os.getenv("SECRET_KEY")
 if not SECRET_KEY:
     if DATABASE_URL.startswith("sqlite"):
-        SECRET_KEY = "dev-secret-change-in-production"
+        # Local SQLite (development/tests) only: a random key per process.
+        # Never a fixed string in source — anyone can read that, so it
+        # could be used to sign valid tokens. Sessions end on restart.
+        SECRET_KEY = secrets.token_urlsafe(32)
     else:
         raise RuntimeError(
             "SECRET_KEY environment variable must be set when DATABASE_URL "
@@ -49,10 +53,21 @@ def _decode(token: str) -> dict:
 
 
 def authenticate_customer(db: Session, phone: str, password: str) -> Optional[models.Customer]:
-    user = db.query(models.Customer).filter(models.Customer.phone == phone).first()
-    if not user or not user.hashed_password or not verify_password(password, user.hashed_password):
+    # Accounts only — a guest profile with the same phone is a different identity.
+    user = (
+        db.query(models.Customer)
+        .filter(models.Customer.phone == phone.strip())
+        .filter(models.Customer.hashed_password.isnot(None))
+        .first()
+    )
+    if not user or not verify_password(password, user.hashed_password):
         return None
     return user
+
+
+def _account(db: Session, customer_id: str) -> Optional[models.Customer]:
+    customer = db.get(models.Customer, customer_id)
+    return customer if customer is not None and customer.is_account else None
 
 
 def get_current_customer(
@@ -73,7 +88,7 @@ def get_current_customer(
     except JWTError:
         raise credentials_exception
 
-    customer = db.get(models.Customer, customer_id)
+    customer = _account(db, customer_id)
     if customer is None:
         raise credentials_exception
     return customer
@@ -96,4 +111,4 @@ def get_current_customer_optional(
             return None
     except JWTError:
         return None
-    return db.get(models.Customer, customer_id)
+    return _account(db, customer_id)

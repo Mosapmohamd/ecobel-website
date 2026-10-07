@@ -1,74 +1,90 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
 import { accountApi, orderApi, type Order } from '@/lib/api';
 import Link from 'next/link';
 import OrderEditor from './OrderEditor';
-import Icon, { type IconName } from '@/components/Icon';
-
-const STATUS_LABEL: Record<Order['status'], string> = {
-  pending: 'قيد التجهيز',
-  shipped: 'في الطريق',
-  delivered: 'تم التوصيل',
-  cancelled: 'ملغي',
-};
-
-const STATUS_STYLE: Record<Order['status'], { icon: IconName; bg: string; color: string }> = {
-  pending: { icon: 'box', bg: 'var(--parchment-2)', color: 'var(--forest-deep)' },
-  shipped: { icon: 'truck', bg: 'rgba(107,156,108,0.14)', color: '#3f6b40' },
-  delivered: { icon: 'checkCircle', bg: 'rgba(107,156,108,0.14)', color: '#3f6b40' },
-  cancelled: { icon: 'close', bg: 'rgba(186,26,26,0.08)', color: 'var(--error)' },
-};
+import Icon from '@/components/Icon';
+import ConfirmDialog from '@/components/ConfirmDialog';
+import OrderStatusBadge, { ORDER_STATUS_LABEL, OrderTotals } from '@/components/OrderStatusBadge';
+import { useToast } from '@/lib/toast';
+import { egp } from '@/lib/constants';
 
 type Filter = 'all' | Order['status'];
 const FILTERS: { key: Filter; label: string }[] = [
   { key: 'all', label: 'الكل' },
-  { key: 'pending', label: 'قيد التجهيز' },
-  { key: 'shipped', label: 'في الطريق' },
-  { key: 'delivered', label: 'تم التوصيل' },
-  { key: 'cancelled', label: 'ملغي' },
+  ...(['pending', 'shipped', 'delivered', 'cancelled'] as const).map((key) => ({ key, label: ORDER_STATUS_LABEL[key] })),
 ];
 
-const egp = (n: number) => `${n.toLocaleString('ar-EG')} ج.م`;
-
 export default function AccountPage() {
-  const { customer, token, loading, logout } = useAuth();
+  const { customer, token, status, profileError, retryProfile, logout } = useAuth();
   const router = useRouter();
+  const toast = useToast();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loadingOrders, setLoadingOrders] = useState(true);
+  const [ordersError, setOrdersError] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [filter, setFilter] = useState<Filter>('all');
+  const [cancelId, setCancelId] = useState<string | null>(null);
+  const [cancelling, setCancelling] = useState(false);
+  const [cancelError, setCancelError] = useState<string | null>(null);
 
+  // Only a missing/invalid session sends the customer to sign in — a
+  // profile that couldn't load right now (network) offers a retry instead.
   useEffect(() => {
-    if (!loading && !customer) router.push('/account/login');
-  }, [loading, customer, router]);
+    if (status === 'anonymous') router.push('/account/login');
+  }, [status, router]);
 
   function loadOrders() {
     if (token) {
       accountApi
         .myOrders(token)
-        .then(setOrders)
-        .catch(() => {})
+        .then((list) => {
+          setOrders(list);
+          setOrdersError(null);
+        })
+        .catch((err) => setOrdersError(err instanceof Error ? err.message : 'تعذر تحميل طلباتك'))
         .finally(() => setLoadingOrders(false));
     }
   }
-  useEffect(loadOrders, [token]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(loadOrders, [token]);
 
-  async function handleCancel(orderId: string) {
-    if (!token) return;
-    if (!confirm('متأكدة إنك عايزة تلغي الطلب ده؟')) return;
+  async function confirmCancel() {
+    if (!token || !cancelId) return;
+    setCancelling(true);
+    setCancelError(null);
     try {
-      await orderApi.cancel(orderId, token);
+      await orderApi.cancel(cancelId, token);
+      setCancelId(null);
       loadOrders();
-    } catch {
-      alert('تعذر إلغاء الطلب');
+      toast.show('تم إلغاء الطلب');
+    } catch (err) {
+      // Backend explains *why* (e.g. already shipped) — show that, not a generic line.
+      setCancelError(err instanceof Error ? err.message : 'تعذر إلغاء الطلب، حاولي تاني.');
+    } finally {
+      setCancelling(false);
     }
   }
 
-  if (loading || !customer) {
-    return <div className="mx-auto max-w-4xl px-5 py-16" style={{ color: 'var(--muted)' }}>جاري التحميل...</div>;
+  const closeCancelDialog = useCallback(() => {
+    setCancelId(null);
+    setCancelError(null);
+  }, []);
+
+  if (status === 'unverified') {
+    return (
+      <div className="mx-auto max-w-xl px-5 py-16">
+        <div role="alert" className="notice notice-error flex flex-wrap items-center justify-between gap-3">
+          <span>{profileError ?? 'تعذر تحميل بيانات حسابك'}</span>
+          <button type="button" className="btn btn-secondary btn-sm" onClick={retryProfile}>حاولي تاني</button>
+        </div>
+      </div>
+    );
+  }
+  if (!customer) {
+    return <div className="mx-auto max-w-4xl px-5 py-16" role="status" style={{ color: 'var(--color-ink-muted)' }}>جاري التحميل...</div>;
   }
 
   const visibleOrders = filter === 'all' ? orders : orders.filter((o) => o.status === filter);
@@ -76,48 +92,48 @@ export default function AccountPage() {
 
   return (
     <div>
-      <section className="border-b" style={{ background: 'var(--parchment)', borderColor: 'var(--line)' }}>
-        <div className="mx-auto max-w-6xl px-5 py-10">
+      <section className="border-b" style={{ background: 'var(--color-surface-tint)', borderColor: 'var(--color-line)' }}>
+        <div className="page-container py-10">
           <span className="kicker">حسابي</span>
           <h1 className="text-[30px] lg:text-[40px] leading-tight">أهلًا {customer.name.split(' ')[0]}</h1>
-          <p className="mt-2 text-[14.5px]" style={{ color: 'var(--muted)' }}>
+          <p className="mt-2 text-[14.5px]" style={{ color: 'var(--color-ink-muted)' }}>
             تابعي طلباتك وعدّلي الطلبات اللي لسه قيد التجهيز.
           </p>
         </div>
       </section>
 
-      <div className="mx-auto max-w-6xl px-5 py-10 grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-8 items-start">
+      <div className="page-container py-10 grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-8 items-start">
         <aside className="lg:sticky lg:top-24 flex flex-col gap-4">
-          <div className="rounded border p-5" style={{ background: 'var(--cream)', borderColor: 'var(--line)' }}>
+          <div className="rounded border p-5" style={{ background: 'var(--color-surface)', borderColor: 'var(--color-line)' }}>
             <div className="flex items-center gap-3 mb-4">
               <span
                 className="w-12 h-12 rounded-full flex items-center justify-center text-[22px] font-bold flex-none"
-                style={{ background: 'var(--parchment-2)', color: 'var(--forest)', fontFamily: 'var(--font-display)' }}
+                style={{ background: 'var(--color-surface-muted)', color: 'var(--color-primary)', fontFamily: 'var(--font-display)' }}
               >
                 {customer.name.trim().charAt(0)}
               </span>
               <h2 className="text-[20px] leading-tight">{customer.name}</h2>
             </div>
-            <div className="flex flex-col gap-2 text-[13.5px]" style={{ color: 'var(--muted-strong)' }}>
+            <div className="flex flex-col gap-2 text-[13.5px]" style={{ color: 'var(--color-ink-secondary)' }}>
               <span className="flex items-center gap-2"><Icon name="phone" size={15} /><span dir="ltr">{customer.phone}</span></span>
               {customer.email && <span className="flex items-center gap-2 break-all"><Icon name="mail" size={15} />{customer.email}</span>}
               {customer.address && <span className="flex items-start gap-2"><Icon name="pin" size={15} className="mt-0.5 flex-none" />{customer.address}</span>}
             </div>
           </div>
 
-          <nav className="rounded border overflow-hidden text-[14px] font-medium" style={{ background: 'var(--cream)', borderColor: 'var(--line)' }}>
-            <span className="flex items-center gap-2.5 px-5 py-3 border-r-2" style={{ background: 'var(--parchment)', color: 'var(--forest)', borderColor: 'var(--forest)' }}>
+          <nav className="rounded border overflow-hidden text-[14px] font-medium" style={{ background: 'var(--color-surface)', borderColor: 'var(--color-line)' }}>
+            <span className="flex items-center gap-2.5 px-5 py-3 border-r-2" style={{ background: 'var(--color-surface-tint)', color: 'var(--color-primary)', borderColor: 'var(--color-primary)' }}>
               <Icon name="box" size={18} />طلباتي
             </span>
-            <Link href="/wishlist" className="flex items-center gap-2.5 px-5 py-3 border-t transition-colors hover:bg-[var(--parchment)]" style={{ borderColor: 'var(--line)' }}>
+            <Link href="/wishlist" className="flex items-center gap-2.5 px-5 py-3 border-t transition-colors hover:bg-[var(--color-surface-tint)]" style={{ borderColor: 'var(--color-line)' }}>
               <Icon name="heart" size={18} />المفضلة
             </Link>
-            <Link href="/track" className="flex items-center gap-2.5 px-5 py-3 border-t transition-colors hover:bg-[var(--parchment)]" style={{ borderColor: 'var(--line)' }}>
+            <Link href="/track" className="flex items-center gap-2.5 px-5 py-3 border-t transition-colors hover:bg-[var(--color-surface-tint)]" style={{ borderColor: 'var(--color-line)' }}>
               <Icon name="truck" size={18} />تتبع طلب
             </Link>
             <button
-              className="w-full flex items-center gap-2.5 px-5 py-3 border-t transition-colors hover:bg-[var(--parchment)]"
-              style={{ borderColor: 'var(--line)', color: 'var(--error)' }}
+              className="w-full flex items-center gap-2.5 px-5 py-3 border-t transition-colors hover:bg-[var(--color-surface-tint)]"
+              style={{ borderColor: 'var(--color-line)', color: 'var(--color-error)' }}
               onClick={() => {
                 logout();
                 router.push('/');
@@ -133,7 +149,7 @@ export default function AccountPage() {
             <div>
               <h2 className="text-[26px] leading-tight">سجل الطلبات</h2>
               {!loadingOrders && (
-                <p className="text-[13px] mt-1" style={{ color: 'var(--muted)' }}>{orders.length.toLocaleString('ar-EG')} طلب</p>
+                <p className="text-[13px] mt-1" style={{ color: 'var(--color-ink-muted)' }}>{orders.length.toLocaleString('ar-EG')} طلب</p>
               )}
             </div>
           </div>
@@ -148,8 +164,8 @@ export default function AccountPage() {
                     onClick={() => setFilter(f.key)}
                     className={`h-9 px-3.5 rounded border text-[13px] font-bold whitespace-nowrap transition-colors ${
                       active
-                        ? 'bg-[var(--parchment)] border-[var(--forest)] text-[var(--forest)]'
-                        : 'bg-white border-[var(--line)] text-[var(--muted-strong)] hover:border-[var(--forest)]'
+                        ? 'bg-[var(--color-surface-tint)] border-[var(--color-primary)] text-[var(--color-primary)]'
+                        : 'bg-white border-[var(--color-line)] text-[var(--color-ink-secondary)] hover:border-[var(--color-primary)]'
                     }`}
                   >
                     {f.label} ({countFor(f.key).toLocaleString('ar-EG')})
@@ -160,34 +176,37 @@ export default function AccountPage() {
           )}
 
           {loadingOrders ? (
-            <p style={{ color: 'var(--muted)' }}>جاري التحميل...</p>
+            <p role="status" style={{ color: 'var(--color-ink-muted)' }}>جاري تحميل طلباتك...</p>
+          ) : ordersError ? (
+            <div role="alert" className="notice notice-error flex flex-wrap items-center justify-between gap-3">
+              <span>{ordersError}</span>
+              <button type="button" className="btn btn-secondary btn-sm" onClick={() => { setLoadingOrders(true); setOrdersError(null); loadOrders(); }}>
+                حاولي تاني
+              </button>
+            </div>
           ) : orders.length === 0 ? (
-            <div className="rounded border p-10 text-center" style={{ background: 'var(--cream)', borderColor: 'var(--line)' }}>
-              <p className="mb-5" style={{ color: 'var(--muted)' }}>لسه معملتيش أي طلب.</p>
+            <div className="rounded border p-10 text-center" style={{ background: 'var(--color-surface)', borderColor: 'var(--color-line)' }}>
+              <p className="mb-5" style={{ color: 'var(--color-ink-muted)' }}>لسه معملتيش أي طلب.</p>
               <Link href="/products" className="btn btn-primary">تسوقي الآن</Link>
             </div>
           ) : (
             <div className="flex flex-col gap-4">
               {visibleOrders.map((o) => {
-                const st = STATUS_STYLE[o.status];
                 return (
-                  <article key={o.id} className="rounded border overflow-hidden" style={{ background: 'var(--cream)', borderColor: 'var(--line)' }}>
-                    <header className="flex flex-wrap items-center justify-between gap-3 px-5 py-4 border-b" style={{ borderColor: 'var(--line)', background: 'var(--parchment)' }}>
+                  <article key={o.id} className="rounded border overflow-hidden" style={{ background: 'var(--color-surface)', borderColor: 'var(--color-line)' }}>
+                    <header className="flex flex-wrap items-center justify-between gap-3 px-5 py-4 border-b" style={{ borderColor: 'var(--color-line)', background: 'var(--color-surface-tint)' }}>
                       <div className="flex flex-wrap items-center gap-3">
                         <span className="font-bold text-[15px]">طلب رقم <span dir="ltr">#{o.order_number}</span></span>
-                        <span className="badge inline-flex items-center gap-1" style={{ background: st.bg, color: st.color }}>
-                          <Icon name={st.icon} size={13} />
-                          {STATUS_LABEL[o.status]}
-                        </span>
+                        <OrderStatusBadge status={o.status} />
                       </div>
                       <div className="text-left">
-                        <div className="text-[11.5px]" style={{ color: 'var(--muted)' }}>إجمالي الطلب</div>
+                        <div className="text-[11.5px]" style={{ color: 'var(--color-ink-muted)' }}>إجمالي الطلب</div>
                         <div className="font-bold text-[17px]">{egp(o.total_amount)}</div>
                       </div>
                     </header>
 
                     <div className="px-5 py-4">
-                      <div className="flex flex-wrap gap-x-5 gap-y-1 text-[12.5px] mb-3" style={{ color: 'var(--muted)' }}>
+                      <div className="flex flex-wrap gap-x-5 gap-y-1 text-[12.5px] mb-3" style={{ color: 'var(--color-ink-muted)' }}>
                         <span>{new Date(o.created_at).toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric' })}</span>
                         <span>{o.payment_method === 'cash_on_delivery' ? 'الدفع عند الاستلام' : o.payment_method}</span>
                         {o.city && <span>{o.city}</span>}
@@ -195,13 +214,16 @@ export default function AccountPage() {
                       <ul className="flex flex-col gap-1.5 text-[14px]">
                         {o.items.map((it) => (
                           <li key={it.product_id} className="flex justify-between gap-3">
-                            <span>{it.product_name} <span style={{ color: 'var(--muted)' }}>× {it.quantity.toLocaleString('ar-EG')}</span></span>
-                            <span className="flex-none" style={{ color: 'var(--muted-strong)' }}>{egp(it.line_total)}</span>
+                            <span>{it.product_name} <span style={{ color: 'var(--color-ink-muted)' }}>× {it.quantity.toLocaleString('ar-EG')}</span></span>
+                            <span className="flex-none" style={{ color: 'var(--color-ink-secondary)' }}>{egp(it.line_total)}</span>
                           </li>
                         ))}
                       </ul>
+                      <div className="mt-3 pt-3 border-t border-line sm:max-w-[320px] sm:mr-auto">
+                        <OrderTotals order={o} />
+                      </div>
                       {o.shipping_address && (
-                        <p className="mt-3 text-[12.5px] flex items-start gap-1.5" style={{ color: 'var(--muted)' }}>
+                        <p className="mt-3 text-[12.5px] flex items-start gap-1.5" style={{ color: 'var(--color-ink-muted)' }}>
                           <Icon name="pin" size={14} className="mt-0.5 flex-none" />
                           {o.shipping_address}
                         </p>
@@ -214,17 +236,17 @@ export default function AccountPage() {
                               order={o}
                               token={token}
                               onClose={() => setEditingId(null)}
-                              onSaved={() => { setEditingId(null); loadOrders(); }}
+                              onSaved={() => { setEditingId(null); loadOrders(); toast.show('تم حفظ تعديلات الطلب'); }}
                             />
                           )
                         ) : (
-                          <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t" style={{ borderColor: 'var(--line)' }}>
+                          <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t" style={{ borderColor: 'var(--color-line)' }}>
                             <button className="btn btn-secondary btn-sm" onClick={() => setEditingId(o.id)}>
                               تعديل الطلب / العنوان
                             </button>
                             <button
-                              className="btn btn-sm border-[var(--line)] text-[var(--error)] hover:bg-[rgba(186,26,26,0.06)]"
-                              onClick={() => handleCancel(o.id)}
+                              className="btn btn-sm border-line text-error hover:bg-[color-mix(in_srgb,var(--color-error)_6%,transparent)]"
+                              onClick={() => setCancelId(o.id)}
                             >
                               إلغاء الطلب
                             </button>
@@ -232,7 +254,7 @@ export default function AccountPage() {
                         )
                       )}
                       {o.status === 'shipped' && (
-                        <div className="mt-4 pt-4 border-t" style={{ borderColor: 'var(--line)' }}>
+                        <div className="mt-4 pt-4 border-t" style={{ borderColor: 'var(--color-line)' }}>
                           <Link
                             href={`/track?order_number=${o.order_number}&phone=${o.customer_phone}`}
                             className="btn btn-secondary btn-sm"
@@ -250,6 +272,21 @@ export default function AccountPage() {
           )}
         </section>
       </div>
+
+      <ConfirmDialog
+        open={cancelId !== null}
+        title="إلغاء الطلب"
+        message="متأكدة إنك عايزة تلغي الطلب ده؟ مش هتقدري ترجعي فيه بعد كده."
+        confirmLabel="أيوه، الغي الطلب"
+        cancelLabel="لا، رجوع"
+        tone="danger"
+        busy={cancelling}
+        busyLabel="جاري إلغاء الطلب..."
+
+        error={cancelError}
+        onConfirm={confirmCancel}
+        onCancel={closeCancelDialog}
+      />
     </div>
   );
 }

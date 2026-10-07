@@ -1,58 +1,64 @@
-@import url('https://fonts.googleapis.com/css2?family=Markazi+Text:wght@600;700&family=Tajawal:wght@400;500;700;800&display=swap');
 @import "tailwindcss";
 
-:root {
-  /* Stitch "Organic Apothecary" palette (rose/berry on white). Variable
-     NAMES are historical and used across every component — read them by
-     role, not by their literal name: --forest is "primary brand / action
-     color", --sage is "muted kicker text", --gold is "soft accent — ratings,
-     small highlights", --rose is "discounts, sale labels and urgency ONLY"
-     (not a general error color, see --error). */
-  --forest: #b5566b;        /* primary brand + single action color (Deep Rose) */
-  --forest-deep: #8e4152;   /* primary hover/pressed */
-  --berry: #973e53;         /* deep berry panels — announcement bar, footer */
-  --charcoal: #2b2320;      /* deep espresso contrast panels */
-  --sage: #6c5d58;          /* category kickers, secondary labels */
-  --gold: #e39aa6;          /* soft accent — star ratings, progress, icon fills (Petal Rose) */
-  --gold-soft: #f6e7ea;     /* faint labels on dark panels, soft highlights */
-  --parchment: #fbf2f4;     /* alternating section tint (Pale Blush) */
-  --parchment-2: #f6e7ea;   /* badges, chips, deeper tint (Rose Mist) */
-  --ink: #2b2320;           /* body text (Espresso) */
-  --cream: #ffffff;         /* card/header surfaces */
-  --line: #ede3e5;          /* hairline borders (Pale Rose Quartz) */
-  --rose: #dc4c64;          /* discounts / sale labels / urgency ONLY */
-  --ok: #6b9c6c;            /* success + botanical seals (Olive) */
-  --error: #ba1a1a;         /* errors, destructive actions, negative status */
-  --muted: #6c5d58;         /* secondary/meta text */
-  --muted-strong: #544245;  /* secondary paragraph copy */
+/* ==========================================================================
+   Eco Bel design tokens — the single source for color, type, radius and
+   elevation (Stitch "Organic Apothecary" system). Tailwind turns every
+   token here into a utility (bg-primary, text-ink-muted, text-headline-lg…)
+   AND a CSS variable (var(--color-primary)…). Never hardcode a hex value in
+   a component — add a role here instead.
+   ========================================================================== */
+@theme static {
+  /* Brand & actions */
+  --color-primary: #b5566b;        /* the single action color: CTAs, links, active states */
+  --color-primary-hover: #8e4152;  /* primary hover / pressed */
+  --color-brand-deep: #973e53;     /* deep berry panels: announcement bar, footer */
+  --color-accent: #e39aa6;         /* petal rose: star ratings, progress, soft icon fills */
 
-  --background: #ffffff;
-  --foreground: var(--ink);
+  /* Surfaces */
+  --color-surface: #ffffff;        /* canvas, cards, header */
+  --color-surface-tint: #fbf2f4;   /* alternating sections, input focus ring */
+  --color-surface-muted: #f6e7ea;  /* badges, chips, icon tiles, deeper tint */
+  --color-line: #ede3e5;           /* hairline borders */
+
+  /* Text */
+  --color-ink: #2b2320;            /* body text and headings */
+  --color-ink-secondary: #544245;  /* secondary paragraph copy */
+  --color-ink-muted: #6c5d58;      /* meta text, kickers, placeholders */
+
+  /* Semantic */
+  --color-sale: #dc4c64;           /* discounts, sale prices, urgency — never an action */
+  --color-success: #6b9c6c;        /* success, in-stock, botanical seals */
+  --color-success-strong: #3f6b40; /* success text on a tinted background */
+  --color-error: #ba1a1a;          /* errors, destructive actions */
+
+  /* Type families (loaded with next/font in app/layout.tsx) */
+  --font-display: var(--font-markazi), 'Markazi Text', serif;
+  --font-body: var(--font-tajawal), 'Tajawal', sans-serif;
+
+  /* Type scale — Stitch levels. Pair a level with its mobile step via
+     responsive classes, e.g. `text-headline-md lg:text-headline-lg`. */
+  --text-display: 3.5rem;            --text-display--line-height: 1.3;
+  --text-headline-lg: 2.5rem;        --text-headline-lg--line-height: 1.3;
+  --text-headline-md: 1.75rem;       --text-headline-md--line-height: 1.35;
+  --text-headline-sm: 1.375rem;      --text-headline-sm--line-height: 1.4;
+  --text-title: 1.125rem;            --text-title--line-height: 1.45;
+  --text-body-lg: 1.0625rem;         --text-body-lg--line-height: 1.8;
+  --text-body: 0.9375rem;            --text-body--line-height: 1.6;
+  --text-body-sm: 0.8125rem;         --text-body-sm--line-height: 1.55;
+  --text-label-lg: 0.9375rem;        --text-label-lg--line-height: 1.35;
+  --text-label: 0.8125rem;           --text-label--line-height: 1.4;
+  --text-label-sm: 0.6875rem;        --text-label-sm--line-height: 1.45;
+
+  /* Elevation. Shape: Tailwind's `rounded` (4px) everywhere; circles only for
+     1:1 icon buttons. */
+  --shadow-soft: 0 1px 8px rgba(43, 35, 32, 0.04);
+  --shadow-raised: 0 4px 16px -2px rgba(43, 35, 32, 0.06), 0 1px 3px 0 rgba(43, 35, 32, 0.03);
+  --shadow-overlay: -6px 0 24px -4px rgba(43, 35, 32, 0.1), 0 12px 32px -8px rgba(43, 35, 32, 0.18);
 }
 
-@theme inline {
-  --color-forest: var(--forest);
-  --color-forest-deep: var(--forest-deep);
-  --color-berry: var(--berry);
-  --color-charcoal: var(--charcoal);
-  --color-sage: var(--sage);
-  --color-gold: var(--gold);
-  --color-gold-soft: var(--gold-soft);
-  --color-parchment: var(--parchment);
-  --color-parchment-2: var(--parchment-2);
-  --color-ink: var(--ink);
-  --color-cream: var(--cream);
-  --color-rose: var(--rose);
-  --color-ok: var(--ok);
-  --color-error: var(--error);
-  --color-muted: var(--muted);
-  --color-muted-strong: var(--muted-strong);
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-display: 'Markazi Text', serif;
-  --font-body: 'Tajawal', sans-serif;
-}
-
+/* ==========================================================================
+   Base
+   ========================================================================== */
 * {
   box-sizing: border-box;
 }
@@ -62,8 +68,8 @@ html {
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
+  background: var(--color-surface);
+  color: var(--color-ink);
   font-family: var(--font-body);
 }
 
@@ -71,6 +77,35 @@ h1, h2, h3 {
   font-family: var(--font-display);
   font-weight: 700;
 }
+
+/* ==========================================================================
+   Layout
+   ========================================================================== */
+
+/* The one page-width container: Stitch's 1280px max with 20px mobile and
+   48px desktop margins. Used by the header, every section and the footer
+   so all edges line up. */
+.page-container {
+  margin-inline: auto;
+  width: 100%;
+  max-width: 80rem;
+  padding-inline: 1.25rem;
+}
+@media (min-width: 1024px) {
+  .page-container { padding-inline: 3rem; }
+}
+
+/* Vertical rhythm between homepage/catalog sections. */
+.section {
+  padding-block: 3rem;
+}
+@media (min-width: 1024px) {
+  .section { padding-block: 4rem; }
+}
+
+/* ==========================================================================
+   Components
+   ========================================================================== */
 
 .btn {
   display: inline-flex;
@@ -81,24 +116,32 @@ h1, h2, h3 {
   border-radius: 4px;
   padding: 0 24px;
   font-weight: 700;
-  font-size: 15px;
+  font-size: var(--text-label-lg);
   cursor: pointer;
   border: 1px solid transparent;
   transition: background-color .2s ease, color .2s ease, border-color .2s ease;
 }
-.btn:focus-visible { outline: none; box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--parchment-2); }
-/* One action color across the whole site — rose accents (--rose, --gold)
-   are never used on a clickable action, so "buy" is always this color. */
-.btn-primary { background: var(--forest); color: var(--cream); }
-.btn-primary:hover { background: var(--forest-deep); }
-.btn-secondary { background: transparent; color: var(--forest); border-color: var(--forest); }
-.btn-secondary:hover { background: var(--parchment); }
-.btn-sm { min-height: 40px; padding: 0 16px; font-size: 13.5px; }
+.btn:focus-visible { outline: none; box-shadow: 0 0 0 2px var(--color-surface), 0 0 0 4px var(--color-primary); }
+/* One action color across the whole site — sale/accent colors are never
+   used on a clickable action, so "buy" is always this color. */
+.btn-primary { background: var(--color-primary); color: var(--color-surface); }
+.btn-primary:hover { background: var(--color-primary-hover); }
+.btn-secondary { background: transparent; color: var(--color-primary); border-color: var(--color-primary); }
+.btn-secondary:hover { background: var(--color-surface-tint); }
+.btn-danger { background: var(--color-error); color: var(--color-surface); }
+.btn-danger:hover { background: color-mix(in srgb, var(--color-error) 85%, var(--color-ink)); }
+.btn-sm { min-height: 44px; padding: 0 16px; font-size: var(--text-label); }
 .btn:disabled { opacity: .5; cursor: not-allowed; }
+/* Primary action on a dark (berry) surface — same shape, inverted colors. */
+.btn-on-dark { background: var(--color-surface); color: var(--color-brand-deep); }
+.btn-on-dark:hover { background: var(--color-surface-muted); }
+.btn-on-dark:focus-visible { box-shadow: 0 0 0 2px var(--color-brand-deep), 0 0 0 4px var(--color-surface); }
+.btn-outline-on-dark { background: transparent; color: var(--color-surface); border-color: color-mix(in srgb, var(--color-surface) 55%, transparent); }
+.btn-outline-on-dark:hover { background: color-mix(in srgb, var(--color-surface) 12%, transparent); }
 
 /* Tertiary link — underline grows from the right on hover (RTL). */
 .link-underline {
-  background-image: linear-gradient(var(--forest), var(--forest));
+  background-image: linear-gradient(var(--color-primary), var(--color-primary));
   background-repeat: no-repeat;
   background-position: 100% 100%;
   background-size: 0 1px;
@@ -109,49 +152,49 @@ h1, h2, h3 {
 /* Small label above a section heading. */
 .kicker {
   display: block;
-  font-size: 13px;
+  font-size: var(--text-label);
   font-weight: 700;
-  color: var(--forest);
-  margin-bottom: 6px;
+  color: var(--color-primary);
+  margin-bottom: 4px;
 }
 
 .field label {
   display: block;
-  font-size: 13px;
+  font-size: var(--text-label);
   font-weight: 700;
-  color: var(--ink);
+  color: var(--color-ink);
   margin-bottom: 6px;
 }
 .field input, .field textarea, .field select, .input {
   width: 100%;
-  border: 1px solid var(--line);
+  border: 1px solid var(--color-line);
   border-radius: 4px;
   padding: 11px 12px;
-  font-size: 15px;
-  background: #fff;
-  color: var(--ink);
+  font-size: var(--text-body);
+  background: var(--color-surface);
+  color: var(--color-ink);
   font-family: var(--font-body);
   transition: border-color .15s, box-shadow .15s;
 }
 .field input::placeholder, .field textarea::placeholder, .input::placeholder {
-  color: var(--muted);
+  color: var(--color-ink-muted);
   opacity: .65;
 }
 .field input:focus, .field textarea:focus, .field select:focus, .input:focus {
   outline: none;
-  border-color: var(--forest);
-  box-shadow: 0 0 0 3px var(--parchment);
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-surface-tint);
 }
 
-/* Hairline card surface shared by product/offer/routine cards and panels. */
+/* Hairline card surface shared by product/routine cards and panels. */
 .card {
-  background: var(--cream);
-  border: 1px solid var(--line);
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
   border-radius: 4px;
   transition: box-shadow .2s ease;
 }
 .card-hover:hover {
-  box-shadow: 0 4px 16px -2px rgba(43, 35, 32, 0.06), 0 1px 3px 0 rgba(43, 35, 32, 0.03);
+  box-shadow: var(--shadow-raised);
 }
 
 .scrollbar-hide {
@@ -166,7 +209,7 @@ h1, h2, h3 {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  font-size: 11px;
+  font-size: var(--text-label-sm);
   font-weight: 800;
   padding: 4px 10px;
   border-radius: 4px;
@@ -175,14 +218,80 @@ h1, h2, h3 {
 /* Round social icon buttons on the berry footer (1:1 icon buttons are the
    one place a circle is allowed). */
 .social {
-  width: 34px;
-  height: 34px;
+  width: 36px;
+  height: 36px;
   border-radius: 9999px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(255, 255, 255, 0.12);
-  color: var(--cream);
+  background: color-mix(in srgb, var(--color-surface) 12%, transparent);
+  color: var(--color-surface);
   transition: background-color .2s;
 }
-.social:hover { background: rgba(255, 255, 255, 0.22); }
+.social:hover { background: color-mix(in srgb, var(--color-surface) 22%, transparent); }
+
+/* Inline status messages (form errors, load failures, notes). Always
+   rendered with role="alert" (errors) or role="status" (info). */
+.notice {
+  border-radius: 4px;
+  padding: 12px 14px;
+  font-size: var(--text-body-sm);
+  line-height: 1.7;
+}
+.notice-error {
+  background: color-mix(in srgb, var(--color-error) 8%, transparent);
+  color: var(--color-error);
+}
+.notice-info {
+  background: var(--color-surface-tint);
+  color: var(--color-ink-secondary);
+  border: 1px solid var(--color-line);
+}
+
+/* In-site dialog (replaces window.confirm/alert). */
+.dialog-backdrop {
+  background: color-mix(in srgb, var(--color-ink) 40%, transparent);
+  backdrop-filter: blur(2px);
+  animation: fade-in .18s ease-out;
+}
+.dialog-panel {
+  box-shadow: var(--shadow-overlay);
+  animation: dialog-in .22s cubic-bezier(.22,.61,.36,1);
+}
+/* Toasts — transient, non-blocking confirmations (added to cart, undo). */
+.toast {
+  box-shadow: 0 4px 16px -2px color-mix(in srgb, var(--color-ink) 14%, transparent), 0 1px 3px 0 color-mix(in srgb, var(--color-ink) 6%, transparent);
+  animation: toast-in .24s cubic-bezier(.22,.61,.36,1);
+}
+@keyframes fade-in { from { opacity: 0; } }
+@keyframes dialog-in { from { opacity: 0; transform: translateY(8px) scale(.98); } }
+@keyframes toast-in { from { opacity: 0; transform: translateY(10px); } }
+@media (prefers-reduced-motion: reduce) {
+  .dialog-backdrop, .dialog-panel, .toast { animation: none; }
+}
+
+/* Hero carousel edge controls: hidden until their hover zone, a touch, or
+   keyboard focus reveals them. Hidden ones ignore the pointer so they can
+   never swallow a click on the banner underneath. */
+.hero-edge {
+  --edge-out: 10px;
+  background: color-mix(in srgb, var(--color-surface) 92%, transparent);
+  color: var(--color-ink);
+  border-color: var(--color-line);
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(var(--edge-out), -50%);
+  transition: opacity .25s ease, transform .3s cubic-bezier(.22,.61,.36,1), background-color .2s ease, color .2s ease, border-color .2s ease;
+}
+.hero-edge[data-side="left"] { --edge-out: -10px; }
+.hero-edge[data-visible],
+.hero-edge:focus-visible {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translate(0, -50%);
+}
+.hero-edge:hover { background: var(--color-primary); color: var(--color-surface); border-color: var(--color-primary); }
+.hero-edge:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) {
+  .hero-edge { transition: opacity .15s linear, background-color .2s ease, color .2s ease; transform: translate(0, -50%); }
+}

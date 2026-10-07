@@ -1,9 +1,9 @@
 from datetime import datetime
 import re
-from typing import Optional, List
+from typing import Literal, Optional, List
 from pydantic import BaseModel, ConfigDict, Field, EmailStr, field_validator
 
-from .models import CouponDiscountType, OrderStatus
+from .models import OrderStatus
 
 _EGYPT_PHONE_RE = re.compile(r"^01\d{9}$")
 
@@ -30,16 +30,36 @@ class Token(BaseModel):
 
 # ---------------- Customer accounts ----------------
 class CustomerRegister(BaseModel):
-    name: str
+    name: str = Field(..., max_length=120)
     phone: str
     email: Optional[EmailStr] = None
-    address: Optional[str] = None
-    password: str = Field(..., min_length=6)
+    address: Optional[str] = Field(None, max_length=500)
+    password: str = Field(..., max_length=128)
+
+    @field_validator("name")
+    @classmethod
+    def _check_name(cls, v: str) -> str:
+        v = " ".join(v.split())
+        if len(v) < 2:
+            raise ValueError("اكتبي اسمك")
+        return v
+
+    @field_validator("phone")
+    @classmethod
+    def _check_phone(cls, v: str) -> str:
+        return _validate_egypt_phone(v)
+
+    @field_validator("password")
+    @classmethod
+    def _check_password(cls, v: str) -> str:
+        if len(v) < 6:
+            raise ValueError("كلمة المرور لازم تكون 6 حروف أو أرقام على الأقل")
+        return v
 
 
 class CustomerLogin(BaseModel):
-    phone: str
-    password: str
+    phone: str = Field(..., max_length=20)
+    password: str = Field(..., max_length=128)
 
 
 class CustomerUpdate(BaseModel):
@@ -66,30 +86,37 @@ class CategoryOut(BaseModel):
     product_count: int = 0
 
 
+class OfferBrief(BaseModel):
+    id: str
+    title: str
+    offer_price: float
+
+
 class ProductOut(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
+    """A product as the storefront sells it. `price` is what checkout will
+    charge (see app/pricing.py); `sale_price` is the regular price, shown
+    struck through when an `offer` applies."""
     id: str
     name: str
     category_id: str
     category_name: str
     sku: Optional[str]
     sale_price: float
-    quantity: int
+    price: float
+    offer: Optional[OfferBrief] = None
     stock_status: str
+    # Most a customer can order right now (0 = unavailable). Capped at the
+    # per-line checkout limit, so exact stock levels aren't published.
+    max_quantity: int
     image_url: Optional[str] = None
     description: Optional[str] = None
 
 
-# ---------------- Coupons ----------------
-class CouponValidateRequest(BaseModel):
-    code: str
-    order_subtotal: float = Field(..., ge=0)
-
-
-class CouponValidateResponse(BaseModel):
-    valid: bool
-    reason: Optional[str] = None
-    discount_amount: float = 0
+class ProductPage(BaseModel):
+    items: List[ProductOut]
+    total: int
+    limit: int
+    offset: int
 
 
 # ---------------- Orders / Checkout ----------------
@@ -99,13 +126,13 @@ class OrderItemIn(BaseModel):
 
 
 class OrderCreate(BaseModel):
-    customer_name: str
+    customer_name: str = Field(..., max_length=120)
     customer_phone: str
-    city: str = Field(..., min_length=1)
-    shipping_address: str
+    city: str = Field(..., min_length=1, max_length=100)
+    shipping_address: str = Field(..., min_length=5, max_length=500)
     items: List[OrderItemIn] = Field(..., min_length=1, max_length=30)
-    coupon_code: Optional[str] = None
-    note: Optional[str] = None
+    coupon_code: Optional[str] = Field(None, max_length=50)
+    note: Optional[str] = Field(None, max_length=500)
 
     @field_validator("customer_name")
     @classmethod
@@ -161,32 +188,70 @@ class OrderTrackSummary(BaseModel):
     created_at: datetime
 
 
-# ---------------- Homepage: offers & routines (read-only) ----------------
-class OfferOut(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-    id: str
-    product_id: str
-    product_name: str
-    original_price: float
-    image_url: Optional[str] = None
-    title: str
-    offer_price: float
-
-
+# ---------------- Routines (read-only here) ----------------
 class RoutineItemOut(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-    product_id: str
-    product_name: str
-    sale_price: float
-    image_url: Optional[str] = None
+    product: ProductOut
+    regular_price: float
+    price: float
 
 
 class RoutineOut(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
+    """A routine priced from its products' current prices. `savings` is
+    what live offers on its products take off the regular total."""
     id: str
     name: str
     description: Optional[str]
     items: List[RoutineItemOut]
+    regular_total: float
+    total: float
+    savings: float
+    is_available: bool
+
+
+# ---------------- Cart quote ----------------
+class CartLineIn(BaseModel):
+    product_id: str
+    quantity: int = Field(..., gt=0, le=100)
+
+
+class CartQuoteRequest(BaseModel):
+    items: List[CartLineIn] = Field(..., max_length=30)
+    # Optional checkout context — when given, the quote also returns the
+    # discount, shipping fee and final total exactly as checkout charges.
+    city: Optional[str] = Field(None, max_length=100)
+    coupon_code: Optional[str] = Field(None, max_length=50)
+
+
+class CartQuoteLine(BaseModel):
+    product_id: str
+    quantity: int
+    product: Optional[ProductOut] = None
+    unit_price: float = 0
+    regular_unit_price: float = 0
+    line_total: float = 0
+    # None = orderable as-is; otherwise why it can't be ordered right now.
+    issue: Optional[Literal["unavailable", "out_of_stock", "insufficient_stock"]] = None
+
+
+class CouponStatus(BaseModel):
+    code: str
+    valid: bool
+    reason: Optional[str] = None
+
+
+class CartQuote(BaseModel):
+    lines: List[CartQuoteLine]
+    subtotal: float
+    regular_subtotal: float
+    savings: float
+    has_issues: bool
+    coupon: Optional[CouponStatus] = None
+    discount: float = 0
+    # None until a deliverable city is chosen (unless shipping is free).
+    shipping_fee: Optional[float] = None
+    city_error: Optional[str] = None
+    free_shipping_threshold: float
+    total: float
 
 
 # ---------------- Order editing (customer, pending orders only) ----------------
@@ -197,9 +262,9 @@ class OrderItemEdit(BaseModel):
 
 class OrderEdit(BaseModel):
     items: List[OrderItemEdit] = Field(..., min_length=1, max_length=30)
-    city: Optional[str] = None
-    shipping_address: Optional[str] = None
-    note: Optional[str] = None
+    city: Optional[str] = Field(None, min_length=1, max_length=100)
+    shipping_address: Optional[str] = Field(None, min_length=5, max_length=500)
+    note: Optional[str] = Field(None, max_length=500)
 
 
 class ShippingRateOut(BaseModel):

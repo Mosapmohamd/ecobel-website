@@ -1,54 +1,111 @@
 import random
 import string
-from datetime import datetime, timezone
-from typing import List, Optional
+from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Request
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, joinedload
 
-from .. import models, schemas, auth, services
+from .. import models, schemas, auth, services, pricing, checkout
 from ..database import get_db
-from .coupons import _validate_coupon
 from ..rate_limit import limiter
 
 router = APIRouter(prefix="/orders", tags=["Orders"])
 
-# Fallback delivery fee for a city with no configured ShippingRate row —
-# actual per-city fees are set by staff in the accounting system.
-DEFAULT_SHIPPING_FEE = 50.0
-FREE_SHIPPING_THRESHOLD = 1000.0
 
-
-def _shipping_fee(db: Session, city: str | None, net_subtotal: float) -> float:
-    """Free shipping above the threshold regardless of city; otherwise the
-    city's configured rate, falling back to DEFAULT_SHIPPING_FEE if the
-    city isn't in the table (or wasn't given)."""
-    if net_subtotal >= FREE_SHIPPING_THRESHOLD:
-        return 0.0
-    if city:
-        rate = (
-            db.query(models.ShippingRate)
-            .filter(models.ShippingRate.city == city.strip())
-            .filter(models.ShippingRate.is_active == True)  # noqa: E712
+def _lock_and_price(db: Session, items: list) -> tuple[list, float]:
+    """Locks each product row, checks it can be sold in that quantity, then
+    prices every line through app/pricing.py — the same rules the catalog
+    and the cart quote use, so the order is charged exactly what the
+    customer was shown. Never trusts client prices."""
+    merged = pricing.merge_lines(items)
+    products = []
+    # Lock in a fixed (id) order so two concurrent checkouts can't deadlock.
+    for product_id in sorted(merged):
+        product = (
+            db.query(models.Product)
+            .filter(models.Product.id == product_id)
+            .filter(models.Product.is_active == True)  # noqa: E712
+            .with_for_update()  # lock the row until this transaction commits —
+            # closes the race where two concurrent checkouts both read the
+            # same quantity before either deducts, causing overselling.
+            # (No-op on SQLite; effective on the real PostgreSQL target.)
             .first()
         )
-        if rate:
-            return rate.fee
-    return DEFAULT_SHIPPING_FEE
+        if not product:
+            raise HTTPException(409, "منتج في طلبك لم يعد متاحًا — احذفيه من السلة وحاولي تاني")
+        if product.quantity < merged[product_id]:
+            raise HTTPException(
+                409,
+                f"الكمية المطلوبة من «{product.name}» مش متاحة حاليًا — عدّلي الكمية وحاولي تاني",
+            )
+        products.append(product)
+
+    offers = pricing.live_offers(db, (p.id for p in products))
+    subtotal = 0.0
+    line_specs = []
+    for product in products:
+        qty = merged[product.id]
+        unit_price = pricing.unit_price(product, offers.get(product.id))
+        line_total = unit_price * qty
+        subtotal += line_total
+        line_specs.append((product, qty, unit_price, line_total))
+    return line_specs, subtotal
 
 
-def _effective_price(db: Session, product: models.Product) -> float:
-    """A product's real charged price: its own sale_price, unless it has
-    an active, unexpired offer — in which case the offer price wins.
-    Always computed server-side; never trust a client-sent price."""
-    now = datetime.now(timezone.utc)
-    offer = (
-        db.query(models.Offer)
-        .filter(models.Offer.product_id == product.id)
-        .filter(models.Offer.is_active == True)  # noqa: E712
-        .filter((models.Offer.expires_at.is_(None)) | (models.Offer.expires_at > now))
+def _add_lines(db: Session, order: models.Order, line_specs: list, note: str) -> None:
+    for product, qty, unit_price, line_total in line_specs:
+        db.add(models.OrderItem(
+            order_id=order.id,
+            product_id=product.id,
+            product_name=product.name,
+            unit_price=unit_price,
+            quantity=qty,
+            line_total=line_total,
+        ))
+        services.apply_stock_movement(
+            db, product, -qty, models.MovementType.website_sale,
+            reference_id=order.id, note=note,
+        )
+
+
+def _own_pending_order(db: Session, order_id: str, customer: models.Customer, action: str) -> models.Order:
+    order = (
+        db.query(models.Order)
+        .options(joinedload(models.Order.items))
+        .filter(models.Order.id == order_id)
+        .with_for_update(of=models.Order)
         .first()
     )
-    return offer.offer_price if offer else product.sale_price
+    if not order or order.customer_id != customer.id:
+        # Someone else's order is reported as missing, not as forbidden.
+        raise HTTPException(404, "الطلب غير موجود")
+    if order.status == models.OrderStatus.cancelled:
+        raise HTTPException(409, "الطلب ده اتلغى بالفعل")
+    if order.status != models.OrderStatus.pending:
+        raise HTTPException(409, f"الطلب خرج للشحن بالفعل ومينفعش {action} دلوقتي — كلمينا لو محتاجة مساعدة")
+    return order
+
+
+def _guest_profile(db: Session, phone: str, name: str) -> models.Customer:
+    """The guest profile for this phone (created on first guest order).
+    Accounts are never matched here."""
+    query = (
+        db.query(models.Customer)
+        .filter(models.Customer.phone == phone)
+        .filter(models.Customer.hashed_password.is_(None))
+    )
+    profile = query.first()
+    if profile:
+        return profile
+    try:
+        with db.begin_nested():
+            profile = models.Customer(name=name, phone=phone)
+            db.add(profile)
+    except IntegrityError:
+        # A concurrent guest checkout created it first (one guest profile
+        # per phone is enforced by the database).
+        profile = query.one()
+    return profile
 
 
 def _generate_order_number(db: Session) -> str:
@@ -68,89 +125,41 @@ def create_order(
     db: Session = Depends(get_db),
     logged_in_customer: models.Customer | None = Depends(auth.get_current_customer_optional),
 ):
-    if not payload.items:
-        raise HTTPException(400, "الطلب لازم يحتوي على منتج واحد على الأقل")
+    line_specs, subtotal = _lock_and_price(db, payload.items)
+    t = checkout.totals(db, subtotal, city=payload.city, coupon_code=payload.coupon_code, lock_coupon=True)
+    checkout.require_orderable(t)
 
-    # Price everything from the current DB state — never trust client-sent prices/totals.
-    subtotal = 0.0
-    line_specs = []
-    for item_in in payload.items:
-        product = (
-            db.query(models.Product)
-            .filter(models.Product.id == item_in.product_id)
-            .filter(models.Product.is_active == True)  # noqa: E712
-            .with_for_update()  # lock the row until this transaction commits —
-            # closes the race where two concurrent checkouts both read the
-            # same quantity before either deducts, causing overselling.
-            # (No-op on SQLite; effective on the real PostgreSQL target.)
-            .first()
-        )
-        if not product:
-            raise HTTPException(404, f"منتج غير موجود: {item_in.product_id}")
-        unit_price = _effective_price(db, product)
-        line_total = unit_price * item_in.quantity
-        subtotal += line_total
-        line_specs.append((product, item_in.quantity, unit_price, line_total))
-
-    discount_amount = 0.0
-    coupon = None
-    if payload.coupon_code:
-        coupon, reason, discount_amount = _validate_coupon(db, payload.coupon_code, subtotal)
-        if not coupon:
-            raise HTTPException(400, reason)
-
-    shipping_fee = _shipping_fee(db, payload.city, subtotal - discount_amount)
-    total_amount = subtotal - discount_amount + shipping_fee
-
-    # Link to the logged-in customer's real account if they're authenticated;
-    # otherwise fall back to the phone-based guest find-or-create as before.
-    if logged_in_customer:
-        customer = logged_in_customer
-    else:
-        customer = db.query(models.Customer).filter(models.Customer.phone == payload.customer_phone).first()
-        if not customer:
-            customer = models.Customer(name=payload.customer_name, phone=payload.customer_phone)
-            db.add(customer)
-            db.flush()
+    # Signed in → the order belongs to that account (it shows in its history
+    # and can be edited/cancelled there). Guest → it belongs to the guest
+    # profile for that phone, never to an account: typing a phone number
+    # proves nothing about who owns it.
+    customer = logged_in_customer or _guest_profile(db, payload.customer_phone, payload.customer_name)
 
     order = models.Order(
         order_number=_generate_order_number(db),
         customer_id=customer.id,
         customer_name=payload.customer_name,
         customer_phone=payload.customer_phone,
-        city=payload.city,
-        shipping_address=payload.shipping_address,
+        city=payload.city.strip(),
+        shipping_address=payload.shipping_address.strip(),
         subtotal=subtotal,
-        coupon_id=coupon.id if coupon else None,
-        discount_amount=discount_amount,
-        shipping_fee=shipping_fee,
-        total_amount=total_amount,
+        coupon_id=t.coupon.id if t.coupon else None,
+        discount_amount=t.discount,
+        shipping_fee=t.shipping_fee,
+        total_amount=t.total,
         note=payload.note,
     )
     db.add(order)
     db.flush()
+    _add_lines(db, order, line_specs, f"طلب موقع #{order.order_number}")
 
-    for product, qty, unit_price, line_total in line_specs:
-        db.add(models.OrderItem(
-            order_id=order.id,
-            product_id=product.id,
-            product_name=product.name,
-            unit_price=unit_price,
-            quantity=qty,
-            line_total=line_total,
-        ))
-        services.apply_stock_movement(
-            db, product, -qty, models.MovementType.website_sale,
-            reference_id=order.id, note=f"طلب موقع #{order.order_number}",
-        )
-
-    if coupon:
-        coupon.used_count += 1
+    if t.coupon:
+        t.coupon.used_count += 1
 
     db.add(models.FinanceEntry(
         type=models.FinanceEntryType.income,
         category="مبيعات الموقع",
-        amount=total_amount,
+        amount=t.total,
         description=f"طلب موقع #{order.order_number}",
         reference_id=order.id,
         source="website",
@@ -220,25 +229,14 @@ def edit_order(
     customer: models.Customer = Depends(auth.get_current_customer),
 ):
     """Customer self-service order editing — add, remove, or change items,
-    or update the address/note. Only allowed while the order is still
+    or update the city/address/note. Only allowed while the order is still
     'pending' (قيد التجهيز); once staff mark it 'shipped' (handed to
     delivery) or later, it's locked. Only the order's own customer can
     edit it — guest orders (no account) can't be edited this way."""
-    order = (
-        db.query(models.Order)
-        .options(joinedload(models.Order.items))
-        .filter(models.Order.id == order_id)
-        .first()
-    )
-    if not order:
-        raise HTTPException(404, "الطلب غير موجود")
-    if order.customer_id != customer.id:
-        raise HTTPException(403, "مش مسموحلك تعدّلي على الطلب ده")
-    if order.status != models.OrderStatus.pending:
-        raise HTTPException(400, "الطلب دخل مرحلة الشحن بالفعل ومينفعش تتعدّل عليه دلوقتي")
+    order = _own_pending_order(db, order_id, customer, "تتعدّلي عليه")
 
-    # Reverse the stock movements for the current items (restore quantities)
-    # before repricing/re-deducting for the new item list.
+    # Give back the stock the current items hold before repricing and
+    # re-deducting for the new item list.
     for old_item in order.items:
         product = db.get(models.Product, old_item.product_id)
         if product:
@@ -249,60 +247,31 @@ def edit_order(
     db.query(models.OrderItem).filter(models.OrderItem.order_id == order.id).delete()
 
     # Re-price the new item list from the current DB state, same as checkout.
-    subtotal = 0.0
-    line_specs = []
-    for item_in in payload.items:
-        product = (
-            db.query(models.Product)
-            .filter(models.Product.id == item_in.product_id)
-            .filter(models.Product.is_active == True)  # noqa: E712
-            .with_for_update()
-            .first()
-        )
-        if not product:
-            raise HTTPException(404, f"منتج غير موجود: {item_in.product_id}")
-        unit_price = _effective_price(db, product)
-        line_total = unit_price * item_in.quantity
-        subtotal += line_total
-        line_specs.append((product, item_in.quantity, unit_price, line_total))
+    line_specs, subtotal = _lock_and_price(db, payload.items)
 
-    # Re-check the existing coupon (if any) against the new subtotal — drop
-    # it if it no longer qualifies (e.g. below its minimum order amount)
-    # rather than re-charging a discount that isn't valid anymore.
-    discount_amount = 0.0
-    if order.coupon_id and order.coupon:
-        coupon, _reason, discount_amount = _validate_coupon(db, order.coupon.code, subtotal)
-        if not coupon:
-            discount_amount = 0.0
-            order.coupon_id = None
-
-    shipping_fee = _shipping_fee(db, payload.city or order.city, subtotal - discount_amount)
-    total_amount = subtotal - discount_amount + shipping_fee
+    # The order keeps its coupon (already counted) as long as the new
+    # subtotal still meets its minimum; otherwise the discount and the
+    # coupon use are released rather than charging a discount that no
+    # longer qualifies.
+    city = payload.city or order.city
+    t = checkout.totals(db, subtotal, city=city, applied_coupon=order.coupon)
+    if order.coupon is not None and t.coupon is None:
+        checkout.release_coupon(order)
+        order.coupon_id = None
+    t.coupon_error = None
+    checkout.require_orderable(t)
 
     order.subtotal = subtotal
-    order.discount_amount = discount_amount
-    order.shipping_fee = shipping_fee
-    order.total_amount = total_amount
-    if payload.city:
-        order.city = payload.city
+    order.discount_amount = t.discount
+    order.shipping_fee = t.shipping_fee
+    order.total_amount = t.total
+    order.city = city.strip()
     if payload.shipping_address:
-        order.shipping_address = payload.shipping_address
+        order.shipping_address = payload.shipping_address.strip()
     if payload.note is not None:
         order.note = payload.note
 
-    for product, qty, unit_price, line_total in line_specs:
-        db.add(models.OrderItem(
-            order_id=order.id,
-            product_id=product.id,
-            product_name=product.name,
-            unit_price=unit_price,
-            quantity=qty,
-            line_total=line_total,
-        ))
-        services.apply_stock_movement(
-            db, product, -qty, models.MovementType.website_sale,
-            reference_id=order.id, note=f"تعديل طلب #{order.order_number}",
-        )
+    _add_lines(db, order, line_specs, f"تعديل طلب #{order.order_number}")
 
     # The original income entry (created at checkout) was for the old
     # total — correct it in place rather than leaving stale accounting
@@ -314,7 +283,7 @@ def edit_order(
         .first()
     )
     if original_entry:
-        original_entry.amount = total_amount
+        original_entry.amount = t.total
 
     db.commit()
     db.refresh(order)
@@ -328,19 +297,8 @@ def cancel_order(
     customer: models.Customer = Depends(auth.get_current_customer),
 ):
     """Customer self-service cancellation — same pending-only, own-order-only
-    rule as editing. Releases the reserved stock back."""
-    order = (
-        db.query(models.Order)
-        .options(joinedload(models.Order.items))
-        .filter(models.Order.id == order_id)
-        .first()
-    )
-    if not order:
-        raise HTTPException(404, "الطلب غير موجود")
-    if order.customer_id != customer.id:
-        raise HTTPException(403, "مش مسموحلك تلغي الطلب ده")
-    if order.status != models.OrderStatus.pending:
-        raise HTTPException(400, "الطلب دخل مرحلة الشحن بالفعل ومينفعش يتلغي دلوقتي")
+    rule as editing. Releases the reserved stock and the coupon use."""
+    order = _own_pending_order(db, order_id, customer, "يتلغي")
 
     for item in order.items:
         product = db.get(models.Product, item.product_id)
@@ -349,6 +307,7 @@ def cancel_order(
                 db, product, item.quantity, models.MovementType.website_sale,
                 reference_id=order.id, note=f"إلغاء طلب #{order.order_number}",
             )
+    checkout.release_coupon(order)
     order.status = models.OrderStatus.cancelled
 
     db.add(models.FinanceEntry(
