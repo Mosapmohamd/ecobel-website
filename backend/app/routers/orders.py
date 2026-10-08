@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session, joinedload
 from .. import models, schemas, auth, services, pricing, checkout
 from ..database import get_db
 from ..rate_limit import limiter
+from slowapi.util import get_remote_address
 
 router = APIRouter(prefix="/orders", tags=["Orders"])
 
@@ -126,7 +127,7 @@ def create_order(
     logged_in_customer: models.Customer | None = Depends(auth.get_current_customer_optional),
 ):
     line_specs, subtotal = _lock_and_price(db, payload.items)
-    t = checkout.totals(db, subtotal, city=payload.city, coupon_code=payload.coupon_code, lock_coupon=True)
+    t = checkout.totals(db, subtotal, city=payload.city, coupon_code=payload.coupon_code, lock_coupon=True, client=get_remote_address(request))
     checkout.require_orderable(t)
 
     # Signed in → the order belongs to that account (it shows in its history

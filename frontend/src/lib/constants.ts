@@ -19,6 +19,13 @@ export const SITE_CONTACT = {
 /** Formats an EGP amount the same way everywhere ("١٬٢٥٠ ج.م"). */
 export const egp = (n: number) => `${n.toLocaleString('ar-EG')} ج.م`;
 
+/** sessionStorage key for "promo bar dismissed this session" (read by an
+ * inline script in the root layout before first paint, and by PromoBar). */
+export const PROMO_DISMISS_KEY = 'ecobel_promo_dismissed';
+
+/** How many on-offer products the homepage shows. */
+export const HOME_OFFERS_SHOWN = 8;
+
 /** Routines are their own catalog section, with their own pages. */
 export const ROUTINES_PATH = '/routines';
 export const ROUTINES_LABEL = 'الروتينات';

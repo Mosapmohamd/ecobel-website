@@ -31,9 +31,9 @@ export default function ProductCard({ product }: { product: Product }) {
           </div>
         </Link>
         {percentOff > 0 ? (
-          <span className="absolute top-3 right-3 badge bg-sale text-surface">خصم {percentOff.toLocaleString('ar-EG')}%</span>
+          <span className="absolute top-3 right-3 badge bg-brand-deep text-surface">خصم {percentOff.toLocaleString('ar-EG')}%</span>
         ) : product.stock_status === 'low' ? (
-          <span className="absolute top-3 right-3 badge bg-surface-muted text-primary">كمية محدودة</span>
+          <span className="absolute top-3 right-3 badge bg-surface-muted text-primary-hover">كمية محدودة</span>
         ) : null}
         <button
           type="button"

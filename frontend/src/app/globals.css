@@ -149,13 +149,35 @@ h1, h2, h3 {
 }
 .link-underline:hover { background-size: 100% 1px; }
 
-/* Small label above a section heading. */
+/* Small label above a section heading. Uses the deeper primary so the
+   small text keeps 4.5:1 contrast on tinted sections as well as white. */
 .kicker {
   display: block;
   font-size: var(--text-label);
   font-weight: 700;
-  color: var(--color-primary);
+  color: var(--color-primary-hover);
   margin-bottom: 4px;
+}
+
+/* Promo bar closed earlier this session (set before first paint, see layout). */
+html[data-promo-dismissed] .promo-bar {
+  display: none;
+}
+
+/* "Skip to content" — invisible until reached with the keyboard. */
+.skip-link {
+  position: absolute;
+  inset-inline-start: 1rem;
+  top: -100px;
+  z-index: 100;
+  padding: 0.75rem 1.25rem;
+  border-radius: 4px;
+  background: var(--color-primary-hover);
+  color: var(--color-surface);
+  font-weight: 700;
+}
+.skip-link:focus {
+  top: 1rem;
 }
 
 .field label {

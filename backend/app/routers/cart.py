@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from .. import checkout, pricing, schemas
 from ..database import get_db
 from ..rate_limit import limiter
+from slowapi.util import get_remote_address
 
 router = APIRouter(prefix="/cart", tags=["Cart"])
 
@@ -19,7 +20,7 @@ def quote_cart(request: Request, payload: schemas.CartQuoteRequest, db: Session 
     orderable = [line for line in lines if line.issue is None]
     subtotal = sum(line.line_total for line in orderable)
     regular_subtotal = sum(line.regular_unit_price * line.quantity for line in orderable)
-    t = checkout.totals(db, subtotal, city=payload.city, coupon_code=payload.coupon_code)
+    t = checkout.totals(db, subtotal, city=payload.city, coupon_code=payload.coupon_code, client=get_remote_address(request))
     code = (payload.coupon_code or "").strip()
     return schemas.CartQuote(
         lines=lines,

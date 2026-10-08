@@ -25,7 +25,7 @@ export default function SectionHeader({
   return (
     <div className={`mb-8 flex gap-4 ${centered ? 'flex-col items-center text-center' : 'flex-wrap items-end justify-between'}`}>
       <div className={centered ? 'max-w-2xl' : 'min-w-0'}>
-        {kicker && <span className={`kicker ${kickerTone === 'sale' ? '!text-sale' : ''}`}>{kicker}</span>}
+        {kicker && <span className={`kicker ${kickerTone === 'sale' ? '!text-brand-deep' : ''}`}>{kicker}</span>}
         <h2 id={id} className="text-headline-md lg:text-headline-lg">{title}</h2>
         {description && <p className="mt-2 text-body text-ink-muted">{description}</p>}
       </div>

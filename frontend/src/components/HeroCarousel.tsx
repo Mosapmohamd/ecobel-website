@@ -275,7 +275,14 @@ export default function HeroCarousel({ slides, label = 'عروض Eco Bel' }: { s
 /** The banner at its own ~3:1 shape (no cropping of the baked-in copy);
  * a dedicated phone crop is used below md when the slide has one. */
 function BannerImage({ slide, eager }: { slide: HeroSlide; eager: boolean }) {
-  const common = { sizes: '(max-width: 1920px) 100vw, 1920px', preload: eager, className: 'w-full h-auto' };
+  // The first slide is the page's largest paint: fetch it at high priority
+  // (a plain preload is only Low priority and queues behind fonts/scripts).
+  const common = {
+    sizes: '(max-width: 1920px) 100vw, 1920px',
+    preload: eager,
+    fetchPriority: eager ? ('high' as const) : undefined,
+    className: 'w-full h-auto',
+  };
   if (!slide.mobileImage) {
     return <Image {...common} alt="" src={slide.image} width={1900} height={630} />;
   }
