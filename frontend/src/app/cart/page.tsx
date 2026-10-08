@@ -470,7 +470,7 @@ export default function CartPage() {
                         </div>
                         {!q.issue && (
                           <span className="text-left">
-                            <span className={`block font-bold text-body ${q.unit_price < q.regular_unit_price ? 'text-sale' : ''}`}>{egp(q.line_total)}</span>
+                            <span className={`block font-bold text-body ${q.unit_price < q.regular_unit_price ? 'text-brand-deep' : ''}`}>{egp(q.line_total)}</span>
                             {q.unit_price < q.regular_unit_price && (
                               <span className="block text-body-sm line-through text-ink-muted">{egp(q.regular_unit_price * q.quantity)}</span>
                             )}

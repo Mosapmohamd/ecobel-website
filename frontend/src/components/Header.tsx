@@ -100,23 +100,32 @@ function CategoriesMenu({ categories }: { categories: Category[] }) {
   );
 }
 
-export default function Header() {
+export default function Header({ initialCategories = null }: { initialCategories?: Category[] | null }) {
   const { count } = useCart();
   const { count: wishCount } = useWishlist();
   const { customer, token } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
   const [query, setQuery] = useState('');
-  const [categories, setCategories] = useState<Category[]>([]);
+  const [categories, setCategories] = useState<Category[]>(initialCategories ?? []);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
 
+  // Server-rendered with the page; fetched here only if the server couldn't.
   useEffect(() => {
+    if (initialCategories) return;
     catalogApi.categories().then(setCategories).catch(() => {});
-  }, []);
+  }, [initialCategories]);
 
   useEffect(() => {
     if (!mobileMenuOpen) return;
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setMobileMenuOpen(false);
+    // Escape closes the menu and puts focus back on its toggle (otherwise
+    // focus would be lost with the removed menu link).
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      setMobileMenuOpen(false);
+      menuButtonRef.current?.focus();
+    };
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
   }, [mobileMenuOpen]);
@@ -153,6 +162,7 @@ export default function Header() {
       <div className="page-container h-16 lg:h-20 flex items-center justify-between gap-4 lg:gap-6">
         <div className="flex items-center gap-2 flex-none">
           <button
+            ref={menuButtonRef}
             type="button"
             aria-label={mobileMenuOpen ? 'إغلاق القائمة' : 'فتح القائمة'}
             aria-expanded={mobileMenuOpen}

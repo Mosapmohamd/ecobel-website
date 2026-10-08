@@ -7,7 +7,9 @@ from fastapi.responses import JSONResponse
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 
-from .database import check_schema_revision
+from .security import DOCS_SETTINGS, SecurityHeadersMiddleware, check_production_config
+from .auth import SECRET_KEY
+from .database import DATABASE_URL, check_schema_revision
 from .routers import catalog, cart, orders, account, reviews
 from .rate_limit import limiter
 
@@ -18,6 +20,7 @@ from .rate_limit import limiter
 check_schema_revision()
 
 app = FastAPI(
+    **DOCS_SETTINGS,  # no public API docs in production
     title="Eco Bel — Website API",
     description="Public storefront API: catalog, checkout, "
                 "order tracking, and customer accounts. Shares its database "
@@ -51,6 +54,8 @@ app.add_middleware(SlowAPIMiddleware)
 FRONTEND_ORIGINS = os.getenv(
     "FRONTEND_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000"
 ).split(",")
+FRONTEND_ORIGINS = [o.strip() for o in FRONTEND_ORIGINS if o.strip()]
+check_production_config(SECRET_KEY, FRONTEND_ORIGINS, DATABASE_URL)
 
 app.add_middleware(
     CORSMiddleware,
@@ -59,6 +64,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.add_middleware(SecurityHeadersMiddleware)
 
 app.include_router(account.router)
 app.include_router(catalog.router)

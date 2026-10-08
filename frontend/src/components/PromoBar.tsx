@@ -1,14 +1,13 @@
 'use client';
 
 import { useState, useSyncExternalStore } from 'react';
-import { FREE_SHIPPING_THRESHOLD, SITE_CONTACT } from '@/lib/constants';
+import { FREE_SHIPPING_THRESHOLD, PROMO_DISMISS_KEY, SITE_CONTACT } from '@/lib/constants';
 import Icon from './Icon';
 
-const DISMISS_KEY = 'ecobel_promo_dismissed';
 
 function readDismissed(): boolean {
   try {
-    return sessionStorage.getItem(DISMISS_KEY) === '1';
+    return sessionStorage.getItem(PROMO_DISMISS_KEY) === '1';
   } catch {
     return false;
   }
@@ -16,17 +15,18 @@ function readDismissed(): boolean {
 const noSubscribe = () => () => {};
 
 export default function PromoBar() {
-  // Dismissal lasts for the browser session. The server render (and the
-  // first client paint) treat it as dismissed, so the bar never flashes
-  // in and back out for someone who already closed it.
-  const storedDismissed = useSyncExternalStore(noSubscribe, readDismissed, () => true);
+  // Dismissal lasts for the browser session. The bar is in the server HTML
+  // (so it paints immediately — it's often the largest text on screen); for
+  // someone who already closed it, an inline script in the root layout hides
+  // it with CSS before first paint, and React then removes it here.
+  const storedDismissed = useSyncExternalStore(noSubscribe, readDismissed, () => false);
   const [dismissed, setDismissed] = useState(false);
 
   if (storedDismissed || dismissed) return null;
 
   function dismiss() {
     try {
-      sessionStorage.setItem(DISMISS_KEY, '1');
+      sessionStorage.setItem(PROMO_DISMISS_KEY, '1');
     } catch {
       // storage unavailable — dismissal just won't persist
     }
@@ -34,7 +34,7 @@ export default function PromoBar() {
   }
 
   return (
-    <div className="bg-brand-deep text-surface">
+    <div className="promo-bar bg-brand-deep text-surface">
       <div className="page-container py-2 flex items-center justify-between gap-4 text-label font-medium">
         <a href={SITE_CONTACT.phoneHref} className="hidden sm:flex items-center gap-1.5 text-surface/85 hover:text-surface transition-colors">
           <Icon name="phone" size={14} />
