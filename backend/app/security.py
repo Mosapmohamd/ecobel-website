@@ -14,11 +14,15 @@ IS_PRODUCTION = ENVIRONMENT == "production"
 _LOCAL_HOSTS = ("localhost", "127.0.0.1", "[::1]", "0.0.0.0")
 
 
-def check_production_config(secret_key: str, origins: list[str]) -> None:
+def check_production_config(secret_key: str, origins: list[str], database_url: str) -> None:
     """Refuse to start in production with settings that are only safe locally."""
     if not IS_PRODUCTION:
         return
     problems = []
+    if database_url.startswith("sqlite"):
+        # A missing DATABASE_URL silently falls back to a local SQLite file —
+        # on a hosting platform that's an empty, throwaway database.
+        problems.append("DATABASE_URL must point at the shared PostgreSQL database (not SQLite)")
     if len(secret_key) < 32:
         problems.append("SECRET_KEY must be a random value of at least 32 characters")
     if not origins or any(not o.startswith("https://") or any(h in o for h in _LOCAL_HOSTS) for o in origins):

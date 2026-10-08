@@ -15,6 +15,7 @@ from app import security  # noqa: E402
 from app.main import app  # noqa: E402
 
 GOOD_SECRET = "x" * 48
+GOOD_DB = "postgresql://db.example:5432/app"
 
 
 @pytest.fixture
@@ -28,26 +29,27 @@ def production(monkeypatch):
 
 def test_development_is_the_default_and_keeps_docs():
     assert not security.IS_PRODUCTION and security.DOCS_SETTINGS == {}
-    security.check_production_config("short", ["http://localhost:3000"])  # never blocks local work
+    security.check_production_config("short", ["http://localhost:3000"], "sqlite:///./dev.db")  # never blocks local work
 
 
 def test_production_disables_api_docs(production):
     assert production.DOCS_SETTINGS == {"docs_url": None, "redoc_url": None, "openapi_url": None}
 
 
-@pytest.mark.parametrize("secret,origins,fragment", [
-    ("too-short", ["https://shop.example"], "SECRET_KEY"),
-    (GOOD_SECRET, ["http://localhost:3000"], "FRONTEND_ORIGINS"),
-    (GOOD_SECRET, ["http://shop.example"], "FRONTEND_ORIGINS"),
-    (GOOD_SECRET, [], "FRONTEND_ORIGINS"),
+@pytest.mark.parametrize("secret,origins,db,fragment", [
+    ("too-short", ["https://shop.example"], GOOD_DB, "SECRET_KEY"),
+    (GOOD_SECRET, ["http://localhost:3000"], GOOD_DB, "FRONTEND_ORIGINS"),
+    (GOOD_SECRET, ["http://shop.example"], GOOD_DB, "FRONTEND_ORIGINS"),
+    (GOOD_SECRET, [], GOOD_DB, "FRONTEND_ORIGINS"),
+    (GOOD_SECRET, ["https://shop.example"], "sqlite:///./ecobel_dev.db", "DATABASE_URL"),
 ])
-def test_production_refuses_unsafe_settings(production, secret, origins, fragment):
+def test_production_refuses_unsafe_settings(production, secret, origins, db, fragment):
     with pytest.raises(RuntimeError, match=fragment):
-        production.check_production_config(secret, origins)
+        production.check_production_config(secret, origins, db)
 
 
 def test_production_accepts_safe_settings(production):
-    production.check_production_config(GOOD_SECRET, ["https://shop.example"])
+    production.check_production_config(GOOD_SECRET, ["https://shop.example"], GOOD_DB)
 
 
 def test_every_response_carries_security_headers():

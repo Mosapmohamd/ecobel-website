@@ -12,12 +12,16 @@ import type { Category, Product, ProductPage, ReviewSummary, Routine } from './a
  * null: the page still renders and its client component loads the data
  * itself (and shows its own error state), exactly as before. */
 const BASE = process.env.API_INTERNAL_BASE || process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8002';
+/** A slow or restarting API must not hold the page: after this the server
+ * renders without the data and the browser loads it (with its own retry UI). */
+const SERVER_FETCH_TIMEOUT_MS = 8000;
 
 export const NOT_FOUND = Symbol('not-found');
 
 async function get<T>(path: string, revalidate?: number): Promise<T | null | typeof NOT_FOUND> {
   try {
-    const res = await fetch(`${BASE}${path}`, revalidate ? { next: { revalidate } } : { cache: 'no-store' });
+    const signal = AbortSignal.timeout(SERVER_FETCH_TIMEOUT_MS);
+    const res = await fetch(`${BASE}${path}`, revalidate ? { next: { revalidate }, signal } : { cache: 'no-store', signal });
     if (res.status === 404) return NOT_FOUND;
     if (!res.ok) return null;
     return (await res.json()) as T;

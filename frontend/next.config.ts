@@ -3,10 +3,11 @@ import type { NextConfig } from "next";
 const isProductionBuild = process.env.NODE_ENV === "production";
 
 // A production build must know its public URL (canonical links, sitemap,
-// structured data) and its API — never fall back to localhost silently.
+// structured data), its API, and where product photos live — never fall back
+// to localhost or silently show every product without its photo.
 // (Local `npm run build` gets them from .env.local.)
 if (isProductionBuild) {
-  for (const name of ["NEXT_PUBLIC_SITE_URL", "NEXT_PUBLIC_API_BASE"]) {
+  for (const name of ["NEXT_PUBLIC_SITE_URL", "NEXT_PUBLIC_API_BASE", "NEXT_PUBLIC_PRODUCT_IMAGE_BASE_URL"]) {
     if (!process.env[name]) throw new Error(`${name} must be set for a production build (see frontend/.env.local.example).`);
   }
 }

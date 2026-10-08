@@ -1,0 +1,47 @@
+# Render Blueprint for the storefront API (backend/). The storefront itself
+# (frontend/) is deployed separately on Vercel — see docs/DEPLOYMENT.md.
+#
+# No secret values live here: `sync: false` variables are entered in the
+# Render dashboard when the Blueprint is first applied.
+services:
+  - type: web
+    name: ecobel-website-api
+    runtime: python
+    rootDir: backend
+    # Closest Render region to the Supabase database (AWS eu-west-1).
+    region: frankfurt
+    # Not "free": free instances sleep when idle, and the first visitor after
+    # that waits for a cold start on every page the storefront renders.
+    plan: starter
+    # One instance only: rate limits and the coupon-guessing guard are kept
+    # in memory per process. Scaling out needs a shared store (e.g. Redis).
+    numInstances: 1
+    buildCommand: pip install -r requirements.txt
+    # --proxy-headers: rate limits must see each visitor's own address, not
+    # the platform load balancer's (otherwise every customer shares one
+    # "5 orders per minute" budget). Only private/internal ranges are trusted
+    # as proxies, so a client can't fake its address via X-Forwarded-For.
+    startCommand: >-
+      uvicorn app.main:app --host 0.0.0.0 --port $PORT
+      --proxy-headers
+      --forwarded-allow-ips "10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,100.64.0.0/10"
+    healthCheckPath: /
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.13.0
+      - key: ENVIRONMENT
+        value: production
+      # Shared Supabase PostgreSQL — the SAME value ecobel-accounting-system
+      # uses. Use Supabase's Session pooler URL (IPv4); the direct
+      # db.<ref>.supabase.co host is IPv6-only.
+      - key: DATABASE_URL
+        sync: false
+      # Signs customer login tokens (32+ random characters). Render generates it once.
+      - key: SECRET_KEY
+        generateValue: true
+      # The storefront's public https origin(s), comma-separated.
+      - key: FRONTEND_ORIGINS
+        sync: false
+      # https://<project-ref>.supabase.co — used only to build public photo URLs.
+      - key: SUPABASE_URL
+        sync: false
