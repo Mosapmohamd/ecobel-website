@@ -9,15 +9,19 @@ from ..rate_limit import limiter
 router = APIRouter(prefix="/products/{product_id}/reviews", tags=["Reviews"])
 
 
-def _has_purchased(db: Session, customer_id: str, product_id: str) -> bool:
-    """A customer is eligible to review a product only if they have at
-    least one non-cancelled order containing it — checked server-side,
-    never trusted from the client."""
+NOT_RECEIVED = "تقدري تقيّمي المنتج ده بعد ما طلبك اللي فيه يوصلك"
+
+
+def _has_received(db: Session, customer_id: str, product_id: str) -> bool:
+    """A customer may review a product only once one of their own orders
+    containing it has been delivered — not while it's pending or shipped,
+    and never for a cancelled order (otherwise anyone could order, review,
+    then cancel). Checked server-side, never trusted from the client."""
     return (
         db.query(models.OrderItem)
         .join(models.Order, models.Order.id == models.OrderItem.order_id)
         .filter(models.Order.customer_id == customer_id)
-        .filter(models.Order.status != models.OrderStatus.cancelled)
+        .filter(models.Order.status == models.OrderStatus.delivered)
         .filter(models.OrderItem.product_id == product_id)
         .first()
         is not None
@@ -50,8 +54,8 @@ def check_eligibility(
     db: Session = Depends(get_db),
     customer: models.Customer = Depends(auth.get_current_customer),
 ):
-    if not _has_purchased(db, customer.id, product_id):
-        return schemas.ReviewEligibility(can_review=False, reason="لازم تكوني طلبتي المنتج ده الأول عشان تقيّميه")
+    if not _has_received(db, customer.id, product_id):
+        return schemas.ReviewEligibility(can_review=False, reason=NOT_RECEIVED)
     already = (
         db.query(models.Review)
         .filter(models.Review.customer_id == customer.id, models.Review.product_id == product_id)
@@ -74,8 +78,8 @@ def create_review(
     product = db.get(models.Product, product_id)
     if not product:
         raise HTTPException(404, "المنتج غير موجود")
-    if not _has_purchased(db, customer.id, product_id):
-        raise HTTPException(403, "لازم تكوني طلبتي المنتج ده الأول عشان تقيّميه")
+    if not _has_received(db, customer.id, product_id):
+        raise HTTPException(403, NOT_RECEIVED)
     existing = (
         db.query(models.Review)
         .filter(models.Review.customer_id == customer.id, models.Review.product_id == product_id)

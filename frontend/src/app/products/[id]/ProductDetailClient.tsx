@@ -10,6 +10,7 @@ import ProductCard from '@/components/ProductCard';
 import ProductImage from '@/components/ProductImage';
 import ReviewsSection, { Stars } from '@/components/ReviewsSection';
 import Icon, { type IconName } from '@/components/Icon';
+import OfferTitle from '@/components/OfferTitle';
 import { egp, FREE_SHIPPING_THRESHOLD } from '@/lib/constants';
 
 /** Store-wide policies (the same ones the trust strip states). */
@@ -175,7 +176,7 @@ export default function ProductDetailClient({
                   </>
                 )}
               </div>
-              {product.offer && <p className="mt-1 text-body-sm font-bold text-brand-deep">{product.offer.title}</p>}
+              {onOffer && <OfferTitle offer={product.offer} className="mt-2" />}
             </div>
 
             {product.description && (

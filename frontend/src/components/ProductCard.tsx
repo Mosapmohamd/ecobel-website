@@ -8,6 +8,7 @@ import { useToast } from '@/lib/toast';
 import { egp } from '@/lib/constants';
 import ProductImage from './ProductImage';
 import Icon from './Icon';
+import OfferTitle from './OfferTitle';
 
 /** The one product tile — catalog, offers, featured, related and wishlist.
  * Price and offer come from the server (`product.price` / `product.offer`). */
@@ -62,6 +63,7 @@ export default function ProductCard({ product }: { product: Product }) {
             {product.name}
           </Link>
         </h3>
+        {onOffer && <OfferTitle offer={product.offer} className="mt-1.5" />}
         <div className="mt-auto pt-3 flex flex-wrap items-baseline gap-x-2">
           <span className={`text-headline-sm font-bold ${onOffer ? 'text-sale' : 'text-ink'}`}>{egp(product.price)}</span>
           {onOffer && <span className="text-body-sm line-through text-ink-muted">{egp(product.sale_price)}</span>}

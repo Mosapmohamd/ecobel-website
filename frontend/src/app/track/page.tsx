@@ -70,7 +70,7 @@ function TrackContent() {
       <form onSubmit={handleSubmit} className="card p-6 flex flex-col gap-4">
         <div className="field">
           <label htmlFor="track-order">رقم الطلب (اختياري)</label>
-          <input id="track-order" value={orderNumber} onChange={(e) => setOrderNumber(e.target.value)} placeholder="مثال: EB123456" dir="ltr" />
+          <input id="track-order" value={orderNumber} onChange={(e) => setOrderNumber(e.target.value)} placeholder="مثال: EB7K4MQ9XR2T" dir="ltr" />
         </div>
         <div className="field">
           <label htmlFor="track-phone">رقم التليفون (اختياري)</label>
@@ -87,10 +87,10 @@ function TrackContent() {
 
       {results && results.length > 0 && (
         <div className="flex flex-col gap-4 mt-8">
-          {results.map((r) => (
-            <div key={r.order_number} className="rounded border p-5" style={{ background: 'var(--color-surface)', borderColor: 'var(--color-line)' }}>
+          {results.map((r, i) => (
+            <div key={isFullOrder(r) ? r.order_number : `${r.reference}-${i}`} className="rounded border p-5" style={{ background: 'var(--color-surface)', borderColor: 'var(--color-line)' }}>
               <div className="flex justify-between items-center gap-3 mb-3">
-                <div className="font-bold text-lg">طلب <span dir="ltr">#{r.order_number}</span></div>
+                <div className="font-bold text-lg">طلب <span dir="ltr">#{isFullOrder(r) ? r.order_number : r.reference}</span></div>
                 <OrderStatusBadge status={r.status} />
               </div>
 
@@ -112,16 +112,16 @@ function TrackContent() {
                   </div>
                 </>
               ) : (
-                <div className="text-[13.5px] flex justify-between" style={{ color: 'var(--color-ink-muted)' }}>
+                <div className="text-[13.5px]" style={{ color: 'var(--color-ink-muted)' }}>
                   <span>{new Date(r.created_at).toLocaleDateString('ar-EG')}</span>
-                  <span className="font-bold" style={{ color: 'var(--color-primary)' }}>{egp(r.total_amount)}</span>
                 </div>
               )}
             </div>
           ))}
           {!isFullOrder(results[0]) && (
             <p className="text-[12.5px] text-center" style={{ color: 'var(--color-ink-muted)' }}>
-              اكتبي رقم الطلب ورقم التليفون سوا عشان تشوفي التفاصيل كاملة (العنوان والمنتجات).
+              عشان خصوصيتك: اكتبي رقم الطلب ورقم التليفون سوا عشان تشوفي الطلب كامل (الرقم والإجمالي والعنوان والمنتجات).
+              رقم الطلب موجود في رسالة تأكيد الطلب.
             </p>
           )}
         </div>

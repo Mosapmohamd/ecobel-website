@@ -8,25 +8,36 @@
    a component — add a role here instead.
    ========================================================================== */
 @theme static {
+  /* EcoBel identity — taken from the official logo (/Logo.jpg in the
+     project root): rich-black ink #231f20 on a gray background gradient
+     #b3b3b3 → #f2f2f2. Every neutral below is that ink, a sample of that
+     gradient, or a step on the ink → logo-gray ramp (chosen for WCAG AA
+     contrast). The accounting system uses the same values
+     (ecobel-accounting-system frontend/src/index.css). */
+  --color-logo-ink: #231f20;       /* the logo's lettering and "eb" disc */
+  --color-logo-gray: #b3b3b3;      /* logo background, dark end */
+  --color-logo-light: #f2f2f2;     /* logo background, light end */
+
   /* Brand & actions */
-  --color-primary: #b5566b;        /* the single action color: CTAs, links, active states */
-  --color-primary-hover: #8e4152;  /* primary hover / pressed */
-  --color-brand-deep: #973e53;     /* deep berry panels: announcement bar, footer */
-  --color-accent: #e39aa6;         /* petal rose: star ratings, progress, soft icon fills */
+  --color-primary: #231f20;        /* the single action color: CTAs, links, active states */
+  --color-primary-hover: #423f40;  /* primary hover / pressed (ramp 15%) */
+  --color-brand-deep: #231f20;     /* deep panels: promo bar, footer, offer badges */
+  --color-accent: #4c494a;         /* star ratings (ramp 20%; 6.9:1 against empty stars) */
 
   /* Surfaces */
   --color-surface: #ffffff;        /* canvas, cards, header */
-  --color-surface-tint: #fbf2f4;   /* alternating sections, input focus ring */
-  --color-surface-muted: #f6e7ea;  /* badges, chips, icon tiles, deeper tint */
-  --color-line: #ede3e5;           /* hairline borders */
+  --color-surface-tint: #f2f2f2;   /* alternating sections, input focus ring (logo light) */
+  --color-surface-muted: #ebebeb;  /* badges, chips, icon tiles, deeper tint (logo gradient) */
+  --color-line: #e3e3e3;           /* hairline borders (logo gradient) */
 
   /* Text */
-  --color-ink: #2b2320;            /* body text and headings */
-  --color-ink-secondary: #544245;  /* secondary paragraph copy */
-  --color-ink-muted: #6c5d58;      /* meta text, kickers, placeholders */
+  --color-ink: #231f20;            /* body text and headings (logo ink) */
+  --color-ink-secondary: #4c494a;  /* secondary paragraph copy (ramp 20%) */
+  --color-ink-muted: #615e5f;      /* meta text, kickers, placeholders (ramp 30%; ≥5:1 on every surface) */
 
-  /* Semantic */
-  --color-sale: #dc4c64;           /* discounts, sale prices, urgency — never an action */
+  /* Semantic — status colors stay recognizable; sale is part of the
+     monochrome identity (strike-through + badge carry the meaning). */
+  --color-sale: #231f20;           /* discounts, sale prices, urgency — never an action */
   --color-success: #6b9c6c;        /* success, in-stock, botanical seals */
   --color-success-strong: #3f6b40; /* success text on a tinted background */
   --color-error: #ba1a1a;          /* errors, destructive actions */
@@ -51,9 +62,9 @@
 
   /* Elevation. Shape: Tailwind's `rounded` (4px) everywhere; circles only for
      1:1 icon buttons. */
-  --shadow-soft: 0 1px 8px rgba(43, 35, 32, 0.04);
-  --shadow-raised: 0 4px 16px -2px rgba(43, 35, 32, 0.06), 0 1px 3px 0 rgba(43, 35, 32, 0.03);
-  --shadow-overlay: -6px 0 24px -4px rgba(43, 35, 32, 0.1), 0 12px 32px -8px rgba(43, 35, 32, 0.18);
+  --shadow-soft: 0 1px 8px rgba(35, 31, 32, 0.04);
+  --shadow-raised: 0 4px 16px -2px rgba(35, 31, 32, 0.06), 0 1px 3px 0 rgba(35, 31, 32, 0.03);
+  --shadow-overlay: -6px 0 24px -4px rgba(35, 31, 32, 0.1), 0 12px 32px -8px rgba(35, 31, 32, 0.18);
 }
 
 /* ==========================================================================
@@ -132,7 +143,7 @@ h1, h2, h3 {
 .btn-danger:hover { background: color-mix(in srgb, var(--color-error) 85%, var(--color-ink)); }
 .btn-sm { min-height: 44px; padding: 0 16px; font-size: var(--text-label); }
 .btn:disabled { opacity: .5; cursor: not-allowed; }
-/* Primary action on a dark (berry) surface — same shape, inverted colors. */
+/* Primary action on a dark (logo-ink) surface — same shape, inverted colors. */
 .btn-on-dark { background: var(--color-surface); color: var(--color-brand-deep); }
 .btn-on-dark:hover { background: var(--color-surface-muted); }
 .btn-on-dark:focus-visible { box-shadow: 0 0 0 2px var(--color-brand-deep), 0 0 0 4px var(--color-surface); }
@@ -157,6 +168,84 @@ h1, h2, h3 {
   font-weight: 700;
   color: var(--color-primary-hover);
   margin-bottom: 4px;
+}
+
+/* Announcement ticker (components/AnnouncementBar.tsx): a slim strip in the
+   logo's black-to-gray direction — logo ink to the darkest ramp gray that
+   keeps the logo-light text ≥5:1 (#b3b3b3 itself is too light for it).
+   Never wider than the screen. */
+.announcement-bar {
+  position: relative;
+  display: flex;
+  align-items: center;
+  height: 1.75rem;
+  overflow: hidden;
+  background: linear-gradient(to right, var(--color-logo-ink), var(--color-ink-muted));
+  color: var(--color-logo-light);
+  border-bottom: 1px solid var(--color-ink-secondary); /* separates it from the black promo bar */
+  font-size: var(--text-label);
+  font-weight: 500;
+}
+.announcement-viewport {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  overflow: hidden;
+}
+.announcement-track {
+  display: flex;
+  width: max-content;
+  height: 100%;
+  animation: announcement-scroll-ltr 32s linear infinite;
+}
+.announcement-track[data-dir="rtl"] { animation-name: announcement-scroll-rtl; }
+.announcement-half {
+  display: flex;
+  flex: none;
+  min-width: 100vw;
+  justify-content: space-around;
+}
+.announcement-item {
+  display: inline-flex;
+  align-items: center;
+  padding-inline: 2.5rem;
+  white-space: nowrap;
+}
+.announcement-static { display: none; }
+/* Paused with the pause button, and while hovered on devices that really
+   hover. Not on focus: focusing the play button must not keep it paused;
+   not on touch screens: a tap leaves :hover stuck. */
+.announcement-bar[data-paused] .announcement-track { animation-play-state: paused; }
+@media (hover: hover) {
+  .announcement-bar:hover .announcement-track { animation-play-state: paused; }
+}
+@keyframes announcement-scroll-ltr { to { transform: translateX(-50%); } }
+@keyframes announcement-scroll-rtl { to { transform: translateX(50%); } }
+.announcement-toggle {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  color: var(--color-logo-light);
+}
+.announcement-toggle:hover { color: var(--color-surface); }
+.announcement-toggle:focus-visible { outline: 2px solid var(--color-logo-light); outline-offset: -3px; }
+/* Reduced motion: the text stands still (centered, cut off with … if too long). */
+@media (prefers-reduced-motion: reduce) {
+  .announcement-track, .announcement-toggle { display: none; }
+  .announcement-static {
+    display: block;
+    height: 100%;
+    line-height: 1.75rem;
+    padding-inline: 1rem;
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
 }
 
 /* Promo bar closed earlier this session (set before first paint, see layout). */
@@ -237,7 +326,7 @@ html[data-promo-dismissed] .promo-bar {
   border-radius: 4px;
 }
 
-/* Round social icon buttons on the berry footer (1:1 icon buttons are the
+/* Round social icon buttons on the dark footer (1:1 icon buttons are the
    one place a circle is allowed). */
 .social {
   width: 36px;

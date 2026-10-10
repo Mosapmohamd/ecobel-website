@@ -141,10 +141,11 @@ export interface Order {
   items: OrderItemOut[];
 }
 
+/** Status-only view (order number OR phone given): a masked reference
+ * like "EB••••••••2T", never the full number, amount or address. */
 export interface OrderTrackSummary {
-  order_number: string;
+  reference: string;
   status: 'pending' | 'shipped' | 'delivered' | 'cancelled';
-  total_amount: number;
   created_at: string;
 }
 

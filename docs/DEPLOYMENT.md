@@ -33,7 +33,11 @@ They depend on two things outside this repo:
 
 ## Order of operations
 
-1. **Database ready.** The production database must be migrated by
+1. **Database ready (migrations first).** This release needs migration
+   `0004_abuse_controls` (adds `orders.client_ip_hash` and the `auth_throttle`
+   table; additive only). Deploy/start ecobel-accounting-system first so it
+   applies it — the API expects that revision and logs a warning otherwise.
+   The production database must be migrated by
    ecobel-accounting-system (start it once against that database, or run
    `alembic upgrade head` there) and be at the revision the API expects.
 2. **API on Render.** New → Blueprint → this repository. Enter the `sync: false`
@@ -64,6 +68,9 @@ those are compiled into the JavaScript every visitor downloads.
 | `PYTHON_VERSION` | Public | Render only | `3.13.0` (the version the tests run on). |
 | `PRODUCT_IMAGES_BUCKET` | Public | No | Defaults to `product-images`. |
 | `PRODUCT_IMAGE_BASE_URL` | Public | No | Overrides the public photo base URL (e.g. a CDN). |
+| `GUEST_PENDING_ORDERS_PER_PHONE` | Public | No | Pending guest (cash-on-delivery) orders one phone may have (default 3). |
+| `GUEST_ORDERS_PER_IP_PER_DAY` | Public | No | Guest orders one client IP may place in 24 h (default 10). Needs correct client IPs — see the start command below. |
+| `LOGIN_MAX_FAILURES`, `LOGIN_FAILURE_WINDOW_MINUTES`, `LOGIN_BLOCK_MINUTES` | Public | No | Failed customer sign-ins per phone before a pause (defaults 10 / 15 min / 15 min). |
 
 The API never uses a Supabase secret/service-role key. Only
 ecobel-accounting-system (`SUPABASE_SECRET_KEY`) can write to Storage.

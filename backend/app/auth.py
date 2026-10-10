@@ -52,15 +52,23 @@ def _decode(token: str) -> dict:
     return jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
 
 
+# Checked when there's no such account, so a miss takes as long as a wrong
+# password — response time doesn't reveal which phone numbers have accounts.
+_NO_ACCOUNT_HASH = pwd_context.hash("no-such-account")
+
+
 def authenticate_customer(db: Session, phone: str, password: str) -> Optional[models.Customer]:
     # Accounts only — a guest profile with the same phone is a different identity.
     user = (
         db.query(models.Customer)
-        .filter(models.Customer.phone == phone.strip())
+        .filter(models.Customer.phone == phone)
         .filter(models.Customer.hashed_password.isnot(None))
         .first()
     )
-    if not user or not verify_password(password, user.hashed_password):
+    if user is None:
+        verify_password(password, _NO_ACCOUNT_HASH)
+        return None
+    if not verify_password(password, user.hashed_password):
         return None
     return user
 

@@ -7,6 +7,7 @@ import ProductImage from '@/components/ProductImage';
 import RoutineCard, { stepsLabel } from '@/components/RoutineCard';
 import AddRoutineButton from '@/components/AddRoutineButton';
 import Icon from '@/components/Icon';
+import OfferTitle from '@/components/OfferTitle';
 import { egp, ROUTINES_LABEL, ROUTINES_PATH } from '@/lib/constants';
 
 /** The routine page's interactive part; the server passes what it already
@@ -147,6 +148,7 @@ export default function RoutineDetailClient({
                     <Link href={`/products/${it.product.id}`} className="block font-bold text-body leading-snug hover:text-primary transition-colors">
                       {it.product.name}
                     </Link>
+                    {it.price < it.regular_price && <OfferTitle offer={it.product.offer} className="mt-0.5" />}
                     {!available && <span className="block text-body-sm text-error">غير متاح حاليًا</span>}
                   </div>
                   <span className="flex-none text-left">

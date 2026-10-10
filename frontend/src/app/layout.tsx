@@ -6,6 +6,7 @@ import { WishlistProvider } from "@/lib/wishlist";
 import { AuthProvider } from "@/lib/auth";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import AnnouncementBar from "@/components/AnnouncementBar";
 import PromoBar from "@/components/PromoBar";
 import JsonLd from "@/components/JsonLd";
 import { ToastProvider } from "@/lib/toast";
@@ -99,6 +100,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           <AuthProvider>
             <CartProvider>
               <WishlistProvider>
+                {/* Above the promo bar, which holds the phone number. */}
+                <AnnouncementBar />
                 <PromoBar />
                 <Header initialCategories={categories} />
                 <main id="main" tabIndex={-1} className="flex-1 outline-none">{children}</main>

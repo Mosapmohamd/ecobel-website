@@ -78,7 +78,7 @@ export default function RegisterPage() {
           <label htmlFor="reg-password">كلمة المرور</label>
           <input id="reg-password" autoComplete="new-password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} aria-required="true" {...errorProps('reg-password-err', fieldErrors.password)} />
           <FieldError id="reg-password-err" message={fieldErrors.password ?? null} />
-          {!fieldErrors.password && <p className="text-[12px] mt-1 text-ink-muted">6 حروف أو أرقام على الأقل</p>}
+          {!fieldErrors.password && <p className="text-[12px] mt-1 text-ink-muted">8 حروف أو أرقام على الأقل</p>}
         </div>
         <button className="btn btn-primary" disabled={loading}>{loading ? 'جاري الإنشاء...' : 'إنشاء الحساب'}</button>
       </form>

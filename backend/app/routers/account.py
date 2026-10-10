@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, joinedload
 
-from .. import models, schemas, auth
+from .. import auth, login_throttle, models, schemas
 from ..database import get_db
 from ..rate_limit import limiter
 
@@ -46,9 +46,15 @@ def register(request: Request, payload: schemas.CustomerRegister, db: Session = 
 @router.post("/login", response_model=schemas.Token)
 @limiter.limit("5/minute")
 def login(request: Request, payload: schemas.CustomerLogin, db: Session = Depends(get_db)):
-    customer = auth.authenticate_customer(db, payload.phone, payload.password)
+    # Failures are also counted per phone across IPs (app/login_throttle.py);
+    # the same answer whether or not an account exists.
+    phone = schemas.normalize_egypt_phone(payload.phone)
+    login_throttle.ensure_not_blocked(db, "customer", phone)
+    customer = auth.authenticate_customer(db, phone, payload.password)
     if not customer:
+        login_throttle.record_failure(db, "customer", phone)
         raise HTTPException(401, "رقم التليفون أو كلمة المرور غير صحيحة")
+    login_throttle.record_success(db, "customer", phone)
     access_token = auth.create_access_token(data={"sub": customer.id, "type": "customer"})
     return {"access_token": access_token, "token_type": "bearer"}
 

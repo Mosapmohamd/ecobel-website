@@ -102,9 +102,11 @@ def test_guest_a_cannot_access_guest_b_order():
     # Guest A knows B's order number but not B's phone: no details.
     wrong = client.get("/orders/track", params={"order_number": b["order_number"], "phone": GUEST_A})
     assert wrong.status_code == 404
-    # Order number alone: status only, never the address or items.
+    # Order number alone: status only — never the address, items, amount
+    # or the full number (see tests/test_order_tracking.py).
     summary = client.get("/orders/track", params={"order_number": b["order_number"]}).json()
-    assert summary == [{"order_number": b["order_number"], "status": "pending", "total_amount": b["total_amount"], "created_at": summary[0]["created_at"]}]
+    assert summary == [{"reference": summary[0]["reference"], "status": "pending", "created_at": summary[0]["created_at"]}]
+    assert b["order_number"] not in summary[0]["reference"]
     # No guest can change an order (that needs an account that owns it).
     assert client.delete(f"/orders/{b['id']}").status_code == 401
 
