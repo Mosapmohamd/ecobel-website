@@ -33,9 +33,12 @@ They depend on two things outside this repo:
 
 ## Order of operations
 
-1. **Database ready (migrations first).** This release needs migration
+1. **Database ready (migrations first).** This release needs migrations
    `0004_abuse_controls` (adds `orders.client_ip_hash` and the `auth_throttle`
-   table; additive only). Deploy/start ecobel-accounting-system first so it
+   table; additive only) and `0005_data_api_lockdown` (turns on row-level
+   security for the six tables Supabase's Data API could still read and write;
+   no data changes — the API process connects as the table owner and is
+   unaffected). Deploy/start ecobel-accounting-system first so it
    applies it — the API expects that revision and logs a warning otherwise.
    The production database must be migrated by
    ecobel-accounting-system (start it once against that database, or run

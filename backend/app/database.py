@@ -54,7 +54,7 @@ def get_db():
 # The shared database's schema is migrated by ecobel-accounting-system
 # (its alembic/versions) — this service never creates or alters tables.
 # Bump this when a new migration there changes tables this service maps.
-EXPECTED_SCHEMA_REVISION = "0004_abuse_controls"
+EXPECTED_SCHEMA_REVISION = "0005_data_api_lockdown"
 
 
 def check_schema_revision() -> None:
