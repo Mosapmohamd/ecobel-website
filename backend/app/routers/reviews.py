@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy import func
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from .. import models, schemas, auth
@@ -9,6 +10,7 @@ from ..rate_limit import limiter
 router = APIRouter(prefix="/products/{product_id}/reviews", tags=["Reviews"])
 
 
+ALREADY_REVIEWED = "قيّمتي المنتج ده قبل كده"
 NOT_RECEIVED = "تقدري تقيّمي المنتج ده بعد ما طلبك اللي فيه يوصلك"
 
 
@@ -86,7 +88,7 @@ def create_review(
         .first()
     )
     if existing:
-        raise HTTPException(400, "قيّمتي المنتج ده قبل كده")
+        raise HTTPException(400, ALREADY_REVIEWED)
 
     review = models.Review(
         product_id=product_id,
@@ -96,6 +98,12 @@ def create_review(
         is_approved=False,
     )
     db.add(review)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        # Two submissions at once both passed the check above; the unique
+        # (customer, product) constraint kept one. Same answer as a repeat.
+        db.rollback()
+        raise HTTPException(400, ALREADY_REVIEWED)
     db.refresh(review)
     return review

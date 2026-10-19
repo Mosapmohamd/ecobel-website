@@ -85,3 +85,43 @@ def test_review_still_requires_sign_in_and_valid_input():
     assert client.post("/products/rv_p1/reviews/", json={"rating": 5}).status_code == 401
     assert review(STATUSES["shipped"], rating=0).status_code == 422
     assert client.post("/products/missing/reviews/", headers=customer_token(STATUSES["delivered"]), json={"rating": 5}).status_code == 404
+
+
+def test_concurrent_duplicate_review_is_a_400_not_a_500():
+    """Two submissions at once both pass the "already reviewed?" check; the
+    second commit hits the unique constraint. It must answer like a repeat."""
+    from sqlalchemy import event
+    from sqlalchemy.orm import Session as OrmSession
+
+    already_reviewed = "قيّمتي المنتج ده قبل كده"
+
+    db = SessionLocal()
+    db.add(models.Customer(id="rv_race", name="منى علي حسن", phone="01099999992", hashed_password=auth.hash_password("review-pass-1")))
+    db.add(models.Order(id="o_rv_race", order_number="EBRVRACE", customer_id="rv_race", customer_name="منى علي حسن",
+                        customer_phone="01099999992", city="القاهرة", shipping_address="عنوان التقييم",
+                        status=models.OrderStatus.delivered, subtotal=100, total_amount=100))
+    db.add(models.OrderItem(order_id="o_rv_race", product_id="rv_p2", product_name="rv_p2", unit_price=100, quantity=1, line_total=100))
+    db.commit()
+    db.close()
+
+    fired = []
+
+    def competing_request_commits_first(session):
+        # Runs inside the request's commit, after its duplicate check passed.
+        if fired:
+            return
+        fired.append(True)
+        with engine.begin() as conn:
+            conn.execute(models.Review.__table__.insert().values(
+                id="rv_race_first", product_id="rv_p2", customer_id="rv_race", rating=4, is_approved=False))
+
+    event.listen(OrmSession, "before_commit", competing_request_commits_first)
+    try:
+        res = review("rv_race", product="rv_p2")
+    finally:
+        event.remove(OrmSession, "before_commit", competing_request_commits_first)
+    assert fired, "the simulated concurrent submission didn't run"
+    assert res.status_code == 400 and res.json()["detail"] == already_reviewed
+    db = SessionLocal()
+    assert db.query(models.Review).filter_by(customer_id="rv_race", product_id="rv_p2").count() == 1
+    db.close()

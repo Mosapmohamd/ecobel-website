@@ -1,6 +1,6 @@
-"""Guest cash-on-delivery orders are capped per phone (pending orders) and per
-client IP (per 24 h), counted in the database. Signed-in customers aren't
-limited. Refused requests change nothing. Synthetic data, throwaway DB."""
+"""Cash-on-delivery orders are capped — pending orders per guest phone or per
+account, and orders per client IP per 24 h — counted in the database.
+Refused requests change nothing. Synthetic data, throwaway DB."""
 import os
 import sys
 import tempfile
@@ -45,6 +45,7 @@ def production_limits(monkeypatch, generous_guest_limits):
     """The real defaults (overriding the generous test-wide values)."""
     monkeypatch.setattr(abuse_limits, "PENDING_PER_PHONE", abuse_limits._env_int("UNSET_FOR_TEST", 3))
     monkeypatch.setattr(abuse_limits, "PER_IP_PER_DAY", abuse_limits._env_int("UNSET_FOR_TEST", 10))
+    monkeypatch.setattr(abuse_limits, "PENDING_PER_ACCOUNT", abuse_limits._env_int("UNSET_FOR_TEST", 3))
 
 
 def order(c, phone, headers=None):
@@ -154,14 +155,44 @@ def test_concurrent_requests_cannot_bypass_the_cap(monkeypatch):
     assert snapshot()[0] == start[0] - 1  # stock moved exactly once
 
 
-def test_signed_in_customers_are_not_limited(monkeypatch):
-    monkeypatch.setattr(abuse_limits, "PENDING_PER_PHONE", 1)
-    monkeypatch.setattr(abuse_limits, "PER_IP_PER_DAY", 1)
+def register(c, phone):
+    token = c.post("/account/register", json={"name": "سارة محمود علي", "phone": phone, "password": "signed-in-1"}).json()["access_token"]
+    return {"Authorization": f"Bearer {token}"}
+
+
+def test_a_new_account_cannot_drain_stock_with_unlimited_orders():
+    """R2: accounts are unverified, so they get the guest caps too — the old
+    behaviour let one fresh account place 8 x 100-unit orders."""
     c = client_from("203.0.113.80")
-    token = c.post("/account/register", json={"name": "سارة محمود علي", "phone": "01070000001", "password": "signed-in-1"}).json()["access_token"]
-    auth = {"Authorization": f"Bearer {token}"}
-    created = [order(c, "01070000001", headers=auth) for _ in range(4)]
-    assert [r.status_code for r in created] == [201] * 4
+    auth = register(c, "01070000001")
+    created = [order(c, "01070000001", headers=auth) for _ in range(3)]
+    assert [r.status_code for r in created] == [201] * 3
+    before = snapshot()
+    refused = order(c, "01070000001", headers=auth)
+    assert refused.status_code == 429 and refused.json()["detail"] == abuse_limits.LIMIT_REACHED
+    assert snapshot() == before  # nothing reserved, charged or recorded
     db = SessionLocal()
-    assert all(db.get(models.Order, r.json()["id"]).client_ip_hash is None for r in created)
+    assert all(db.get(models.Order, r.json()["id"]).client_ip_hash for r in created)  # counted per IP too
     db.close()
+
+
+def test_account_orders_count_toward_the_per_ip_cap(monkeypatch):
+    monkeypatch.setattr(abuse_limits, "PER_IP_PER_DAY", 2)
+    c = client_from("203.0.113.81")
+    auth = register(c, "01070000002")
+    assert order(c, "01070000003").status_code == 201                 # a guest from this IP
+    assert order(c, "01070000002", headers=auth).status_code == 201   # an account from this IP
+    assert order(c, "01070000002", headers=auth).status_code == 429   # the IP's 2 are used
+
+
+def test_an_accounts_finished_orders_free_it_again():
+    c = client_from("203.0.113.82")
+    auth = register(c, "01070000004")
+    ids = [order(c, "01070000004", headers=auth).json()["id"] for _ in range(3)]
+    assert order(c, "01070000004", headers=auth).status_code == 429
+    db = SessionLocal()
+    db.get(models.Order, ids[0]).status = models.OrderStatus.delivered
+    db.commit()
+    db.close()
+    assert order(c, "01070000004", headers=auth).status_code == 201
+

@@ -39,7 +39,11 @@ def _env_int(name: str, default: int) -> int:
 
 
 PENDING_PER_PHONE = _env_int("GUEST_PENDING_ORDERS_PER_PHONE", 3)
-PER_IP_PER_DAY = _env_int("GUEST_ORDERS_PER_IP_PER_DAY", 10)
+# Accounts aren't verified (anyone can register any phone), so a signed-in
+# customer gets the same caps as a guest: pending orders per account, and
+# their orders count toward the per-IP daily cap like everyone else's.
+PENDING_PER_ACCOUNT = _env_int("ACCOUNT_PENDING_ORDERS", 3)
+PER_IP_PER_DAY = _env_int("GUEST_ORDERS_PER_IP_PER_DAY", 10)  # all orders from one IP
 IP_WINDOW = timedelta(hours=24)
 
 # Deliberately says nothing about why (another order, this phone, this IP).
@@ -87,14 +91,35 @@ def check_guest_order(db: Session, phone: str, client_ip: str | None) -> str | N
     )
     if pending >= PENDING_PER_PHONE:
         raise HTTPException(429, LIMIT_REACHED)
-
-    if ip_hash:
-        recent = (
-            db.query(func.count(models.Order.id))
-            .filter(models.Order.client_ip_hash == ip_hash)
-            .filter(models.Order.created_at >= now_utc() - IP_WINDOW)
-            .scalar()
-        )
-        if recent >= PER_IP_PER_DAY:
-            raise HTTPException(429, LIMIT_REACHED)
+    _check_ip(db, ip_hash)
     return ip_hash
+
+
+def check_account_order(db: Session, customer_id: str, client_ip: str | None) -> str | None:
+    """The same for a signed-in customer: raises 429 over a limit, otherwise
+    returns the IP hash to store. Call before any stock moves."""
+    ip_hash = keyed_hash(f"ip:{client_ip}") if client_ip else None
+    _serialize(db, f"customer:{customer_id}", *( [f"ip:{ip_hash}"] if ip_hash else [] ))
+    pending = (
+        db.query(func.count(models.Order.id))
+        .filter(models.Order.customer_id == customer_id)
+        .filter(models.Order.status == models.OrderStatus.pending)
+        .scalar()
+    )
+    if pending >= PENDING_PER_ACCOUNT:
+        raise HTTPException(429, LIMIT_REACHED)
+    _check_ip(db, ip_hash)
+    return ip_hash
+
+
+def _check_ip(db: Session, ip_hash: str | None) -> None:
+    if not ip_hash:
+        return
+    recent = (
+        db.query(func.count(models.Order.id))
+        .filter(models.Order.client_ip_hash == ip_hash)
+        .filter(models.Order.created_at >= now_utc() - IP_WINDOW)
+        .scalar()
+    )
+    if recent >= PER_IP_PER_DAY:
+        raise HTTPException(429, LIMIT_REACHED)

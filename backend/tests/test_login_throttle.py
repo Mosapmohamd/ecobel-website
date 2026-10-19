@@ -118,3 +118,22 @@ def test_phone_is_normalized_and_never_stored_in_the_throttle_table():
     finally:
         db.close()
     assert keys and all("0108" not in k and len(k) == 64 for k in keys)
+
+
+def test_stale_throttle_rows_are_purged_but_live_blocks_are_kept():
+    """auth_throttle doesn't grow forever: a failure drops rows idle for
+    longer than STALE_AFTER, never one whose block is still running."""
+    now = login_throttle.now_utc()
+    old = now - login_throttle.STALE_AFTER - timedelta(minutes=1)
+    db = SessionLocal()
+    db.add(models.AuthThrottle(key="stale-customer", failures=3, window_started_at=old))
+    db.add(models.AuthThrottle(key="stale-blocked-customer", failures=10, window_started_at=old, blocked_until=now + timedelta(hours=1)))
+    db.add(models.AuthThrottle(key="recent-customer", failures=2, window_started_at=now - timedelta(minutes=5)))
+    db.commit()
+    db.close()
+    assert login("01080009999", "wrong-password-x").status_code == 401
+    db = SessionLocal()
+    keys = {k for (k,) in db.query(models.AuthThrottle.key).all()}
+    db.close()
+    assert "stale-customer" not in keys
+    assert {"stale-blocked-customer", "recent-customer"} <= keys

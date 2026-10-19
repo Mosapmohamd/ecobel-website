@@ -139,8 +139,13 @@ def normalize_order_ref(value: str) -> str:
 
 
 def mask_order_ref(ref: str) -> str:
-    """"EB7K4MQ9XR2T" → "EB••••••••2T": recognisable, not usable."""
-    return ref[:2] + "•" * max(len(ref) - 4, 1) + ref[-2:]
+    """"EB7K4MQ9XR2T" → "EB••••••••2T": recognisable, not usable — 8 hidden
+    characters of 31 are ~10^12 combinations. Shorter references (the old
+    EB + 6 digits) show nothing after "EB": revealing 2 of 6 digits would
+    leave only 10^4 to try against a known phone."""
+    if len(ref) >= 2 + ORDER_REF_LENGTH:
+        return ref[:2] + "•" * (len(ref) - 4) + ref[-2:]
+    return ref[:2] + "•" * max(len(ref) - 2, 1)
 
 
 @router.post("/", response_model=schemas.OrderOut, status_code=201)
@@ -152,12 +157,13 @@ def create_order(
     logged_in_customer: models.Customer | None = Depends(auth.get_current_customer_optional),
 ):
     client_ip = get_remote_address(request)
-    # Guest checkouts are capped per phone and per IP (app/abuse_limits.py),
-    # checked before any stock moves so a refused request changes nothing.
-    # Signed-in customers' orders aren't limited here.
-    ip_hash = None
+    # Cash-on-delivery orders are capped — pending orders per guest phone or
+    # per account, and orders per IP per day (app/abuse_limits.py) — checked
+    # before any stock moves so a refused request changes nothing.
     if logged_in_customer is None:
         ip_hash = abuse_limits.check_guest_order(db, payload.customer_phone, client_ip)
+    else:
+        ip_hash = abuse_limits.check_account_order(db, logged_in_customer.id, client_ip)
 
     line_specs, subtotal = _lock_and_price(db, payload.items)
     t = checkout.totals(db, subtotal, city=payload.city, coupon_code=payload.coupon_code, lock_coupon=True, client=client_ip)

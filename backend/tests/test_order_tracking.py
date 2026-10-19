@@ -134,3 +134,18 @@ def test_collision_is_retried_and_endless_collisions_fail_safely(monkeypatch):
         assert getattr(err.value, "status_code", None) == 500
     finally:
         db.close()
+
+
+def test_legacy_short_reference_reveals_none_of_its_digits():
+    """Old orders have EB + 6 digits. Showing the last 2 would leave only
+    10^4 guesses for someone who knows the phone; nothing is shown."""
+    db = SessionLocal()
+    legacy_phone = "01011110003"
+    db.add(models.Customer(id="tr_legacy", name="عميل قديم", phone=legacy_phone))
+    db.add(models.Order(id="o_tr_legacy", order_number="EB583941", customer_id="tr_legacy", customer_name="عميل قديم",
+                        customer_phone=legacy_phone, city=CITY, shipping_address="عنوان قديم", subtotal=100, total_amount=140))
+    db.commit()
+    db.close()
+    ref = track(phone=legacy_phone).json()[0]["reference"]
+    assert ref == "EB••••••" and not re.search(r"\d", ref)
+    assert orders_router.mask_order_ref("EB7K4MQ9XR2T") == "EB••••••••2T"  # current references unchanged

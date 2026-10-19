@@ -72,7 +72,8 @@ those are compiled into the JavaScript every visitor downloads.
 | `PRODUCT_IMAGES_BUCKET` | Public | No | Defaults to `product-images`. |
 | `PRODUCT_IMAGE_BASE_URL` | Public | No | Overrides the public photo base URL (e.g. a CDN). |
 | `GUEST_PENDING_ORDERS_PER_PHONE` | Public | No | Pending guest (cash-on-delivery) orders one phone may have (default 3). |
-| `GUEST_ORDERS_PER_IP_PER_DAY` | Public | No | Guest orders one client IP may place in 24 h (default 10). Needs correct client IPs — see the start command below. |
+| `ACCOUNT_PENDING_ORDERS` | Public | No | Pending orders one signed-in account may have (default 3) — accounts aren't verified, so they get the guest caps. |
+| `GUEST_ORDERS_PER_IP_PER_DAY` | Public | No | Orders (guest or signed-in) one client IP may place in 24 h (default 10). Needs correct client IPs — see the start command below. |
 | `LOGIN_MAX_FAILURES`, `LOGIN_FAILURE_WINDOW_MINUTES`, `LOGIN_BLOCK_MINUTES` | Public | No | Failed customer sign-ins per phone before a pause (defaults 10 / 15 min / 15 min). |
 
 The API never uses a Supabase secret/service-role key. Only
