@@ -1,3 +1,5 @@
+import { productQueryString } from './catalogQuery';
+
 export const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8002';
 
 export interface Category {
@@ -139,10 +141,11 @@ export interface Order {
   items: OrderItemOut[];
 }
 
+/** Status-only view (order number OR phone given): a masked reference
+ * like "EB••••••••2T", never the full number, amount or address. */
 export interface OrderTrackSummary {
-  order_number: string;
+  reference: string;
   status: 'pending' | 'shipped' | 'delivered' | 'cancelled';
-  total_amount: number;
   created_at: string;
 }
 
@@ -203,19 +206,7 @@ async function request<T>(path: string, options?: RequestInit & { token?: string
 
 export const catalogApi = {
   categories: () => request<Category[]>('/catalog/categories'),
-  products: (opts: ProductQuery = {}) => {
-    const params = new URLSearchParams();
-    if (opts.categoryId) params.set('category_id', opts.categoryId);
-    if (opts.q) params.set('q', opts.q);
-    if (opts.minPrice !== undefined) params.set('min_price', String(opts.minPrice));
-    if (opts.maxPrice !== undefined) params.set('max_price', String(opts.maxPrice));
-    if (opts.onOffer) params.set('on_offer', 'true');
-    if (opts.sort) params.set('sort', opts.sort);
-    if (opts.limit) params.set('limit', String(opts.limit));
-    if (opts.offset) params.set('offset', String(opts.offset));
-    const qs = params.toString();
-    return request<ProductPage>(`/catalog/products${qs ? `?${qs}` : ''}`);
-  },
+  products: (opts: ProductQuery = {}) => request<ProductPage>(`/catalog/products${productQueryString(opts)}`),
   product: (id: string) => request<Product>(`/catalog/products/${encodeURIComponent(id)}`),
   related: (id: string) => request<Product[]>(`/catalog/products/${encodeURIComponent(id)}/related`),
   featuredProducts: () => request<Product[]>('/catalog/featured-products'),

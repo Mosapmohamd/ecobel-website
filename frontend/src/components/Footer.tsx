@@ -12,12 +12,14 @@ function ColumnTitle({ children }: { children: React.ReactNode }) {
 
 const linkClass = 'text-surface/80 hover:text-surface transition-colors';
 
-export default function Footer() {
-  const [categories, setCategories] = useState<Category[]>([]);
+export default function Footer({ initialCategories = null }: { initialCategories?: Category[] | null }) {
+  const [categories, setCategories] = useState<Category[]>(initialCategories ?? []);
 
+  // Server-rendered with the page; fetched here only if the server couldn't.
   useEffect(() => {
+    if (initialCategories) return;
     catalogApi.categories().then(setCategories).catch(() => {});
-  }, []);
+  }, [initialCategories]);
 
   return (
     <footer className="mt-16 bg-brand-deep text-surface/80">
@@ -95,7 +97,7 @@ export default function Footer() {
       </div>
 
       <div className="border-t border-surface/15">
-        <div className="page-container py-5 text-label flex flex-col sm:flex-row gap-2 justify-between text-surface/65">
+        <div className="page-container py-5 text-label flex flex-col sm:flex-row gap-2 justify-between text-surface/80">
           <span>© {new Date().getFullYear()} جميع الحقوق محفوظة لـ Eco Bel</span>
           <span className="flex items-center gap-1.5">
             <Icon name="truck" size={14} />

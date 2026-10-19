@@ -1,5 +1,15 @@
+import type { Metadata } from 'next';
 import Icon from '@/components/Icon';
 import { FREE_SHIPPING_THRESHOLD, SITE_CONTACT } from '@/lib/constants';
+
+const DESCRIPTION = 'Eco Bel علامة مصرية للعناية بالبشرة والشعر بمكونات طبيعية وآمنة — من المعادي، القاهرة، بنشحن لكل محافظات مصر.';
+
+export const metadata: Metadata = {
+  title: 'قصتنا',
+  description: DESCRIPTION,
+  alternates: { canonical: '/about' },
+  openGraph: { title: 'قصتنا', description: DESCRIPTION, url: '/about' },
+};
 
 export default function AboutPage() {
   return (

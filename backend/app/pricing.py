@@ -7,6 +7,11 @@ the order is charged — never re-implemented in the frontend.
 Rule: a product's price is its `sale_price`, unless it has an active,
 unexpired offer priced below `sale_price` — then the lowest such offer
 price wins (deterministic even if staff left two offers active).
+
+"Unexpired" means now < expires_at. expires_at is the exclusive end
+instant written by ecobel-accounting-system: an admin-picked last day is
+stored as the moment the next Africa/Cairo day starts (its
+app/cairo_time.py), so the offer runs through that whole Cairo day.
 """
 from datetime import datetime, timezone
 from typing import Iterable
@@ -21,9 +26,14 @@ from . import models, schemas
 MAX_LINE_QUANTITY = 100
 
 
+def now_utc() -> datetime:
+    """The clock offers are checked against (replaceable in tests)."""
+    return datetime.now(timezone.utc)
+
+
 def offer_price_subquery(now: datetime | None = None):
     """product_id → lowest live offer price, as a subquery usable in joins."""
-    now = now or datetime.now(timezone.utc)
+    now = now or now_utc()
     return (
         select(models.Offer.product_id, func.min(models.Offer.offer_price).label("offer_price"))
         .where(models.Offer.is_active == True)  # noqa: E712
@@ -41,13 +51,13 @@ def effective_price_expr(offer_sq):
     )
 
 
-def live_offers(db: Session, product_ids: Iterable[str]) -> dict[str, models.Offer]:
+def live_offers(db: Session, product_ids: Iterable[str], now: datetime | None = None) -> dict[str, models.Offer]:
     """product_id → the offer that currently sets its price (only products
     whose offer actually undercuts sale_price are included)."""
     ids = list(set(product_ids))
     if not ids:
         return {}
-    now = datetime.now(timezone.utc)
+    now = now or now_utc()
     offers = (
         db.query(models.Offer)
         .join(models.Product, models.Product.id == models.Offer.product_id)

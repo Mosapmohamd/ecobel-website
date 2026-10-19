@@ -11,6 +11,7 @@ import ProductImage from '@/components/ProductImage';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import FieldError, { errorProps } from '@/components/FieldError';
 import Icon from '@/components/Icon';
+import OfferTitle from '@/components/OfferTitle';
 import { focusFirstError, validateFullName, validatePhone, validateRequired, type FieldErrors } from '@/lib/validation';
 
 // Cart and checkout live on one page (Stitch "السلة وإتمام الطلب"):
@@ -433,6 +434,7 @@ export default function CartPage() {
                           <Icon name="trash" size={17} />
                         </button>
                       </div>
+                      {q.unit_price < q.regular_unit_price && <OfferTitle offer={product?.offer} className="mt-1" />}
                       {q.issue && (
                         <p role="alert" className="mt-1 text-body-sm text-error">
                           {q.issue === 'insufficient_stock'
@@ -470,7 +472,7 @@ export default function CartPage() {
                         </div>
                         {!q.issue && (
                           <span className="text-left">
-                            <span className={`block font-bold text-body ${q.unit_price < q.regular_unit_price ? 'text-sale' : ''}`}>{egp(q.line_total)}</span>
+                            <span className={`block font-bold text-body ${q.unit_price < q.regular_unit_price ? 'text-brand-deep' : ''}`}>{egp(q.line_total)}</span>
                             {q.unit_price < q.regular_unit_price && (
                               <span className="block text-body-sm line-through text-ink-muted">{egp(q.regular_unit_price * q.quantity)}</span>
                             )}

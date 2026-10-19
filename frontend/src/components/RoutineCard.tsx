@@ -27,7 +27,7 @@ export default function RoutineCard({ routine }: { routine: Routine }) {
           روتين من {stepsLabel(routine.items.length)}
         </span>
         {routine.savings > 0 && (
-          <span className="badge bg-surface-muted text-sale">وفّري {egp(routine.savings)}</span>
+          <span className="badge bg-surface-muted text-brand-deep">وفّري {egp(routine.savings)}</span>
         )}
       </div>
 
@@ -57,7 +57,7 @@ export default function RoutineCard({ routine }: { routine: Routine }) {
               {(i + 1).toLocaleString('ar-EG')}
             </span>
             <span className="flex-1 min-w-0">{it.product.name}</span>
-            <span className={`flex-none ${it.price < it.regular_price ? 'text-sale' : 'text-ink-muted'}`}>{egp(it.price)}</span>
+            <span className={`flex-none ${it.price < it.regular_price ? 'text-brand-deep' : 'text-ink-muted'}`}>{egp(it.price)}</span>
           </li>
         ))}
       </ol>

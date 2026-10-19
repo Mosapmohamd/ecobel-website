@@ -25,7 +25,7 @@ export function validatePhone(value: string): string | null {
 
 export function validateNewPassword(value: string): string | null {
   if (!value) return 'اكتبي كلمة المرور';
-  if (value.length < 6) return 'كلمة المرور لازم تكون 6 حروف أو أرقام على الأقل';
+  if (value.length < 8) return 'كلمة المرور لازم تكون 8 حروف أو أرقام على الأقل';
   return null;
 }
 

@@ -1,15 +1,19 @@
-import random
-import string
+import secrets
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, joinedload
 
-from .. import models, schemas, auth, services, pricing, checkout
+from .. import abuse_limits, auth, checkout, models, pricing, schemas, services
 from ..database import get_db
 from ..rate_limit import limiter
+from slowapi.util import get_remote_address
 
 router = APIRouter(prefix="/orders", tags=["Orders"])
+
+# One answer for "no such order" and "wrong order number/phone pair", so a
+# lookup can't tell which part was right.
+NOT_FOUND = "مش لاقيين طلب بالبيانات دي — راجعي رقم الطلب ورقم التليفون"
 
 
 def _lock_and_price(db: Session, items: list) -> tuple[list, float]:
@@ -108,13 +112,40 @@ def _guest_profile(db: Session, phone: str, name: str) -> models.Customer:
     return profile
 
 
+# Order references: "EB" + 10 characters from `secrets` over an alphabet
+# without look-alikes (no 0/O, 1/I/L) — ~49 bits, so a reference can't be
+# guessed or enumerated. (Older orders keep their "EB" + 6-digit numbers.)
+ORDER_REF_ALPHABET = "23456789ABCDEFGHJKMNPQRSTUVWXYZ"
+ORDER_REF_LENGTH = 10
+
+
+def _new_order_ref() -> str:
+    return "EB" + "".join(secrets.choice(ORDER_REF_ALPHABET) for _ in range(ORDER_REF_LENGTH))
+
+
 def _generate_order_number(db: Session) -> str:
+    """A fresh reference not used by any order (the column is also unique
+    in the database). A collision is astronomically unlikely; it's retried."""
     for _ in range(10):
-        suffix = "".join(random.choices(string.digits, k=6))
-        candidate = f"EB{suffix}"
-        if not db.query(models.Order).filter(models.Order.order_number == candidate).first():
+        candidate = _new_order_ref()
+        if not db.query(models.Order.id).filter(models.Order.order_number == candidate).first():
             return candidate
     raise HTTPException(500, "تعذر توليد رقم طلب فريد، حاول تاني")
+
+
+def normalize_order_ref(value: str) -> str:
+    """How a customer may type a reference: any case, with spaces or dashes."""
+    return "".join(ch for ch in (value or "").upper() if ch.isalnum())
+
+
+def mask_order_ref(ref: str) -> str:
+    """"EB7K4MQ9XR2T" → "EB••••••••2T": recognisable, not usable — 8 hidden
+    characters of 31 are ~10^12 combinations. Shorter references (the old
+    EB + 6 digits) show nothing after "EB": revealing 2 of 6 digits would
+    leave only 10^4 to try against a known phone."""
+    if len(ref) >= 2 + ORDER_REF_LENGTH:
+        return ref[:2] + "•" * (len(ref) - 4) + ref[-2:]
+    return ref[:2] + "•" * max(len(ref) - 2, 1)
 
 
 @router.post("/", response_model=schemas.OrderOut, status_code=201)
@@ -125,8 +156,17 @@ def create_order(
     db: Session = Depends(get_db),
     logged_in_customer: models.Customer | None = Depends(auth.get_current_customer_optional),
 ):
+    client_ip = get_remote_address(request)
+    # Cash-on-delivery orders are capped — pending orders per guest phone or
+    # per account, and orders per IP per day (app/abuse_limits.py) — checked
+    # before any stock moves so a refused request changes nothing.
+    if logged_in_customer is None:
+        ip_hash = abuse_limits.check_guest_order(db, payload.customer_phone, client_ip)
+    else:
+        ip_hash = abuse_limits.check_account_order(db, logged_in_customer.id, client_ip)
+
     line_specs, subtotal = _lock_and_price(db, payload.items)
-    t = checkout.totals(db, subtotal, city=payload.city, coupon_code=payload.coupon_code, lock_coupon=True)
+    t = checkout.totals(db, subtotal, city=payload.city, coupon_code=payload.coupon_code, lock_coupon=True, client=client_ip)
     checkout.require_orderable(t)
 
     # Signed in → the order belongs to that account (it shows in its history
@@ -148,6 +188,7 @@ def create_order(
         shipping_fee=t.shipping_fee,
         total_amount=t.total,
         note=payload.note,
+        client_ip_hash=ip_hash,
     )
     db.add(order)
     db.flush()
@@ -178,47 +219,41 @@ def track_order(
     phone: Optional[str] = None,
     db: Session = Depends(get_db),
 ):
-    """Flexible order lookup:
-    - order_number + phone (both match): full order details.
-    - order_number only: status-only confirmation (no address/items) —
-      knowing the order number alone shouldn't reveal where it's going.
-    - phone only: status-only list of every order for that phone — same
-      reasoning, and it's a list since one phone can have many orders.
+    """Guest order lookup (no login):
+    - order number + phone, both matching: the full order (address, items).
+    - order number only, or phone only: status summaries with a masked
+      reference — never the full order number, amount, address or items.
+      Knowing a customer's phone must not lead to their address, so the
+      phone-only answer can't be chained into a full lookup.
+    A wrong combination gets the same answer as a non-existent order.
+    Signed-in customers see their own orders under /account/orders.
     """
-    if not order_number and not phone:
+    ref = normalize_order_ref(order_number) if order_number else ""
+    phone_n = schemas.normalize_egypt_phone(phone) if phone else ""
+    if not ref and not phone_n:
         raise HTTPException(400, "لازم تدخلي رقم الطلب أو رقم التليفون على الأقل")
 
-    if order_number and phone:
+    if ref and phone_n:
         order = (
             db.query(models.Order)
             .options(joinedload(models.Order.items))
-            .filter(models.Order.order_number == order_number.strip().upper())
-            .filter(models.Order.customer_phone == phone.strip())
+            .filter(models.Order.order_number == ref)
+            .filter(models.Order.customer_phone == phone_n)
             .first()
         )
         if not order:
-            raise HTTPException(404, "الطلب غير موجود — تأكدي من رقم الطلب ورقم التليفون")
+            raise HTTPException(404, NOT_FOUND)
         return schemas.OrderOut.model_validate(order)
 
-    if order_number:
-        order = (
-            db.query(models.Order)
-            .filter(models.Order.order_number == order_number.strip().upper())
-            .first()
-        )
-        if not order:
-            raise HTTPException(404, "مفيش طلب بالرقم ده")
-        return [schemas.OrderTrackSummary.model_validate(order)]
-
-    orders = (
-        db.query(models.Order)
-        .filter(models.Order.customer_phone == phone.strip())
-        .order_by(models.Order.created_at.desc())
-        .all()
-    )
+    q = db.query(models.Order)
+    q = q.filter(models.Order.order_number == ref) if ref else q.filter(models.Order.customer_phone == phone_n)
+    orders = q.order_by(models.Order.created_at.desc()).all()
     if not orders:
-        raise HTTPException(404, "مفيش طلبات مسجّلة بالرقم ده")
-    return [schemas.OrderTrackSummary.model_validate(o) for o in orders]
+        raise HTTPException(404, NOT_FOUND)
+    return [
+        schemas.OrderTrackSummary(reference=mask_order_ref(o.order_number), status=o.status, created_at=o.created_at)
+        for o in orders
+    ]
 
 
 @router.patch("/{order_id}", response_model=schemas.OrderOut)

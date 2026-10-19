@@ -15,8 +15,27 @@ def _validate_full_name(value: str) -> str:
     return " ".join(parts)
 
 
+_DIGITS = str.maketrans("٠١٢٣٤٥٦٧٨٩۰۱۲۳۴۵۶۷۸۹", "01234567890123456789")
+
+
+def normalize_egypt_phone(value: str) -> str:
+    """One canonical form (01XXXXXXXXX) for every way a customer may type a
+    number: Arabic-Indic digits, spaces/dashes/dots/brackets, or the +20 /
+    0020 / 20 country code. Used wherever a phone is stored, compared or
+    limited, so formatting can't create a "different" number."""
+    value = (value or "").translate(_DIGITS)
+    value = "".join(ch for ch in value if ch.isdigit() or ch == "+")
+    if value.startswith("+20"):
+        value = "0" + value[3:]
+    elif value.startswith("0020"):
+        value = "0" + value[4:]
+    elif value.startswith("20") and len(value) == 12:
+        value = "0" + value[2:]
+    return value
+
+
 def _validate_egypt_phone(value: str) -> str:
-    value = value.strip()
+    value = normalize_egypt_phone(value)
     if not _EGYPT_PHONE_RE.match(value):
         raise ValueError("رقم التليفون لازم يبدأ بـ 01 ويتكون من 11 رقم")
     return value
@@ -52,8 +71,10 @@ class CustomerRegister(BaseModel):
     @field_validator("password")
     @classmethod
     def _check_password(cls, v: str) -> str:
-        if len(v) < 6:
-            raise ValueError("كلمة المرور لازم تكون 6 حروف أو أرقام على الأقل")
+        # New passwords only — sign-in never checks length, so existing
+        # accounts with shorter passwords keep working.
+        if len(v) < 8:
+            raise ValueError("كلمة المرور لازم تكون 8 حروف أو أرقام على الأقل")
         return v
 
 
@@ -178,13 +199,12 @@ class OrderStatusUpdate(BaseModel):
 
 
 class OrderTrackSummary(BaseModel):
-    """Reduced view used when only one of order_number/phone is given —
-    confirms the order exists and its status, without exposing the
-    address or full item list to someone who only guessed one credential."""
-    model_config = ConfigDict(from_attributes=True)
-    order_number: str
+    """Reduced view when only one of order number / phone is given: the
+    order exists and its status. Never the full order number (it unlocks
+    the details together with the phone), the amount, the address or the
+    items — someone may know a customer's phone without being them."""
+    reference: str  # masked, e.g. "EB••••••7K"
     status: OrderStatus
-    total_amount: float
     created_at: datetime
 
 

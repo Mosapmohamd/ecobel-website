@@ -211,3 +211,24 @@ def test_someone_elses_order_looks_missing(token):
     assert client.delete(f"/orders/{guest['id']}", headers=auth).status_code == 404
     edit = {"items": [{"product_id": "k1", "quantity": 1}]}
     assert client.patch(f"/orders/{guest['id']}", json=edit, headers=auth).status_code == 404
+
+
+def test_coupon_guessing_is_slowed_down():
+    from app.checkout import CouponGuessGuard, coupon_guard
+    coupon_guard._failures.clear()
+    try:
+        items = [{"product_id": "k1", "quantity": 1}]
+        # A real coupon that merely doesn't qualify never counts as guessing.
+        for _ in range(12):
+            assert "الحد الأدنى" in quote(items, coupon_code="KMIN")["coupon"]["reason"]
+        for i in range(10):
+            assert quote(items, coupon_code=f"GUESS{i}")["coupon"]["valid"] is False
+        # Now even a valid code isn't checked for this client (until the window passes)…
+        blocked = quote(items, coupon_code="K10")["coupon"]
+        assert blocked["valid"] is False and blocked["reason"] == CouponGuessGuard.MESSAGE
+        res = client.post("/orders/", json=order_payload(items, coupon_code="K10"))
+        assert res.status_code == 400 and res.json()["detail"] == CouponGuessGuard.MESSAGE
+        # …while another client is unaffected.
+        assert not coupon_guard.blocked("another-client")
+    finally:
+        coupon_guard._failures.clear()

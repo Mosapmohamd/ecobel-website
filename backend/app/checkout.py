@@ -8,6 +8,8 @@ Shipping: free at FREE_SHIPPING_THRESHOLD (after discount); otherwise the
 fee staff configured for the city in the accounting system. Only cities
 with an active rate can be delivered to — there is no silent default fee.
 """
+import time
+from collections import defaultdict, deque
 from dataclasses import dataclass
 from datetime import datetime, timezone
 
@@ -63,6 +65,36 @@ def city_fee(db: Session, city: str) -> float | None:
     return rate.fee if rate else None
 
 
+class CouponGuessGuard:
+    """Slows down coupon-code guessing: after `limit` codes that don't exist
+    (or aren't active) within `window` seconds from one client, coupon codes
+    from that client aren't checked until the window passes. Real coupons
+    that merely don't qualify (minimum order, expired) don't count.
+    In memory per process, like the request rate limiter."""
+
+    MESSAGE = "محاولات كتير لأكواد خصم غير صحيحة — استني شوية وحاولي تاني"
+
+    def __init__(self, limit: int = 10, window: float = 15 * 60):
+        self.limit, self.window = limit, window
+        self._failures: dict[str, deque[float]] = defaultdict(deque)
+
+    def _recent(self, client: str) -> deque[float]:
+        q = self._failures[client]
+        cutoff = time.monotonic() - self.window
+        while q and q[0] < cutoff:
+            q.popleft()
+        return q
+
+    def blocked(self, client: str) -> bool:
+        return len(self._recent(client)) >= self.limit
+
+    def record_failure(self, client: str) -> None:
+        self._recent(client).append(time.monotonic())
+
+
+coupon_guard = CouponGuessGuard()
+
+
 @dataclass
 class Totals:
     subtotal: float
@@ -86,17 +118,24 @@ def totals(
     coupon_code: str | None = None,
     applied_coupon: models.Coupon | None = None,
     lock_coupon: bool = False,
+    client: str | None = None,
 ) -> Totals:
     """Pass `coupon_code` for a coupon the customer is entering now, or
-    `applied_coupon` for the one an existing order already holds."""
+    `applied_coupon` for the one an existing order already holds. `client`
+    (the caller's address) enables the coupon-guessing guard."""
     coupon, discount, coupon_error = None, 0.0, None
     if applied_coupon is not None:
         discount, coupon_error = coupon_discount(applied_coupon, subtotal, already_applied=True)
         coupon = applied_coupon if coupon_error is None else None
     elif coupon_code and coupon_code.strip():
-        found = find_coupon(db, coupon_code, lock=lock_coupon)
-        discount, coupon_error = coupon_discount(found, subtotal)
-        coupon = found if coupon_error is None else None
+        if client and coupon_guard.blocked(client):
+            coupon_error = CouponGuessGuard.MESSAGE
+        else:
+            found = find_coupon(db, coupon_code, lock=lock_coupon)
+            discount, coupon_error = coupon_discount(found, subtotal)
+            coupon = found if coupon_error is None else None
+            if client and (found is None or not found.is_active):
+                coupon_guard.record_failure(client)
 
     shipping_fee, city_error = None, None
     if city and city.strip():
