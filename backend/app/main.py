@@ -9,15 +9,17 @@ from slowapi.middleware import SlowAPIMiddleware
 
 from .security import DOCS_SETTINGS, SecurityHeadersMiddleware, check_production_config
 from .auth import SECRET_KEY
-from .database import DATABASE_URL, check_schema_revision
+from . import models  # noqa: F401  (registers every table on Base.metadata)
+from .database import DATABASE_URL, check_schema_matches_models
 from .routers import catalog, cart, orders, account, reviews
 from .rate_limit import limiter
 
-# The shared schema is migrated by ecobel-accounting-system; this service
-# only checks it's at the revision these models expect. Product images,
-# coupon management, and online-order admin also live there — this
-# service is the public storefront only.
-check_schema_revision()
+# The shared schema is managed in Supabase (docs/DATABASE_SCHEMA_MANAGEMENT.md);
+# starting the app never changes it — it only warns if the database lacks
+# something these models use. Product images, coupon management and
+# online-order admin live in ecobel-accounting-system — this service is
+# the public storefront only.
+check_schema_matches_models()
 
 app = FastAPI(
     **DOCS_SETTINGS,  # no public API docs in production

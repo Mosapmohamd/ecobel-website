@@ -32,13 +32,12 @@ pip install -r requirements.txt
 cp .env.example .env            # DATABASE_URL must match ecobel-accounting-system's
 ```
 
-### Database schema — migrated by ecobel-accounting-system
+### Database schema — managed in Supabase
 
-This service never creates or alters tables. The shared database's schema
-has one migration history, owned and applied by ecobel-accounting-system
-(start it first, or together). On startup this service logs a warning if
-the database isn't at `EXPECTED_SCHEMA_REVISION` (`app/database.py`) —
-bump that when a new migration changes a table this service maps.
+This service never creates or alters tables. The shared database's schema is
+managed in Supabase with reviewed SQL (see `../docs/DATABASE_SCHEMA_MANAGEMENT.md`).
+On startup this service only logs a warning if the database lacks a table or
+column its models use (`check_schema_matches_models` in `app/database.py`).
 
 Run the server:
 

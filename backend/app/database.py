@@ -2,7 +2,7 @@ import os
 from dotenv import load_dotenv
 import logging
 
-from sqlalchemy import create_engine, inspect, text
+from sqlalchemy import create_engine, inspect
 from sqlalchemy.orm import sessionmaker, declarative_base
 
 # Load backend/.env into the real process environment. Without this,
@@ -51,28 +51,29 @@ def get_db():
         db.close()
 
 
-# The shared database's schema is migrated by ecobel-accounting-system
-# (its alembic/versions) — this service never creates or alters tables.
-# Bump this when a new migration there changes tables this service maps.
-EXPECTED_SCHEMA_REVISION = "0005_data_api_lockdown"
-
-
-def check_schema_revision() -> None:
-    """Warns (doesn't crash — both services may start at the same moment)
-    when the database isn't at the revision these models expect."""
+def check_schema_matches_models() -> None:
+    """Read-only and warning-only: logs any table or column these models use
+    that the database lacks (e.g. a reviewed schema change not applied in
+    Supabase yet). Never blocks startup and never changes the schema —
+    that's managed in Supabase (docs/DATABASE_SCHEMA_MANAGEMENT.md)."""
     log = logging.getLogger("uvicorn.error")
     try:
         with engine.connect() as conn:
-            if "alembic_version" not in inspect(conn).get_table_names():
-                log.warning("Database has no migration history — start ecobel-accounting-system (it migrates the shared schema).")
-                return
-            current = conn.execute(text("SELECT version_num FROM alembic_version")).scalar()
+            insp = inspect(conn)
+            existing = set(insp.get_table_names())
+            missing = []
+            for table in Base.metadata.sorted_tables:
+                if table.name not in existing:
+                    missing.append(table.name)
+                    continue
+                present = {c["name"] for c in insp.get_columns(table.name)}
+                missing += [f"{table.name}.{c.name}" for c in table.columns if c.name not in present]
     except Exception as exc:  # database unreachable — requests will report it
-        log.warning("Could not check the database schema revision: %s", exc)
+        log.warning("Could not compare the database schema with the models: %s", exc)
         return
-    if current != EXPECTED_SCHEMA_REVISION:
+    if missing:
         log.warning(
-            "Database schema is at %s but this service expects %s — run the accounting "
-            "system's migrations (alembic upgrade head) or update ecobel-website.",
-            current, EXPECTED_SCHEMA_REVISION,
+            "The database schema lacks what this service's models use: %s — apply the "
+            "reviewed schema change in Supabase (docs/DATABASE_SCHEMA_MANAGEMENT.md).",
+            ", ".join(missing),
         )

@@ -10,11 +10,13 @@ This repository holds two deployable apps:
 They depend on two things outside this repo:
 
 - **Supabase** — the shared PostgreSQL database and the `product-images` Storage bucket.
-- **ecobel-accounting-system** — owns the database migrations (it runs them on
-  startup), product photo uploads, and online-order administration. The
-  storefront API never changes the schema; it only checks that the database is
-  at the revision it expects (`EXPECTED_SCHEMA_REVISION` in `backend/app/database.py`)
-  and logs a warning if not.
+- **ecobel-accounting-system** — product photo uploads and online-order
+  administration.
+
+The database schema is managed in Supabase with reviewed SQL
+([`DATABASE_SCHEMA_MANAGEMENT.md`](./DATABASE_SCHEMA_MANAGEMENT.md)). Neither
+API changes it; on startup each logs a warning if the database lacks a table
+or column its models use.
 
 ## Why these platforms
 
@@ -33,16 +35,11 @@ They depend on two things outside this repo:
 
 ## Order of operations
 
-1. **Database ready (migrations first).** This release needs migrations
-   `0004_abuse_controls` (adds `orders.client_ip_hash` and the `auth_throttle`
-   table; additive only) and `0005_data_api_lockdown` (turns on row-level
-   security for the six tables Supabase's Data API could still read and write;
-   no data changes — the API process connects as the table owner and is
-   unaffected). Deploy/start ecobel-accounting-system first so it
-   applies it — the API expects that revision and logs a warning otherwise.
-   The production database must be migrated by
-   ecobel-accounting-system (start it once against that database, or run
-   `alembic upgrade head` there) and be at the revision the API expects.
+1. **Database ready (schema first).** The database must already have the
+   schema this release's models use — for this release `orders.client_ip_hash`,
+   the `auth_throttle` table, and row-level security on every public table
+   (all applied to the shared Supabase project on 2026-10-10). Any schema
+   change is applied as reviewed SQL in Supabase before deploying.
 2. **API on Render.** New → Blueprint → this repository. Enter the `sync: false`
    values when asked (see below). Note the service URL, e.g. `https://ecobel-website-api.onrender.com`.
 3. **Storefront on Vercel.** Project → Settings → General → Root Directory =
@@ -109,7 +106,7 @@ Run **one instance with one worker**: the limits live in process memory.
 ## After deploying — checks
 
 - `GET https://<api>/` → `{"status":"ok"}`; `GET https://<api>/docs` → 404.
-- Render logs at startup show no "schema is at … but this service expects" warning.
+- Render logs at startup show no "The database schema lacks …" warning.
 - Render access log: your own requests show **your** public IP, not a `10.x`/`172.x`
   address. If they show the load balancer's address, the platform's proxy range
   differs — adjust `--forwarded-allow-ips` to it (still never `*`).

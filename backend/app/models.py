@@ -24,9 +24,8 @@ def now() -> datetime:
 # SHARED TABLES — must stay byte-for-byte identical (table name, columns,
 # enum values) to the definitions in ecobel-accounting-system/backend/app/models.py.
 # Both services read and write these same rows. If you change a shared
-# model here, make the identical change there (and vice versa), then run
-# `alembic revision --autogenerate` in the service that owns the migration
-# history for that table.
+# model here, make the identical change there (and vice versa), and apply
+# the matching reviewed SQL in Supabase (docs/DATABASE_SCHEMA_MANAGEMENT.md).
 # =============================================================================
 
 class Category(Base):
