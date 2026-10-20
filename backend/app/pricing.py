@@ -95,6 +95,7 @@ def product_out(product: models.Product, offer: models.Offer | None) -> schemas.
         stock_status=product.stock_status if product.is_active else "out",
         max_quantity=min(product.quantity, MAX_LINE_QUANTITY) if is_available(product) else 0,
         image_url=product.image_url,
+        short_description=product.short_description,
         description=product.description,
     )
 

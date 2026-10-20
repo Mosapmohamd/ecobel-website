@@ -130,6 +130,10 @@ class ProductOut(BaseModel):
     # per-line checkout limit, so exact stock levels aren't published.
     max_quantity: int
     image_url: Optional[str] = None
+    # Every photo URL for the product page's gallery, main photo first.
+    # Filled only by the single-product endpoint; empty in listings.
+    images: List[str] = []
+    short_description: Optional[str] = None
     description: Optional[str] = None
 
 

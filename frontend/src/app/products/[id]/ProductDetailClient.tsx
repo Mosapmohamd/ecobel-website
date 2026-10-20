@@ -7,7 +7,8 @@ import { useCart } from '@/lib/cart';
 import { useWishlist } from '@/lib/wishlist';
 import { useToast } from '@/lib/toast';
 import ProductCard from '@/components/ProductCard';
-import ProductImage from '@/components/ProductImage';
+import ProductGallery from '@/components/ProductGallery';
+import RichDescription from '@/components/RichDescription';
 import ReviewsSection, { Stars } from '@/components/ReviewsSection';
 import Icon, { type IconName } from '@/components/Icon';
 import OfferTitle from '@/components/OfferTitle';
@@ -114,6 +115,8 @@ export default function ProductDetailClient({
   const onOffer = product.price < product.sale_price;
   const percentOff = onOffer ? Math.round((1 - product.price / product.sale_price) * 100) : 0;
   const available = product.max_quantity > 0;
+  // Older API responses have no `images`: fall back to the main photo.
+  const gallery = product.images?.length ? product.images : product.image_url ? [product.image_url] : [];
   const setQuantity = (value: number) => setQty({ id, value: Math.max(1, Math.min(product.max_quantity, value)) });
 
   return (
@@ -131,12 +134,13 @@ export default function ProductDetailClient({
       <div className="page-container py-8 lg:py-12">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-14 items-start">
           <div className="md:sticky md:top-28">
-            <div className="relative aspect-square rounded overflow-hidden border border-line bg-surface-tint">
-              <ProductImage src={product.image_url} alt={product.name} sizes="(max-width: 767px) 100vw, 580px" preload />
-              {percentOff > 0 && (
-                <span className="absolute top-3 right-3 badge bg-brand-deep text-surface">خصم {percentOff.toLocaleString('ar-EG')}%</span>
+            <ProductGallery
+              images={gallery}
+              name={product.name}
+              badge={percentOff > 0 && (
+                <span className="absolute top-3 right-3 z-[1] badge bg-brand-deep text-surface">خصم {percentOff.toLocaleString('ar-EG')}%</span>
               )}
-            </div>
+            />
           </div>
 
           <div>
@@ -179,8 +183,8 @@ export default function ProductDetailClient({
               {onOffer && <OfferTitle offer={product.offer} className="mt-2" />}
             </div>
 
-            {product.description && (
-              <p className="mt-6 text-body-lg text-ink-secondary whitespace-pre-line">{product.description}</p>
+            {product.short_description && (
+              <p className="mt-6 text-body-lg text-ink-secondary whitespace-pre-line" data-testid="short-description">{product.short_description}</p>
             )}
 
             {available ? (
@@ -254,6 +258,13 @@ export default function ProductDetailClient({
             </ul>
           </div>
         </div>
+
+        {product.description && (
+          <section aria-labelledby="description-title" className="mt-16 max-w-3xl" data-testid="full-description">
+            <h2 id="description-title" className="text-headline-md lg:text-headline-lg mb-5">تفاصيل المنتج</h2>
+            <RichDescription text={product.description} />
+          </section>
+        )}
 
         <div className="mt-16">
           <ReviewsSection productId={product.id} summary={summary} onSubmitted={loadReviews} />

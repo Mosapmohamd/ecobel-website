@@ -13,7 +13,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (product === NOT_FOUND) return { title: 'المنتج غير موجود', robots: { index: false } };
   if (!product) return {}; // API unreachable: keep the site defaults rather than guess
   const path = `/products/${encodeURIComponent(product.id)}`;
-  const description = describe(product.description, `${product.name} من ${product.category_name} — منتجات Eco Bel الطبيعية.`);
+  const description = describe(product.short_description || product.description, `${product.name} من ${product.category_name} — منتجات Eco Bel الطبيعية.`);
   return {
     title: product.name,
     description,
@@ -43,9 +43,9 @@ export default async function ProductPage({ params }: Props) {
               {
                 '@type': 'Product',
                 name: product.name,
-                ...(product.description ? { description: product.description } : {}),
+                ...(product.short_description || product.description ? { description: product.short_description || product.description } : {}),
                 ...(product.sku ? { sku: product.sku } : {}),
-                ...(product.image_url ? { image: [product.image_url] } : {}),
+                ...(product.images?.length ? { image: product.images } : product.image_url ? { image: [product.image_url] } : {}),
                 category: product.category_name,
                 brand: { '@type': 'Brand', name: SITE_NAME },
                 url: absoluteUrl(`/products/${encodeURIComponent(product.id)}`),

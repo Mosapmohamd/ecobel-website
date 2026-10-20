@@ -406,3 +406,23 @@ html[data-promo-dismissed] .promo-bar {
 @media (prefers-reduced-motion: reduce) {
   .hero-edge { transition: opacity .15s linear, background-color .2s ease, color .2s ease; transform: translate(0, -50%); }
 }
+
+/* Previous/next photo on the product page gallery (components/ProductGallery.tsx). */
+.gallery-nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 1;
+  width: 40px;
+  height: 40px;
+  border-radius: 9999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: color-mix(in srgb, var(--color-surface) 90%, transparent);
+  color: var(--color-ink);
+  border: 1px solid var(--color-line);
+  box-shadow: 0 1px 4px rgb(0 0 0 / 0.08);
+}
+.gallery-nav:hover { background: var(--color-surface); }
+.gallery-nav:focus-visible { outline: none; box-shadow: 0 0 0 2px var(--color-surface), 0 0 0 4px var(--color-primary); }
