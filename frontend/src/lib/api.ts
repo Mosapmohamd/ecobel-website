@@ -30,6 +30,11 @@ export interface Product {
   /** Most that can be ordered now; 0 = unavailable. */
   max_quantity: number;
   image_url: string | null;
+  /** Every photo URL, main first — only on the single-product endpoint (empty in listings). */
+  images?: string[];
+  /** One to three sentences shown next to the price. */
+  short_description?: string | null;
+  /** Full plain-text description (paragraphs, "## " headings, "- " bullets). */
   description: string | null;
 }
 

@@ -161,6 +161,53 @@ def test_product_photos_come_back_as_absolute_urls_built_from_the_storage_key(mo
         db.close()
 
 
+def test_product_page_gallery_lists_main_photo_first_then_additional_in_order(monkeypatch):
+    from app import product_images
+    base = "https://ref.supabase.co/storage/v1/object/public/product-images"
+    monkeypatch.setattr(product_images, "PUBLIC_BASE_URL", base)
+    db = SessionLocal()
+    db.query(models.Product).filter_by(id="p2").update({"image_key": "products/p2/main.webp"})
+    db.add_all([
+        models.ProductImage(id="pi_b", product_id="p2", image_key="products/p2/b.webp", position=1),
+        models.ProductImage(id="pi_a", product_id="p2", image_key="products/p2/a.webp", position=0),
+    ])
+    db.commit()
+    db.close()
+    try:
+        page = client.get("/catalog/products/p2").json()
+        assert page["images"] == [f"{base}/products/p2/{n}.webp" for n in ("main", "a", "b")]
+        assert page["image_url"] == f"{base}/products/p2/main.webp"
+        # Listings stay light: no gallery there.
+        assert next(p for p in client.get("/catalog/products").json()["items"] if p["id"] == "p2")["images"] == []
+        # A product without any photo has an empty gallery, never a guessed URL.
+        assert client.get("/catalog/products/p3").json()["images"] == []
+    finally:
+        db = SessionLocal()
+        db.query(models.ProductImage).filter_by(product_id="p2").delete()
+        db.query(models.Product).filter_by(id="p2").update({"image_key": None})
+        db.commit()
+        db.close()
+
+
+def test_short_and_full_descriptions_are_separate_and_optional():
+    db = SessionLocal()
+    db.query(models.Product).filter_by(id="p1").update({"short_description": "سيروم فيتامين سي للإشراقة."})
+    db.commit()
+    db.close()
+    try:
+        p1 = client.get("/catalog/products/p1").json()
+        assert p1["short_description"] == "سيروم فيتامين سي للإشراقة." and p1["description"] == "Vitamin C serum"
+        assert ids(client.get("/catalog/products", params={"q": "للإشراقة"}).json()["items"]) == ["p1"]
+        # Products without descriptions still work.
+        p3 = client.get("/catalog/products/p3").json()
+        assert p3["short_description"] is None and p3["description"] is None
+    finally:
+        db = SessionLocal()
+        db.query(models.Product).filter_by(id="p1").update({"short_description": None})
+        db.commit()
+        db.close()
+
+
 def test_related_products_exclude_self_and_other_categories():
     assert ids(client.get("/catalog/products/p1/related").json()) == ["p2"]
 

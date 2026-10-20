@@ -2,7 +2,7 @@ from typing import List, Literal, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func, or_
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.orm import Session, joinedload, selectinload
 
 from .. import models, schemas, pricing
 from ..database import get_db
@@ -50,7 +50,7 @@ def list_categories(db: Session = Depends(get_db)):
 @router.get("/products", response_model=schemas.ProductPage)
 def list_products(
     category_id: Optional[str] = None,
-    q: Optional[str] = Query(None, max_length=100, description="Search name, description, category and SKU"),
+    q: Optional[str] = Query(None, max_length=100, description="Search name, descriptions, category and SKU"),
     min_price: Optional[float] = Query(None, ge=0),
     max_price: Optional[float] = Query(None, ge=0),
     on_offer: bool = False,
@@ -77,6 +77,7 @@ def list_products(
         query = query.filter(or_(
             models.Product.name.ilike(term),
             models.Product.description.ilike(term),
+            models.Product.short_description.ilike(term),
             models.Product.sku.ilike(term),
             models.Category.name.ilike(term),
         ))
@@ -104,14 +105,16 @@ def get_product(product_id: str, db: Session = Depends(get_db)):
     unavailable), but never deactivated ones."""
     product = (
         db.query(models.Product)
-        .options(joinedload(models.Product.category))
+        .options(joinedload(models.Product.category), selectinload(models.Product.images))
         .filter(models.Product.id == product_id)
         .filter(models.Product.is_active == True)  # noqa: E712
         .first()
     )
     if not product:
         raise HTTPException(404, "المنتج غير موجود")
-    return pricing.products_out(db, [product])[0]
+    out = pricing.products_out(db, [product])[0]
+    out.images = [u for u in [product.image_url, *(i.image_url for i in product.images)] if u]
+    return out
 
 
 @router.get("/products/{product_id}/related", response_model=List[schemas.ProductOut])
