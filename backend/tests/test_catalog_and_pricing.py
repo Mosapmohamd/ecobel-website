@@ -71,10 +71,14 @@ def ids(items):
     return [p["id"] for p in items]
 
 
-def test_catalog_lists_only_sellable_products_with_server_prices():
+def test_catalog_lists_every_active_product_with_server_prices():
+    # p5 is out of stock: still listed (flagged, not purchasable); p4 is
+    # deactivated: hidden.
     page = client.get("/catalog/products?sort=name").json()
-    assert page["total"] == 3
-    assert ids(page["items"]) == ["p2", "p1", "p3"]
+    assert page["total"] == 4
+    assert ids(page["items"]) == ["p2", "p1", "p3", "p5"]
+    p5 = next(p for p in page["items"] if p["id"] == "p5")
+    assert p5["max_quantity"] == 0 and p5["stock_status"] == "out"
     p1 = next(p for p in page["items"] if p["id"] == "p1")
     assert p1["price"] == 240 and p1["sale_price"] == 300 and p1["offer"]["id"] == "o2"
     p3 = next(p for p in page["items"] if p["id"] == "p3")
@@ -84,7 +88,7 @@ def test_catalog_lists_only_sellable_products_with_server_prices():
 
 def test_price_sort_filter_and_offer_filter_use_charged_price():
     asc = client.get("/catalog/products?sort=price_asc").json()["items"]
-    assert ids(asc) == ["p3", "p2", "p1"]
+    assert ids(asc) == ["p5", "p3", "p2", "p1"]
     ranged = client.get("/catalog/products?min_price=230&max_price=245").json()["items"]
     assert ids(ranged) == ["p1"]
     offers = client.get("/catalog/products?on_offer=true").json()["items"]
@@ -93,24 +97,42 @@ def test_price_sort_filter_and_offer_filter_use_charged_price():
 
 def test_search_matches_name_description_and_arabic_category():
     assert ids(client.get("/catalog/products", params={"q": "vitamin"}).json()["items"]) == ["p1"]
-    assert sorted(ids(client.get("/catalog/products", params={"q": "بالبشرة"}).json()["items"])) == ["p1", "p2"]
+    assert sorted(ids(client.get("/catalog/products", params={"q": "بالبشرة"}).json()["items"])) == ["p1", "p2", "p5"]
+    assert ids(client.get("/catalog/products", params={"q": "sold out"}).json()["items"]) == ["p5"]  # found, not hidden
+    assert client.get("/catalog/products", params={"q": "retired"}).json()["total"] == 0  # deactivated stays hidden
     assert client.get("/catalog/products", params={"q": "nothing-matches"}).json()["total"] == 0
 
 
 def test_pagination():
     first = client.get("/catalog/products?sort=name&limit=2").json()
     second = client.get("/catalog/products?sort=name&limit=2&offset=2").json()
-    assert first["total"] == second["total"] == 3
-    assert ids(first["items"]) == ["p2", "p1"] and ids(second["items"]) == ["p3"]
+    assert first["total"] == second["total"] == 4
+    assert ids(first["items"]) == ["p2", "p1"] and ids(second["items"]) == ["p3", "p5"]
 
 
 def test_category_counts_match_listing():
     counts = {c["id"]: c["product_count"] for c in client.get("/catalog/categories").json()}
-    assert counts == {"c_skin": 2, "c_hair": 1}
+    assert counts == {"c_skin": 3, "c_hair": 1}  # p5 (out of stock) counted, p4 (deactivated) not
+    assert client.get("/catalog/products", params={"category_id": "c_skin"}).json()["total"] == 3
 
 
-def test_featured_products_follow_staff_order_and_skip_unsellable():
+def test_featured_products_follow_staff_order_and_skip_deactivated():
     assert ids(client.get("/catalog/featured-products").json()) == ["p3", "p1"]
+
+
+def test_an_out_of_stock_featured_product_stays_featured_but_not_purchasable():
+    db = SessionLocal()
+    db.add(models.FeaturedProduct(position=4, product_id="p5"))
+    db.commit()
+    db.close()
+    try:
+        featured = client.get("/catalog/featured-products").json()
+        assert ids(featured) == ["p3", "p1", "p5"] and featured[2]["max_quantity"] == 0
+    finally:
+        db = SessionLocal()
+        db.query(models.FeaturedProduct).filter_by(product_id="p5").delete()
+        db.commit()
+        db.close()
 
 
 def test_featured_routines_skip_unavailable():
@@ -209,7 +231,21 @@ def test_short_and_full_descriptions_are_separate_and_optional():
 
 
 def test_related_products_exclude_self_and_other_categories():
-    assert ids(client.get("/catalog/products/p1/related").json()) == ["p2"]
+    related = ids(client.get("/catalog/products/p1/related").json())
+    assert sorted(related) == ["p2", "p5"] and "p4" not in related  # out of stock listed, deactivated not
+
+
+def test_out_of_stock_products_cannot_be_bought():
+    q = client.post("/cart/quote", json={"items": [{"product_id": "p5", "quantity": 1}]}).json()
+    assert q["has_issues"] and q["lines"][0]["issue"] == "out_of_stock"
+    res = client.post("/orders/", json={"customer_name": "منى علي حسن", "customer_phone": "01099990001", "city": "القاهرة",
+                                        "shipping_address": "شارع النيل 10", "items": [{"product_id": "p5", "quantity": 1}]})
+    assert res.status_code == 409
+    db = SessionLocal()
+    try:
+        assert db.get(models.Product, "p5").quantity == 0  # nothing sold, nothing went negative
+    finally:
+        db.close()
 
 
 def test_product_page_hides_inactive_but_shows_sold_out():

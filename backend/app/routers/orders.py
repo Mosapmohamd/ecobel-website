@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, joinedload
 
-from .. import abuse_limits, auth, checkout, models, pricing, promotions, schemas, services
+from .. import abuse_limits, auth, checkout, models, order_ledger, pricing, promotions, schemas, services
 from ..database import get_db
 from ..rate_limit import limiter
 from slowapi.util import get_remote_address
@@ -239,14 +239,9 @@ def create_order(
         t.coupon.used_count += 1
     checkout.record_promotions(db, order, t)
 
-    db.add(models.FinanceEntry(
-        type=models.FinanceEntryType.income,
-        category="مبيعات الموقع",
-        amount=t.total,
-        description=f"طلب موقع #{order.order_number}",
-        reference_id=order.id,
-        source="website",
-    ))
+    # No revenue is recorded here: a placed (pending, unpaid) order isn't
+    # revenue. It's recognized when the order is delivered — completed and
+    # paid — by the accounting system (app/order_ledger.py).
 
     db.commit()
     db.refresh(order)
@@ -315,15 +310,9 @@ def edit_order(
     if not payload.items and not bundles:
         raise HTTPException(400, "الطلب لازم يحتوي على منتج واحد على الأقل — لو عايزة تلغي الطلب كامل استخدمي زرار الإلغاء")
 
-    # Give back the stock the current items hold before repricing and
-    # re-deducting for the new item list.
-    for old_item in order.items:
-        product = db.get(models.Product, old_item.product_id)
-        if product:
-            services.apply_stock_movement(
-                db, product, old_item.quantity, models.MovementType.website_sale,
-                reference_id=order.id, note=f"تعديل طلب #{order.order_number} — استرجاع كمية",
-            )
+    # Give back the stock the order holds (from its own movements, product
+    # rows locked) before repricing and re-deducting for the new item list.
+    order_ledger.restore_stock(db, models, services, order, f"تعديل طلب #{order.order_number} — استرجاع كمية")
     db.query(models.OrderItem).filter(models.OrderItem.order_id == order.id).delete()
 
     # Re-price the new item list from the current DB state, same as checkout.
@@ -362,17 +351,10 @@ def edit_order(
 
     _add_lines(db, order, line_specs, f"تعديل طلب #{order.order_number}")
 
-    # The original income entry (created at checkout) was for the old
-    # total — correct it in place rather than leaving stale accounting
-    # data or creating a second, confusing income row for the same order.
-    original_entry = (
-        db.query(models.FinanceEntry)
-        .filter(models.FinanceEntry.reference_id == order.id)
-        .filter(models.FinanceEntry.type == models.FinanceEntryType.income)
-        .first()
-    )
-    if original_entry:
-        original_entry.amount = t.total
+    # Only pending orders are edited, and a pending order has no recognized
+    # revenue, so the ledger isn't touched (entries are never edited in place;
+    # an older order that was booked at checkout is settled to its final
+    # total when it's delivered — app/order_ledger.py).
 
     db.commit()
     db.refresh(order)
@@ -386,29 +368,17 @@ def cancel_order(
     customer: models.Customer = Depends(auth.get_current_customer),
 ):
     """Customer self-service cancellation — same pending-only, own-order-only
-    rule as editing. Releases the reserved stock, the coupon use and the
-    offer uses."""
+    rule as editing. Gives back the stock the order holds and its coupon /
+    offer uses, and reverses its revenue only if any was recognized (a
+    pending order normally has none) — each exactly once (app/order_ledger.py;
+    the order row stays locked, and a cancelled order can't be cancelled again)."""
     order = _own_pending_order(db, order_id, customer, "يتلغي")
 
-    for item in order.items:
-        product = db.get(models.Product, item.product_id)
-        if product:
-            services.apply_stock_movement(
-                db, product, item.quantity, models.MovementType.website_sale,
-                reference_id=order.id, note=f"إلغاء طلب #{order.order_number}",
-            )
+    order_ledger.restore_stock(db, models, services, order, f"إلغاء طلب #{order.order_number}")
     checkout.release_coupon(order)
     checkout.release_promotions(db, order)
     order.status = models.OrderStatus.cancelled
-
-    db.add(models.FinanceEntry(
-        type=models.FinanceEntryType.expense,
-        category="إلغاء طلب موقع",
-        amount=order.total_amount,
-        description=f"إلغاء طلب #{order.order_number}",
-        reference_id=order.id,
-        source="website",
-    ))
+    order_ledger.settle_revenue(db, models, order, f"إلغاء طلب #{order.order_number}")
 
     db.commit()
     db.refresh(order)

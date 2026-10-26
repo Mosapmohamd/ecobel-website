@@ -12,13 +12,12 @@ router = APIRouter(prefix="/catalog", tags=["Catalog"])
 ProductSort = Literal["newest", "price_asc", "price_desc", "name"]
 
 
-def _sellable_products(db: Session):
-    """Active products with stock — the only ones the storefront lists."""
-    return (
-        db.query(models.Product)
-        .filter(models.Product.is_active == True)  # noqa: E712
-        .filter(models.Product.quantity > 0)
-    )
+def _listed_products(db: Session):
+    """Every active product, in stock or not — an out-of-stock product is
+    still listed (shown as «نفد من المخزون», max_quantity 0, so it can't be
+    added to the cart and checkout refuses it). Deactivated products stay
+    hidden."""
+    return db.query(models.Product).filter(models.Product.is_active == True)  # noqa: E712
 
 
 def _load_routines(db: Session):
@@ -29,16 +28,15 @@ def _load_routines(db: Session):
 
 @router.get("/categories", response_model=List[schemas.CategoryOut])
 def list_categories(db: Session = Depends(get_db)):
-    """Categories with the number of products the storefront actually lists
-    under them (active and in stock), so a count never promises more than
-    the category page shows."""
+    """Categories with the number of products the storefront lists under
+    them (every active product, in stock or not) — the same count the
+    category page shows."""
     rows = (
         db.query(models.Category, func.count(models.Product.id))
         .outerjoin(
             models.Product,
             (models.Product.category_id == models.Category.id)
-            & (models.Product.is_active == True)  # noqa: E712
-            & (models.Product.quantity > 0),
+            & (models.Product.is_active == True),  # noqa: E712
         )
         .group_by(models.Category.id)
         .order_by(models.Category.name)
@@ -61,13 +59,14 @@ def list_products(
     offset: int = Query(0, ge=0),
     db: Session = Depends(get_db),
 ):
-    """The full sellable catalog. Price filters and price sorting use the
+    """The full catalog: every active product, out-of-stock ones included
+    (flagged, not purchasable). Price filters and price sorting use the
     price checkout charges (offers included). Featured placement never
     affects this listing."""
     offer_sq = pricing.offer_price_subquery()
     price = pricing.effective_price_expr(offer_sq)
     query = (
-        _sellable_products(db)
+        _listed_products(db)
         .join(models.Category, models.Category.id == models.Product.category_id)
         .outerjoin(offer_sq, offer_sq.c.product_id == models.Product.id)
         .options(joinedload(models.Product.category))
@@ -139,13 +138,13 @@ def get_product(product_id: str, db: Session = Depends(get_db)):
 
 @router.get("/products/{product_id}/related", response_model=List[schemas.ProductOut])
 def related_products(product_id: str, limit: int = Query(4, ge=1, le=12), db: Session = Depends(get_db)):
-    """Other sellable products from the same category (newest first) — never
-    the product itself, never padded with unrelated products."""
+    """Other listed (active) products from the same category, newest first —
+    never the product itself, never padded with unrelated products."""
     product = db.get(models.Product, product_id)
     if not product:
         raise HTTPException(404, "المنتج غير موجود")
     related = (
-        _sellable_products(db)
+        _listed_products(db)
         .options(joinedload(models.Product.category))
         .filter(models.Product.category_id == product.category_id)
         .filter(models.Product.id != product.id)
@@ -159,8 +158,9 @@ def related_products(product_id: str, limit: int = Query(4, ge=1, le=12), db: Se
 @router.get("/featured-products", response_model=List[schemas.ProductOut])
 def featured_products(db: Session = Depends(get_db)):
     """Homepage "منتجات مختارة" — exactly the slots staff set in the
-    accounting system, in their order. A slot whose product is no longer
-    sellable is skipped (never replaced by another product)."""
+    accounting system, in their order. A slot whose product was deactivated
+    is skipped (never replaced by another product); an out-of-stock product
+    stays, shown as out of stock."""
     rows = (
         db.query(models.FeaturedProduct)
         .options(joinedload(models.FeaturedProduct.product).joinedload(models.Product.category))
@@ -168,7 +168,7 @@ def featured_products(db: Session = Depends(get_db)):
         .limit(models.FEATURED_PRODUCTS_MAX)
         .all()
     )
-    products = [r.product for r in rows if pricing.is_available(r.product)]
+    products = [r.product for r in rows if r.product.is_active]
     return pricing.products_out(db, products)
 
 

@@ -32,7 +32,10 @@ export default function ProductCard({ product }: { product: Product }) {
             </div>
           </div>
         </Link>
-        {percentOff > 0 ? (
+        {/* Out-of-stock products are listed too (never hidden) — said up front. */}
+        {outOfStock ? (
+          <span className="absolute top-3 right-3 badge bg-surface text-ink border border-line">نفد من المخزون</span>
+        ) : percentOff > 0 ? (
           <span className="absolute top-3 right-3 badge bg-brand-deep text-surface">خصم {percentOff.toLocaleString('ar-EG')}%</span>
         ) : product.stock_status === 'low' ? (
           <span className="absolute top-3 right-3 badge bg-surface-muted text-primary-hover">كمية محدودة</span>

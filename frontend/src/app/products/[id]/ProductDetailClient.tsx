@@ -157,7 +157,7 @@ export default function ProductDetailClient({
               ) : (
                 <span className="badge bg-error/10 text-error">
                   <Icon name="close" size={13} />
-                  نفدت الكمية
+                  نفد من المخزون
                 </span>
               )}
             </div>

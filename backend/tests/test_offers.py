@@ -85,15 +85,17 @@ def test_expired_paused_or_mispriced_offers_are_never_presented(pid):
     assert p["offer"] is None and p["price"] == p["sale_price"] == 200
 
 
-def test_offers_on_products_the_shop_does_not_sell_are_not_presented():
+def test_offers_on_deactivated_products_are_not_presented_sold_out_ones_are_flagged():
     assert client.get("/catalog/products/of_hidden").status_code == 404
-    listed = {p["id"] for p in client.get("/catalog/products?on_offer=true&limit=100").json()["items"]}
-    assert "of_hidden" not in listed and "of_soldout" not in listed
+    listed = {p["id"]: p for p in client.get("/catalog/products?on_offer=true&limit=100").json()["items"]}
+    assert "of_hidden" not in listed
+    # out of stock: still listed with its offer price, but not purchasable
+    assert listed["of_soldout"]["max_quantity"] == 0 and listed["of_soldout"]["price"] == 150
 
 
 def test_on_offer_filter_lists_exactly_the_live_offers():
     listed = {p["id"] for p in client.get("/catalog/products?on_offer=true&limit=100").json()["items"] if p["id"].startswith("of_")}
-    assert listed == set(LIVE)
+    assert listed == set(LIVE) | {"of_soldout"}  # of_soldout: live offer, out of stock (listed, flagged)
 
 
 def test_routine_prices_each_item_like_the_cart():
