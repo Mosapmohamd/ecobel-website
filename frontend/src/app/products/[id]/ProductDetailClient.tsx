@@ -12,6 +12,7 @@ import RichDescription from '@/components/RichDescription';
 import ReviewsSection, { Stars } from '@/components/ReviewsSection';
 import Icon, { type IconName } from '@/components/Icon';
 import OfferTitle from '@/components/OfferTitle';
+import { PromotionList } from '@/components/PromotionBadges';
 import { egp, FREE_SHIPPING_THRESHOLD } from '@/lib/constants';
 
 /** Store-wide policies (the same ones the trust strip states). */
@@ -181,6 +182,7 @@ export default function ProductDetailClient({
                 )}
               </div>
               {onOffer && <OfferTitle offer={product.offer} className="mt-2" />}
+              <PromotionList promotions={product.promotions} />
             </div>
 
             {product.short_description && (

@@ -15,6 +15,7 @@ export function parseCatalogQuery(get: (key: string) => string | null) {
     minPrice: num(get('min')),
     maxPrice: num(get('max')),
     onOffer: get('offers') === '1',
+    promotion: get('promotion')?.trim().slice(0, 64) || undefined,
     sort: (sort && PRODUCT_SORTS.includes(sort) ? sort : 'newest') as ProductSort,
     page: Math.max(1, Math.floor(num(get('page')) ?? 1)),
   };
@@ -29,6 +30,7 @@ export function toSearch(q: Partial<CatalogQuery>): string {
   if (q.minPrice !== undefined) p.set('min', String(q.minPrice));
   if (q.maxPrice !== undefined) p.set('max', String(q.maxPrice));
   if (q.onOffer) p.set('offers', '1');
+  if (q.promotion) p.set('promotion', q.promotion);
   if (q.sort && q.sort !== 'newest') p.set('sort', q.sort);
   if (q.page && q.page > 1) p.set('page', String(q.page));
   const s = p.toString();
@@ -43,6 +45,7 @@ export function toProductQuery(q: CatalogQuery): ProductQuery {
     minPrice: q.minPrice,
     maxPrice: q.maxPrice,
     onOffer: q.onOffer,
+    promotion: q.promotion,
     sort: q.sort,
     limit: CATALOG_PAGE_SIZE,
     offset: (q.page - 1) * CATALOG_PAGE_SIZE,
@@ -57,6 +60,7 @@ export function productQueryString(o: ProductQuery): string {
   if (o.minPrice !== undefined) params.set('min_price', String(o.minPrice));
   if (o.maxPrice !== undefined) params.set('max_price', String(o.maxPrice));
   if (o.onOffer) params.set('on_offer', 'true');
+  if (o.promotion) params.set('promotion', o.promotion);
   if (o.sort) params.set('sort', o.sort);
   if (o.limit) params.set('limit', String(o.limit));
   if (o.offset) params.set('offset', String(o.offset));

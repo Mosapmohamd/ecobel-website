@@ -14,6 +14,53 @@ export interface OfferBrief {
   offer_price: number;
 }
 
+/** A cart offer (bundle, free shipping, discount, gift — the backend's
+ * app/promotions.py) a product takes part in. The cart applies it. */
+export interface PromotionBadge {
+  id: string;
+  name: string;
+  type: 'bundle' | 'free_shipping' | 'percentage' | 'fixed_amount' | 'buy_x_get_y';
+  badge_text: string | null;
+  /** What it gives, in one line (from the server). */
+  summary: string;
+  description: string | null;
+  /** "reward": this product is the gift. */
+  role: 'eligible' | 'reward';
+}
+
+export interface PromotionPublic extends PromotionBadge {
+  ends_at: string | null;
+  product_ids: string[];
+  category_ids: string[];
+  reward_product_ids: string[];
+  reward_category_ids: string[];
+}
+
+/** A running bundle offer with what its card needs: fixed bundles list their
+ * exact contents (and quantities); choose-your-own bundles list the
+ * products the customer may pick from. Prices are the server's. */
+export interface BundleOffer extends PromotionPublic {
+  fixed: boolean;
+  bundle_price: number;
+  /** Units in one bundle. */
+  bundle_quantity: number;
+  distinct_products: boolean;
+  /** Most bundles one order may hold (null = no limit). */
+  max_bundles: number | null;
+  products: { product: Product; quantity: number }[];
+  regular_total: number | null;
+  savings: number | null;
+  available: boolean;
+}
+
+/** A bundle as the browser sends it: the offer, its products (units per
+ * bundle) and how many bundles. Never a price. */
+export interface BundleIn {
+  promotion_id: string;
+  quantity: number;
+  items: { product_id: string; quantity: number }[];
+}
+
 /** A product as the storefront sells it. `price` is what checkout charges
  * (offers already applied server-side); `sale_price` is the regular price,
  * shown struck through when `offer` is set. */
@@ -36,6 +83,8 @@ export interface Product {
   short_description?: string | null;
   /** Full plain-text description (paragraphs, "## " headings, "- " bullets). */
   description: string | null;
+  /** Live cart offers it takes part in. */
+  promotions?: PromotionBadge[];
 }
 
 export interface ProductPage {
@@ -53,6 +102,8 @@ export interface ProductQuery {
   minPrice?: number;
   maxPrice?: number;
   onOffer?: boolean;
+  /** Only the products a live cart offer applies to. */
+  promotion?: string;
   sort?: ProductSort;
   limit?: number;
   offset?: number;
@@ -86,7 +137,45 @@ export interface CartQuoteLine {
   unit_price: number;
   regular_unit_price: number;
   line_total: number;
+  /** Cart-offer discount on this line, and how many of its units are free gifts. */
+  promotion_discount?: number;
+  free_units?: number;
   issue: CartIssue | null;
+}
+
+/** A bundle in the cart, priced by the server. `issue` = can't be ordered as is. */
+export interface CartBundle {
+  promotion_id: string;
+  name: string;
+  badge_text: string | null;
+  summary: string;
+  fixed: boolean;
+  quantity: number;
+  items: { product_id: string; quantity: number; product: Product | null; unit_price: number }[];
+  regular_total: number;
+  total: number;
+  discount: number;
+  issue: string | null;
+}
+
+export interface AppliedPromotion {
+  id: string;
+  name: string;
+  type: PromotionBadge['type'];
+  badge_text: string | null;
+  summary: string;
+  discount: number;
+  shipping_discount: number;
+}
+
+/** An offer related to this cart that it doesn't get yet — and why. */
+export interface PromotionHint {
+  id: string;
+  name: string;
+  type: PromotionBadge['type'];
+  badge_text: string | null;
+  summary: string;
+  reason: string;
 }
 
 /** The cart priced exactly as checkout will charge it. Discount, shipping
@@ -104,6 +193,14 @@ export interface CartQuote {
   city_error: string | null;
   free_shipping_threshold: number;
   total: number;
+  /** Cart offers: product discount, waived shipping, what applied, what didn't (and why). */
+  promotion_discount?: number;
+  shipping_discount?: number;
+  promotions?: AppliedPromotion[];
+  promotion_hints?: PromotionHint[];
+  /** Everything saved: sale prices + offers + coupon + shipping. */
+  total_savings?: number;
+  bundles?: CartBundle[];
 }
 
 export interface OrderItemIn {
@@ -138,12 +235,18 @@ export interface Order {
   status: 'pending' | 'shipped' | 'delivered' | 'cancelled';
   payment_method: string;
   subtotal: number;
+  /** Coupon discount. */
   discount_amount: number;
+  /** Cart offers' discount. */
+  promotion_discount?: number;
   shipping_fee: number;
   total_amount: number;
   note: string | null;
   created_at: string;
   items: OrderItemOut[];
+  applied_promotions?: { promotion_id: string; name: string; type: string; discount: number; shipping_discount: number }[];
+  /** Bundles in the order, as the customer added them. */
+  bundles?: { promotion_id: string; name: string; quantity: number; items: { product_id: string; product_name: string; quantity: number }[]; price: number; discount: number }[];
 }
 
 /** Status-only view (order number OR phone given): a masked reference
@@ -220,13 +323,17 @@ export const catalogApi = {
   routine: (id: string) => request<Routine>(`/catalog/routines/${encodeURIComponent(id)}`),
   featuredRoutines: () => request<Routine[]>('/catalog/featured-routines'),
   shippingRates: () => request<{ city: string; fee: number }[]>('/catalog/shipping-rates'),
+  /** Cart offers running now. */
+  promotions: () => request<PromotionPublic[]>('/promotions'),
+  /** A running bundle offer with its products (404 when not running). */
+  bundle: (id: string) => request<BundleOffer>(`/promotions/${encodeURIComponent(id)}/bundle`),
 };
 
 export const cartApi = {
-  quote: (items: OrderItemIn[], checkout: { city?: string; couponCode?: string } = {}) =>
+  quote: (items: OrderItemIn[], checkout: { city?: string; couponCode?: string } = {}, bundles: BundleIn[] = []) =>
     request<CartQuote>('/cart/quote', {
       method: 'POST',
-      body: JSON.stringify({ items, city: checkout.city || undefined, coupon_code: checkout.couponCode || undefined }),
+      body: JSON.stringify({ items, bundles, city: checkout.city || undefined, coupon_code: checkout.couponCode || undefined }),
     }),
 };
 
@@ -237,6 +344,7 @@ export const orderApi = {
     city: string;
     shipping_address: string;
     items: OrderItemIn[];
+    bundles?: BundleIn[];
     coupon_code?: string;
     note?: string;
   }, token?: string) => request<Order>('/orders/', { method: 'POST', body: JSON.stringify(payload), token }),
@@ -246,7 +354,8 @@ export const orderApi = {
     if (opts.phone) params.set('phone', opts.phone);
     return request<Order | OrderTrackSummary[]>(`/orders/track?${params.toString()}`);
   },
-  edit: (orderId: string, payload: { items: OrderItemIn[]; city?: string; shipping_address?: string; note?: string }, token: string) =>
+  /** `bundles` omitted = the order keeps its bundles as they are. */
+  edit: (orderId: string, payload: { items: OrderItemIn[]; bundles?: BundleIn[]; city?: string; shipping_address?: string; note?: string }, token: string) =>
     request<Order>(`/orders/${orderId}`, { method: 'PATCH', body: JSON.stringify(payload), token }),
   cancel: (orderId: string, token: string) =>
     request<Order>(`/orders/${orderId}`, { method: 'DELETE', token }),
@@ -296,3 +405,17 @@ export const reviewApi = {
   create: (productId: string, payload: { rating: number; comment?: string }, token: string) =>
     request<Review>(`/products/${productId}/reviews/`, { method: 'POST', body: JSON.stringify(payload), token }),
 };
+
+/** The top announcement bar, as staff configured it (validated server-side:
+ * plain text, named themes, a site path or https link). */
+export interface AnnouncementBarSettings {
+  enabled: boolean;
+  text_ar: string | null;
+  text_en: string | null;
+  scrolling: boolean;
+  direction: 'auto' | 'right' | 'left';
+  speed: 'slow' | 'normal' | 'fast';
+  visibility: 'all' | 'desktop' | 'mobile';
+  theme: 'default' | 'brand' | 'light' | 'accent';
+  link_url: string | null;
+}

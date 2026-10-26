@@ -1,7 +1,7 @@
 'use client';
 
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
-import { cartApi, type CartQuote } from './api';
+import { cartApi, type BundleIn, type CartQuote } from './api';
 import { createPersistedStore } from './persistedStore';
 
 /** What the browser remembers: which products, how many. Never prices —
@@ -27,6 +27,47 @@ function parseLines(raw: unknown): CartLine[] {
 
 const store = createPersistedStore<CartLine[]>('ecobel_cart', [], parseLines);
 
+/** A bundle offer in the cart, as ONE item: its products (units per
+ * bundle) and how many bundles. `key` is stable for the same offer and the
+ * same contents, so adding it again just adds one more bundle. */
+export interface CartBundleLine {
+  key: string;
+  promotionId: string;
+  items: CartLine[];
+  quantity: number;
+}
+
+const MAX_BUNDLES = 20;
+
+export function bundleKey(promotionId: string, items: CartLine[]): string {
+  const contents = [...items].sort((a, b) => a.productId.localeCompare(b.productId)).map((i) => `${i.productId}:${i.quantity}`).join(',');
+  return `${promotionId}|${contents}`;
+}
+
+function parseBundles(raw: unknown): CartBundleLine[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.flatMap((b): CartBundleLine[] => {
+    if (!b || typeof b !== 'object') return [];
+    const rec = b as { promotionId?: unknown; items?: unknown; quantity?: unknown };
+    if (typeof rec.promotionId !== 'string') return [];
+    const items = parseLines(rec.items);
+    const quantity = typeof rec.quantity === 'number' ? Math.floor(rec.quantity) : 0;
+    if (!items.length || quantity <= 0) return [];
+    return [{ key: bundleKey(rec.promotionId, items), promotionId: rec.promotionId, items, quantity: Math.min(quantity, MAX_BUNDLES) }];
+  });
+}
+
+const bundleStore = createPersistedStore<CartBundleLine[]>('ecobel_cart_bundles', [], parseBundles);
+
+/** The bundles as the API takes them. */
+export function bundlesIn(bundles: CartBundleLine[]): BundleIn[] {
+  return bundles.map((b) => ({
+    promotion_id: b.promotionId,
+    quantity: b.quantity,
+    items: b.items.map((i) => ({ product_id: i.productId, quantity: i.quantity })),
+  }));
+}
+
 function addInto(prev: CartLine[], items: CartLine[]): CartLine[] {
   const next = [...prev];
   for (const { productId, quantity } of items) {
@@ -39,7 +80,9 @@ function addInto(prev: CartLine[], items: CartLine[]): CartLine[] {
 
 interface CartContextValue {
   lines: CartLine[];
-  /** Total pieces, for the header badge. */
+  /** Bundle offers, each one cart item (see CartBundleLine). */
+  bundles: CartBundleLine[];
+  /** Total pieces (bundle contents included), for the header badge. */
   count: number;
   add: (productId: string, quantity?: number) => void;
   /** Several products at once (e.g. every product in a routine). */
@@ -48,6 +91,12 @@ interface CartContextValue {
   /** Put a removed line back at its original position (undo). */
   restore: (line: CartLine, index: number) => void;
   setQuantity: (productId: string, quantity: number) => void;
+  /** A whole bundle in one action (again = one more of the same bundle). */
+  addBundle: (promotionId: string, items: CartLine[], quantity?: number) => void;
+  /** Removes the bundle and everything in it. */
+  removeBundle: (key: string) => void;
+  restoreBundle: (bundle: CartBundleLine, index: number) => void;
+  setBundleQuantity: (key: string, quantity: number) => void;
   clear: () => void;
   /** Server-priced view of the current lines; null until the first quote. */
   quote: CartQuote | null;
@@ -70,17 +119,18 @@ const CartContext = createContext<CartContextValue | null>(null);
 
 export function CartProvider({ children }: { children: ReactNode }) {
   const lines = store.useValue();
+  const bundles = bundleStore.useValue();
   const [checkout, setCheckoutState] = useState<CheckoutContext>({ city: '', couponCode: '' });
-  const key = useMemo(() => JSON.stringify([lines, checkout]), [lines, checkout]);
+  const key = useMemo(() => JSON.stringify([lines, bundles, checkout]), [lines, bundles, checkout]);
   const [result, setResult] = useState<{ key: string; quote: CartQuote | null; error: string | null } | null>(null);
   const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
-    if (lines.length === 0) return;
+    if (lines.length === 0 && bundles.length === 0) return;
     let cancelled = false;
     const t = setTimeout(() => {
       cartApi
-        .quote(lines.map((l) => ({ product_id: l.productId, quantity: l.quantity })), checkout)
+        .quote(lines.map((l) => ({ product_id: l.productId, quantity: l.quantity })), checkout, bundlesIn(bundles))
         .then((quote) => !cancelled && setResult({ key, quote, error: null }))
         .catch((err) => !cancelled && setResult({ key, quote: null, error: err instanceof Error ? err.message : 'تعذر تحديث أسعار السلة' }));
     }, 250);
@@ -88,13 +138,15 @@ export function CartProvider({ children }: { children: ReactNode }) {
       cancelled = true;
       clearTimeout(t);
     };
-  }, [key, lines, checkout, attempt]);
+  }, [key, lines, bundles, checkout, attempt]);
 
-  const empty = lines.length === 0;
+  const empty = lines.length === 0 && bundles.length === 0;
   const fresh = result?.key === key;
   const value: CartContextValue = {
     lines,
-    count: lines.reduce((sum, l) => sum + l.quantity, 0),
+    bundles,
+    count: lines.reduce((sum, l) => sum + l.quantity, 0)
+      + bundles.reduce((sum, b) => sum + b.quantity * b.items.reduce((n, i) => n + i.quantity, 0), 0),
     add: (productId, quantity = 1) => store.set((prev) => addInto(prev, [{ productId, quantity }])),
     addMany: (items) => store.set((prev) => addInto(prev, items)),
     remove: (productId) => store.set((prev) => prev.filter((l) => l.productId !== productId)),
@@ -111,7 +163,35 @@ export function CartProvider({ children }: { children: ReactNode }) {
           ? prev.filter((l) => l.productId !== productId)
           : prev.map((l) => (l.productId === productId ? { ...l, quantity: Math.min(quantity, MAX_LINE_QUANTITY) } : l)),
       ),
-    clear: () => store.set(() => []),
+    addBundle: (promotionId, items, quantity = 1) =>
+      bundleStore.set((prev) => {
+        const k = bundleKey(promotionId, items);
+        const i = prev.findIndex((b) => b.key === k);
+        if (i >= 0) {
+          const next = [...prev];
+          next[i] = { ...next[i], quantity: Math.min(next[i].quantity + quantity, MAX_BUNDLES) };
+          return next;
+        }
+        return [...prev, { key: k, promotionId, items: items.map((it) => ({ ...it })), quantity: Math.min(quantity, MAX_BUNDLES) }];
+      }),
+    removeBundle: (k) => bundleStore.set((prev) => prev.filter((b) => b.key !== k)),
+    restoreBundle: (bundle, index) =>
+      bundleStore.set((prev) => {
+        if (prev.some((b) => b.key === bundle.key)) return prev;
+        const next = [...prev];
+        next.splice(Math.min(index, next.length), 0, bundle);
+        return next;
+      }),
+    setBundleQuantity: (k, quantity) =>
+      bundleStore.set((prev) =>
+        quantity <= 0
+          ? prev.filter((b) => b.key !== k)
+          : prev.map((b) => (b.key === k ? { ...b, quantity: Math.min(quantity, MAX_BUNDLES) } : b)),
+      ),
+    clear: () => {
+      store.set(() => []);
+      bundleStore.set(() => []);
+    },
     // Keep showing the last quote while a new one loads (no flicker).
     quote: empty ? null : (result?.quote ?? null),
     quoting: !empty && !fresh,

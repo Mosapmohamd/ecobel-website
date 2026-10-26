@@ -3,10 +3,11 @@
 import { Suspense, useEffect, useMemo, useState, type FormEvent } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { catalogApi, type Category, type ProductPage, type ProductSort, type Routine } from '@/lib/api';
+import { catalogApi, type Category, type ProductPage, type ProductSort, type PromotionPublic, type Routine } from '@/lib/api';
 import ProductCard, { ProductCardSkeleton } from '@/components/ProductCard';
 import RoutineCard from '@/components/RoutineCard';
 import Icon from '@/components/Icon';
+import BundleOfferCard from '@/components/BundleOfferCard';
 import { errorProps } from '@/components/FieldError';
 import { ROUTINES_LABEL, ROUTINES_PATH } from '@/lib/constants';
 import { CATALOG_PAGE_SIZE, parseCatalogQuery, routineQueryOf, toProductQuery, toSearch, type CatalogQuery } from '@/lib/catalogQuery';
@@ -114,8 +115,25 @@ function ProductsContent({ initial }: { initial: CatalogInitial | null }) {
   }
 
   const activeCategory = categories.find((c) => c.id === query.categoryId);
+  // ?promotion=<id>: the products a cart offer applies to (the server filters).
+  const [promotion, setPromotion] = useState<PromotionPublic | null>(null);
+  useEffect(() => {
+    if (!query.promotion) return;
+    let cancelled = false;
+    catalogApi.promotions()
+      .then((list) => { if (!cancelled) setPromotion(list.find((p) => p.id === query.promotion) ?? null); })
+      .catch(() => { if (!cancelled) setPromotion(null); });
+    return () => { cancelled = true; };
+  }, [query.promotion]);
+  const activePromotion = query.promotion && promotion?.id === query.promotion ? promotion : null;
   const totalAll = useMemo(() => categories.reduce((sum, c) => sum + c.product_count, 0), [categories]);
-  const title = query.q ? `نتائج البحث عن "${query.q}"` : activeCategory ? activeCategory.name : query.onOffer ? 'العروض والتخفيضات' : 'كل المنتجات';
+  const title = query.q
+    ? `نتائج البحث عن "${query.q}"`
+    : activeCategory
+      ? activeCategory.name
+      : query.promotion
+        ? activePromotion?.name ?? 'منتجات العرض'
+        : query.onOffer ? 'العروض والتخفيضات' : 'كل المنتجات';
   const hasFilters = query.minPrice !== undefined || query.maxPrice !== undefined || query.onOffer || query.sort !== 'newest';
   const pages = page ? Math.max(1, Math.ceil(page.total / PAGE_SIZE)) : 1;
 
@@ -126,7 +144,7 @@ function ProductsContent({ initial }: { initial: CatalogInitial | null }) {
           <nav aria-label="مسار التصفح" className="flex flex-wrap items-center gap-1.5 text-body-sm text-ink-muted mb-3">
             <Link href="/" className="hover:text-primary transition-colors">الرئيسية</Link>
             <Icon name="chevronLeft" size={14} />
-            {activeCategory || query.q || query.onOffer ? (
+            {activeCategory || query.q || query.onOffer || query.promotion ? (
               <>
                 <Link href="/products" className="hover:text-primary transition-colors">كل المنتجات</Link>
                 <Icon name="chevronLeft" size={14} />
@@ -137,6 +155,13 @@ function ProductsContent({ initial }: { initial: CatalogInitial | null }) {
             )}
           </nav>
           <h1 className="text-headline-md lg:text-headline-lg">{title}</h1>
+          {query.promotion && (
+            <p className="mt-1 text-body text-brand-deep font-bold">
+              {activePromotion ? activePromotion.summary : 'العرض ده مش متاح دلوقتي'}
+              {' · '}
+              <Link href={`/products${toSearch({ ...query, promotion: undefined, page: 1 })}`} className="link-underline text-ink-muted font-normal">كل المنتجات</Link>
+            </p>
+          )}
           {page && (
             <p className="mt-1 text-body-sm text-ink-muted" role="status">
               {page.total.toLocaleString('ar-EG')} منتج
@@ -147,6 +172,7 @@ function ProductsContent({ initial }: { initial: CatalogInitial | null }) {
       </section>
 
       <div className="page-container py-8">
+        {activePromotion?.type === 'bundle' && <BundleOfferCard promotionId={activePromotion.id} className="mb-8 max-w-2xl" />}
         <nav aria-label="الفئات" className="flex gap-2 overflow-x-auto scrollbar-hide -mx-5 px-5 lg:mx-0 lg:px-0 lg:flex-wrap mb-6">
           <Link href={`/products${toSearch({ q: query.q })}`} className={chipClass(!query.categoryId)} aria-current={!query.categoryId ? 'page' : undefined}>
             الكل

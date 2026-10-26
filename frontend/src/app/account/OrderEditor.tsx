@@ -95,9 +95,17 @@ export default function OrderEditor({
   onClose: () => void;
   onSaved: () => void;
 }) {
-  const [lines, setLines] = useState(
-    order.items.map((it) => ({ product_id: it.product_id, name: it.product_name, quantity: it.quantity }))
-  );
+  // Bundles stay whole: their products aren't editable one by one — a bundle
+  // is kept or removed as a whole. The loose lines are what's left of each
+  // product once the bundles' units are taken out.
+  const orderBundles = order.bundles ?? [];
+  const [bundles, setBundles] = useState(orderBundles);
+  const inBundles: Record<string, number> = {};
+  for (const b of orderBundles) for (const i of b.items) inBundles[i.product_id] = (inBundles[i.product_id] ?? 0) + i.quantity * b.quantity;
+  const looseItems = order.items
+    .map((it) => ({ product_id: it.product_id, name: it.product_name, quantity: it.quantity - (inBundles[it.product_id] ?? 0) }))
+    .filter((l) => l.quantity > 0);
+  const [lines, setLines] = useState(looseItems);
   const [city, setCity] = useState(order.city ?? '');
   const [address, setAddress] = useState(order.shipping_address);
   const [rates, setRates] = useState<{ city: string; fee: number }[]>([]);
@@ -113,8 +121,10 @@ export default function OrderEditor({
   const dirty =
     city !== (order.city ?? '') ||
     address !== order.shipping_address ||
-    lines.length !== order.items.length ||
-    lines.some((l) => order.items.find((it) => it.product_id === l.product_id)?.quantity !== l.quantity);
+    bundles.length !== orderBundles.length ||
+    lines.length !== looseItems.length ||
+    lines.some((l) => looseItems.find((it) => it.product_id === l.product_id)?.quantity !== l.quantity);
+  const empty = lines.length === 0 && bundles.length === 0;
 
   // Closing with unsaved edits asks first; closing a pristine editor doesn't.
   function requestClose() {
@@ -132,7 +142,7 @@ export default function OrderEditor({
   }
 
   async function handleSave() {
-    if (lines.length === 0) {
+    if (empty) {
       setError('الطلب لازم يحتوي على منتج واحد على الأقل — لو عايزة تلغي الطلب كامل استخدمي زرار الإلغاء');
       return;
     }
@@ -147,6 +157,10 @@ export default function OrderEditor({
         order.id,
         {
           items: lines.map((l) => ({ product_id: l.product_id, quantity: l.quantity })),
+          bundles: bundles.map((b) => ({
+            promotion_id: b.promotion_id, quantity: b.quantity,
+            items: b.items.map((i) => ({ product_id: i.product_id, quantity: i.quantity })),
+          })),
           city: city || undefined,
           shipping_address: address.trim(),
         },
@@ -173,6 +187,30 @@ export default function OrderEditor({
         </div>
       )}
 
+      {bundles.length > 0 && (
+        <ul className="flex flex-col gap-2 mb-3" aria-label="الباقات في الطلب">
+          {bundles.map((b, idx) => (
+            <li key={`${b.promotion_id}-${idx}`} className="rounded border bg-white px-3 py-2 text-[13.5px]" style={{ borderColor: 'var(--color-line)' }}>
+              <div className="flex items-center justify-between gap-3">
+                <span className="font-bold min-w-0">
+                  {b.name}{b.quantity > 1 && ` × ${b.quantity.toLocaleString('ar-EG')}`}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setBundles((prev) => prev.filter((_, j) => j !== idx))}
+                  className="flex-none p-1 transition-colors text-[var(--color-ink-muted)] hover:text-[var(--color-error)]"
+                  aria-label={`حذف ${b.name} بكل منتجاتها من الطلب`}
+                >
+                  <Icon name="trash" size={17} />
+                </button>
+              </div>
+              <p className="text-[12.5px] text-ink-muted">
+                {b.items.map((i) => `${i.product_name} × ${(i.quantity * b.quantity).toLocaleString('ar-EG')}`).join('، ')}
+              </p>
+            </li>
+          ))}
+        </ul>
+      )}
       <ul className="flex flex-col gap-2 mb-4">
         {lines.map((l) => (
           <li key={l.product_id} className="flex items-center justify-between gap-3 text-[13.5px]">
@@ -209,7 +247,7 @@ export default function OrderEditor({
           </li>
         ))}
       </ul>
-      {lines.length === 0 && (
+      {empty && (
         <p role="status" className="notice notice-info mb-4">
           شلتي كل المنتجات من الطلب. أضيفي منتج واحد على الأقل، أو استخدمي زرار «إلغاء الطلب» لو عايزة تلغيه كامل.
         </p>
@@ -239,7 +277,7 @@ export default function OrderEditor({
       </p>
 
       <div className="flex flex-wrap gap-2">
-        <button type="button" className="btn btn-primary btn-sm" onClick={handleSave} disabled={saving || !dirty || lines.length === 0}>
+        <button type="button" className="btn btn-primary btn-sm" onClick={handleSave} disabled={saving || !dirty || empty}>
           {saving ? 'جاري الحفظ...' : 'حفظ التعديلات'}
         </button>
         <button type="button" className="btn btn-secondary btn-sm" onClick={requestClose} disabled={saving}>

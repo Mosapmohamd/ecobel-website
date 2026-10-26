@@ -1,5 +1,5 @@
 import { cache } from 'react';
-import type { Category, Product, ProductPage, ReviewSummary, Routine } from './api';
+import type { AnnouncementBarSettings, Category, Product, ProductPage, ReviewSummary, Routine } from './api';
 
 /** Server components only. Data for server-rendered pages (HTML that search engines and first
  * paint see). Same API, same authoritative prices/stock as the browser.
@@ -34,6 +34,8 @@ const orNull = <T,>(v: T | null | typeof NOT_FOUND): T | null => (v === NOT_FOUN
 
 // `cache` dedupes calls made by both generateMetadata and the page itself.
 export const getCategories = cache(async () => orNull(await get<Category[]>('/catalog/categories', 300)));
+// Staff edits show within a minute — no rebuild (no prices or stock in it).
+export const getAnnouncementBar = cache(async () => orNull(await get<AnnouncementBarSettings>('/storefront/announcement-bar', 60)));
 export const getProduct = cache((id: string) => get<Product>(`/catalog/products/${encodeURIComponent(id)}`));
 export const getRelated = cache(async (id: string) => orNull(await get<Product[]>(`/catalog/products/${encodeURIComponent(id)}/related`)));
 export const getReviews = cache(async (id: string) => orNull(await get<ReviewSummary>(`/products/${encodeURIComponent(id)}/reviews/`)));

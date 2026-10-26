@@ -1,7 +1,7 @@
 from typing import List, Literal, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import func, or_
+from sqlalchemy import false, func, or_
 from sqlalchemy.orm import Session, joinedload, selectinload
 
 from .. import models, schemas, pricing
@@ -54,6 +54,7 @@ def list_products(
     min_price: Optional[float] = Query(None, ge=0),
     max_price: Optional[float] = Query(None, ge=0),
     on_offer: bool = False,
+    promotion: Optional[str] = Query(None, max_length=64, description="Only products a live cart offer applies to"),
     sort: ProductSort = "newest",
     limit: int = Query(24, ge=1, le=100),
     offset: int = Query(0, ge=0),
@@ -87,6 +88,14 @@ def list_products(
         query = query.filter(price <= max_price)
     if on_offer:
         query = query.filter(price < models.Product.sale_price)
+    if promotion:
+        rule = next((r for r in pricing.live_promotions(db) if r.id == promotion), None)
+        if rule is None:
+            query = query.filter(false())  # not running (or no such offer): nothing qualifies
+        elif rule.restricted:  # an offer open to every product filters nothing
+            products = rule.eligible_products | rule.reward_products
+            categories = rule.eligible_categories | rule.reward_categories
+            query = query.filter(or_(models.Product.id.in_(list(products)), models.Product.category_id.in_(list(categories))))
 
     total = query.count()
     order = {
