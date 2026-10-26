@@ -273,3 +273,47 @@ def test_priority_and_combination_between_offers():
     q = quote(items(a=1))
     assert [p["name"] for p in q["promotions"]] == ["عشرة في المية"] and q["promotion_discount"] == 25
     assert "ما بيتجمعش" in q["promotion_hints"][0]["reason"]
+
+
+# ---------------------------------------------------------------- "offers only" (any_offer)
+def _listed(**params):
+    res = client.get("/catalog/products", params={"limit": 100, **params})
+    assert res.status_code == 200, res.text
+    return [p["id"] for p in res.json()["items"]]
+
+
+def test_offers_only_lists_sale_prices_and_products_in_running_cart_offers():
+    # (pm_g's stock is used up by earlier tests in this module — listings skip
+    # unavailable products — so the gift here is the well-stocked pm_h)
+    promo("bundle", {"mode": "combination", "bundle_price": 400, "bundle_quantity": 2}, products=["pm_a"])
+    promo("buy_x_get_y", {"buy_quantity": 1, "get_quantity": 1}, products=["pm_a"], rewards=["pm_h"])
+    db = SessionLocal()
+    db.add(models.Offer(id="pm_sale", product_id="pm_b", title="خصم", offer_price=240))
+    db.commit()
+    db.close()
+    try:
+        ids = _listed(any_offer="true")
+        assert {"pm_a", "pm_h", "pm_b"} <= set(ids)  # in a bundle, the gift (reward only), a sale price
+        # on_offer keeps meaning "sale price" (the homepage sale-price section)
+        legacy = _listed(on_offer="true")
+        assert "pm_b" in legacy and not {"pm_a", "pm_h"} & set(legacy)
+        # other filters and sorting still apply on top
+        asc = _listed(any_offer="true", category_id="pm_skin", sort="price_asc")
+        desc = _listed(any_offer="true", category_id="pm_skin", sort="price_desc")
+        assert [i for i in asc if i.startswith("pm_")] == ["pm_b", "pm_a"]  # 240 (sale price) before 250
+        assert [i for i in desc if i.startswith("pm_")] == ["pm_a", "pm_b"]
+    finally:
+        db = SessionLocal()
+        db.query(models.Offer).filter_by(id="pm_sale").delete()
+        db.commit()
+        db.close()
+
+
+def test_offers_only_ignores_inactive_expired_and_all_product_offers():
+    promo("percentage", {"percent": 10}, products=["pm_h"], status="draft")
+    promo("percentage", {"percent": 10}, products=["pm_h"], status="inactive")
+    promo("percentage", {"percent": 10}, products=["pm_h"], ends_at=NOW - timedelta(seconds=1))
+    promo("percentage", {"percent": 10}, products=["pm_h"], starts_at=NOW + timedelta(days=1))
+    promo("percentage", {"percent": 5})  # open to every product: not "on offer" each
+    ids = _listed(any_offer="true")
+    assert not {"pm_a", "pm_b", "pm_h", "pm_g"} & set(ids)

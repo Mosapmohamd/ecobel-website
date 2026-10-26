@@ -3,15 +3,50 @@ import type { PromotionBadge } from '@/lib/api';
 import Icon from './Icon';
 import BundleOfferCard from './BundleOfferCard';
 
-/** One small line on a product tile: the first cart offer it's part of. */
-export function PromotionChip({ promotions, className = '' }: { promotions?: PromotionBadge[]; className?: string }) {
-  const p = promotions?.[0];
-  if (!p) return null;
+/** A product's offer labels for its tile: in the server's order (priority),
+ * one label per distinct text (two offers saying the same thing show once),
+ * at most `max`, plus how many more there are. */
+export function cardBadges(promotions: PromotionBadge[] | undefined, max = 2): { labels: string[]; more: number } {
+  const seen = new Set<string>();
+  const labels: string[] = [];
+  for (const p of promotions ?? []) {
+    const text = p.badge_text || p.summary;
+    const label = p.role === 'reward' ? `هدية: ${text}` : text;
+    if (!seen.has(label)) {
+      seen.add(label);
+      labels.push(label);
+    }
+  }
+  return { labels: labels.slice(0, max), more: Math.max(0, labels.length - max) };
+}
+
+/** "و…كمان" for the hidden offers, with Arabic number agreement. */
+function moreOffersLabel(n: number): string {
+  if (n === 1) return 'وعرض كمان';
+  if (n === 2) return 'وعرضين كمان';
+  return `و${n.toLocaleString('ar-EG')} ${n <= 10 ? 'عروض' : 'عرض'} كمان`;
+}
+
+/** Offer badges on a product tile: up to two, then "+N". The cart applies
+ * the offers — these only say which ones the product is part of. */
+export function PromotionChips({ promotions, className = '' }: { promotions?: PromotionBadge[]; className?: string }) {
+  const { labels, more } = cardBadges(promotions);
+  if (!labels.length) return null;
   return (
-    <p className={`flex items-center gap-1 text-label-sm font-bold text-brand-deep ${className}`}>
-      <Icon name="tag" size={13} />
-      <span className="line-clamp-1">{p.role === 'reward' ? `هدية مع عرض: ${p.badge_text || p.summary}` : p.badge_text || p.summary}</span>
-    </p>
+    <ul aria-label="عروض على المنتج" className={`flex flex-wrap items-center gap-1 min-w-0 ${className}`}>
+      {labels.map((label) => (
+        <li key={label} className="inline-flex items-center gap-1 max-w-full min-w-0 rounded-sm border border-brand-deep bg-surface-tint px-1.5 py-0.5 text-label-sm font-bold text-brand-deep">
+          <Icon name="tag" size={12} className="flex-none" />
+          <span className="truncate">{label}</span>
+        </li>
+      ))}
+      {more > 0 && (
+        <li className="inline-flex items-center rounded-sm bg-brand-deep px-1.5 py-0.5 text-label-sm font-bold text-surface">
+          <span aria-hidden="true">+{more.toLocaleString('ar-EG')}</span>
+          <span className="sr-only">{moreOffersLabel(more)}</span>
+        </li>
+      )}
+    </ul>
   );
 }
 

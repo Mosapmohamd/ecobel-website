@@ -101,7 +101,10 @@ export interface ProductQuery {
   q?: string;
   minPrice?: number;
   maxPrice?: number;
+  /** Sale prices only (the homepage sale-price section). */
   onOffer?: boolean;
+  /** "Offers only": sale prices OR products in a running cart offer. */
+  anyOffer?: boolean;
   /** Only the products a live cart offer applies to. */
   promotion?: string;
   sort?: ProductSort;

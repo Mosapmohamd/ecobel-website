@@ -16,6 +16,9 @@ export const SITE_CONTACT = {
   },
 } as const;
 
+/** Running cart offers shown on the homepage (the rest: «كل العروض»). */
+export const HOME_PROMOTIONS_SHOWN = 6;
+
 /** Formats an EGP amount the same way everywhere ("١٬٢٥٠ ج.م"). */
 export const egp = (n: number) => `${n.toLocaleString('ar-EG')} ج.م`;
 

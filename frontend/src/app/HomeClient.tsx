@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { catalogApi, type Category, type Product, type Routine } from '@/lib/api';
+import { catalogApi, type Category, type Product, type PromotionPublic, type Routine } from '@/lib/api';
 import ProductCard, { ProductCardSkeleton } from '@/components/ProductCard';
 import RoutineCard from '@/components/RoutineCard';
 import HeroCarousel from '@/components/HeroCarousel';
@@ -12,7 +12,8 @@ import BrandStory from '@/components/BrandStory';
 import HomeReviews from '@/components/HomeReviews';
 import ClosingCta from '@/components/ClosingCta';
 import SectionHeader from '@/components/SectionHeader';
-import { HOME_OFFERS_SHOWN, ROUTINES_PATH } from '@/lib/constants';
+import PromotionOfferCard from '@/components/PromotionOfferCard';
+import { HOME_OFFERS_SHOWN, HOME_PROMOTIONS_SHOWN, ROUTINES_PATH } from '@/lib/constants';
 import { HERO_SLIDES, buildHeroSlides } from '@/lib/heroSlides';
 
 type Tone = 'surface' | 'tint';
@@ -27,10 +28,23 @@ export interface HomeData {
   routineCount: number;
 }
 
+/** Bundles first (they're bought as one item), then the other offers, each
+ * group in the server's order (priority). */
+function homePromotions(list: PromotionPublic[]): PromotionPublic[] {
+  return [...list.filter((p) => p.type === 'bundle'), ...list.filter((p) => p.type !== 'bundle')].slice(0, HOME_PROMOTIONS_SHOWN);
+}
+
 /** The homepage. Rendered on the server with `initialData` (so first paint
  * and search engines get the real content); if that's missing it loads in
  * the browser exactly as before. */
-export default function HomeClient({ initialData }: { initialData: HomeData | null }) {
+export default function HomeClient({
+  initialData,
+  initialPromotions = null,
+}: {
+  initialData: HomeData | null;
+  /** Running cart offers from the server; null → loaded in the browser. */
+  initialPromotions?: PromotionPublic[] | null;
+}) {
   const [data, setData] = useState<HomeData | null>(initialData);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
@@ -56,6 +70,29 @@ export default function HomeClient({ initialData }: { initialData: HomeData | nu
     };
   }, [attempt, initialData]);
 
+  // Cart offers (bundles, discounts, gifts, free shipping) — their own
+  // request, so a failure here never hides the rest of the page.
+  const [promotions, setPromotions] = useState<PromotionPublic[] | null>(initialPromotions);
+  const [promoError, setPromoError] = useState<string | null>(null);
+  const [promoAttempt, setPromoAttempt] = useState(0);
+  useEffect(() => {
+    if (initialPromotions && promoAttempt === 0) return; // already rendered on the server
+    let cancelled = false;
+    catalogApi
+      .promotions()
+      .then((list) => {
+        if (cancelled) return;
+        setPromotions(list);
+        setPromoError(null);
+      })
+      .catch(() => !cancelled && setPromoError('تعذر تحميل العروض'));
+    return () => {
+      cancelled = true;
+    };
+  }, [promoAttempt, initialPromotions]);
+  const promoLoading = promotions === null && promoError === null;
+  const shownPromotions = useMemo(() => homePromotions(promotions ?? []), [promotions]);
+
   const heroSlides = useMemo(() => buildHeroSlides(HERO_SLIDES, data?.categories ?? []), [data]);
   const reviewProductIds = useMemo(() => (data?.featured ?? []).map((p) => p.id).slice(0, 3), [data]);
 
@@ -68,6 +105,7 @@ export default function HomeClient({ initialData }: { initialData: HomeData | nu
   // tinted sections never sit next to each other.
   const shownSections = [
     'categories',
+    ...(promoLoading || promoError || shownPromotions.length > 0 ? ['promotions'] : []),
     ...(offers.length > 0 ? ['offers'] : []),
     ...(loading || loadError || featured.length > 0 ? ['featured'] : []),
     ...(featuredRoutines.length > 0 ? ['routines'] : []),
@@ -84,6 +122,42 @@ export default function HomeClient({ initialData }: { initialData: HomeData | nu
       <TrustStrip />
 
       <CategoryIconRow categories={data?.categories ?? []} routinesCount={data?.routineCount ?? 0} tone={toneOf('categories')} />
+
+      {/* Running cart offers. None → the section is hidden; it never shows
+          drafts, scheduled, ended or used-up offers (the server filters). */}
+      {(promoLoading || promoError || shownPromotions.length > 0) && (
+        <section id="cart-offers" aria-labelledby="home-promotions" className={`section scroll-mt-24 ${bg(toneOf('promotions'))}`}>
+          <div className="page-container">
+            <SectionHeader
+              id="home-promotions"
+              kicker="وفّري أكتر"
+              kickerTone="sale"
+              title="عروض وباقات"
+              description="باقات بسعر خاص، هدايا وخصومات — بتتحسب تلقائيًا في السلة."
+              link={{ href: '/products?offers=1', label: 'كل العروض' }}
+            />
+            {promoLoading ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6" aria-busy="true">
+                <span className="sr-only" role="status">جاري تحميل العروض...</span>
+                {Array.from({ length: 3 }, (_, i) => (
+                  <div key={i} className="card h-56 animate-pulse motion-reduce:animate-none bg-surface-tint" aria-hidden="true" />
+                ))}
+              </div>
+            ) : promoError ? (
+              <div role="alert" className="notice notice-error flex flex-wrap items-center justify-between gap-3">
+                <span>{promoError}</span>
+                <button type="button" className="btn btn-secondary btn-sm" onClick={() => { setPromoError(null); setPromotions(null); setPromoAttempt((n) => n + 1); }}>
+                  حاولي تاني
+                </button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6">
+                {shownPromotions.map((p) => <PromotionOfferCard key={p.id} promotion={p} />)}
+              </div>
+            )}
+          </div>
+        </section>
+      )}
 
       {offers.length > 0 && (
         <section id="offers" aria-labelledby="home-offers" className={`section scroll-mt-24 ${bg(toneOf('offers'))}`}>

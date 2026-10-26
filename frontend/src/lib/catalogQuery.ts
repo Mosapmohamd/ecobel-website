@@ -44,7 +44,8 @@ export function toProductQuery(q: CatalogQuery): ProductQuery {
     q: q.q,
     minPrice: q.minPrice,
     maxPrice: q.maxPrice,
-    onOffer: q.onOffer,
+    // The catalog's "offers only" covers cart offers (bundles, gifts…) too.
+    anyOffer: q.onOffer,
     promotion: q.promotion,
     sort: q.sort,
     limit: CATALOG_PAGE_SIZE,
@@ -60,6 +61,7 @@ export function productQueryString(o: ProductQuery): string {
   if (o.minPrice !== undefined) params.set('min_price', String(o.minPrice));
   if (o.maxPrice !== undefined) params.set('max_price', String(o.maxPrice));
   if (o.onOffer) params.set('on_offer', 'true');
+  if (o.anyOffer) params.set('any_offer', 'true');
   if (o.promotion) params.set('promotion', o.promotion);
   if (o.sort) params.set('sort', o.sort);
   if (o.limit) params.set('limit', String(o.limit));

@@ -99,6 +99,22 @@ def product_promotions(product: models.Product, rules: Iterable[promotions.Rule]
     return out
 
 
+def badged_targets(rules: Iterable[promotions.Rule]) -> tuple[set[str], set[str]]:
+    """(product ids, category ids) the given offers are badged on — the same
+    rule as product_promotions(), so "offers only" lists exactly the products
+    that show an offer badge (plus sale prices)."""
+    products: set[str] = set()
+    categories: set[str] = set()
+    for r in rules:
+        if r.restricted:
+            products |= r.eligible_products
+            categories |= r.eligible_categories
+        if r.type == "buy_x_get_y" and r.has_reward_targets:
+            products |= r.reward_products
+            categories |= r.reward_categories
+    return products, categories
+
+
 def unit_price(product: models.Product, offer: models.Offer | None) -> float:
     return offer.offer_price if offer else product.sale_price
 
