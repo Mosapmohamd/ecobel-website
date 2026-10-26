@@ -33,7 +33,7 @@ export async function generateMetadata({ searchParams }: Props): Promise<Metadat
       ? 'أسعار مخفضة على مختارات من منتجات Eco Bel لفترة محدودة.'
       : 'كل منتجات Eco Bel للعناية بالبشرة والشعر والجسم — شحن لكل المحافظات والدفع عند الاستلام.';
   // Search results and filtered/sorted variations aren't separate pages to index.
-  const isVariation = !!q.q || q.minPrice !== undefined || q.maxPrice !== undefined || q.sort !== 'newest' || (!!q.categoryId && !category);
+  const isVariation = !!q.q || !!q.promotion || q.minPrice !== undefined || q.maxPrice !== undefined || q.sort !== 'newest' || (!!q.categoryId && !category);
   return {
     title,
     description,

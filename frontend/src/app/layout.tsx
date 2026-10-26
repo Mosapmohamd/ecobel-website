@@ -10,7 +10,7 @@ import AnnouncementBar from "@/components/AnnouncementBar";
 import PromoBar from "@/components/PromoBar";
 import JsonLd from "@/components/JsonLd";
 import { ToastProvider } from "@/lib/toast";
-import { getCategories } from "@/lib/server-api";
+import { getAnnouncementBar, getCategories } from "@/lib/server-api";
 import { PROMO_DISMISS_KEY, SITE_CONTACT } from "@/lib/constants";
 import { DEFAULT_DESCRIPTION, SITE_NAME, SITE_URL, absoluteUrl } from "@/lib/seo";
 
@@ -50,7 +50,7 @@ export const metadata: Metadata = {
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   // Fetched once on the server for the header menu and footer (cached
   // briefly; categories carry no prices). null → they load it themselves.
-  const categories = await getCategories();
+  const [categories, announcement] = await Promise.all([getCategories(), getAnnouncementBar()]);
 
   return (
     // suppressHydrationWarning: the inline script below may add an attribute
@@ -101,7 +101,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             <CartProvider>
               <WishlistProvider>
                 {/* Above the promo bar, which holds the phone number. */}
-                <AnnouncementBar />
+                <AnnouncementBar settings={announcement} />
                 <PromoBar />
                 <Header initialCategories={categories} />
                 <main id="main" tabIndex={-1} className="flex-1 outline-none">{children}</main>

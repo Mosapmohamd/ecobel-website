@@ -1,5 +1,5 @@
 import { cache } from 'react';
-import type { Category, Product, ProductPage, ReviewSummary, Routine } from './api';
+import type { AnnouncementBarSettings, Category, Product, ProductPage, PromotionPublic, ReviewSummary, Routine } from './api';
 
 /** Server components only. Data for server-rendered pages (HTML that search engines and first
  * paint see). Same API, same authoritative prices/stock as the browser.
@@ -34,11 +34,15 @@ const orNull = <T,>(v: T | null | typeof NOT_FOUND): T | null => (v === NOT_FOUN
 
 // `cache` dedupes calls made by both generateMetadata and the page itself.
 export const getCategories = cache(async () => orNull(await get<Category[]>('/catalog/categories', 300)));
+// Staff edits show within a minute — no rebuild (no prices or stock in it).
+export const getAnnouncementBar = cache(async () => orNull(await get<AnnouncementBarSettings>('/storefront/announcement-bar', 60)));
 export const getProduct = cache((id: string) => get<Product>(`/catalog/products/${encodeURIComponent(id)}`));
 export const getRelated = cache(async (id: string) => orNull(await get<Product[]>(`/catalog/products/${encodeURIComponent(id)}/related`)));
 export const getReviews = cache(async (id: string) => orNull(await get<ReviewSummary>(`/products/${encodeURIComponent(id)}/reviews/`)));
 export const getRoutine = cache((id: string) => get<Routine>(`/catalog/routines/${encodeURIComponent(id)}`));
 export const getRoutines = cache(async (q?: string) => orNull(await get<Routine[]>(`/catalog/routines${q ? `?q=${encodeURIComponent(q)}` : ''}`)));
 export const getFeaturedProducts = cache(async () => orNull(await get<Product[]>('/catalog/featured-products')));
+// Running cart offers (their summaries carry prices → never cached).
+export const getPromotions = cache(async () => orNull(await get<PromotionPublic[]>('/promotions')));
 export const getFeaturedRoutines = cache(async () => orNull(await get<Routine[]>('/catalog/featured-routines')));
 export const getProductPage = cache(async (qs: string) => orNull(await get<ProductPage>(`/catalog/products${qs}`)));

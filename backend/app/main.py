@@ -11,7 +11,7 @@ from .security import DOCS_SETTINGS, SecurityHeadersMiddleware, check_production
 from .auth import SECRET_KEY
 from . import models  # noqa: F401  (registers every table on Base.metadata)
 from .database import DATABASE_URL, check_schema_matches_models
-from .routers import catalog, cart, orders, account, reviews
+from .routers import catalog, cart, orders, account, reviews, promotions, storefront
 from .rate_limit import limiter
 
 # The shared schema is managed in Supabase (docs/DATABASE_SCHEMA_MANAGEMENT.md);
@@ -73,6 +73,8 @@ app.include_router(catalog.router)
 app.include_router(cart.router)
 app.include_router(orders.router)
 app.include_router(reviews.router)
+app.include_router(promotions.router)
+app.include_router(storefront.router)
 
 
 @app.get("/")

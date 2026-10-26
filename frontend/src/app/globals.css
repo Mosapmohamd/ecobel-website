@@ -173,7 +173,8 @@ h1, h2, h3 {
 /* Announcement ticker (components/AnnouncementBar.tsx): a slim strip in the
    logo's black-to-gray direction — logo ink to the darkest ramp gray that
    keeps the logo-light text ≥5:1 (#b3b3b3 itself is too light for it).
-   Never wider than the screen. */
+   Never wider than the screen. Staff pick a named theme, speed and where it
+   shows (data-theme / data-speed / data-visibility) — never free CSS. */
 .announcement-bar {
   position: relative;
   display: flex;
@@ -186,8 +187,26 @@ h1, h2, h3 {
   font-size: var(--text-label);
   font-weight: 500;
 }
+.announcement-bar[data-theme="brand"] { background: var(--color-logo-ink); color: var(--color-surface); border-bottom-color: var(--color-logo-ink); }
+.announcement-bar[data-theme="accent"] { background: var(--color-ink-secondary); color: var(--color-surface); }
+.announcement-bar[data-theme="light"] { background: var(--color-surface-tint); color: var(--color-ink); border-bottom-color: var(--color-line); }
+.announcement-bar[data-theme="light"] .announcement-toggle { color: var(--color-ink); }
+.announcement-bar[data-theme="light"] .announcement-toggle:focus-visible { outline-color: var(--color-ink); }
+@media (max-width: 767px) { .announcement-bar[data-visibility="desktop"] { display: none; } }
+@media (min-width: 768px) { .announcement-bar[data-visibility="mobile"] { display: none; } }
+.announcement-link {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  color: inherit;
+  text-decoration: none;
+}
+a.announcement-link:hover .announcement-item, a.announcement-link:hover .announcement-static { text-decoration: underline; }
+a.announcement-link:focus-visible { outline: 2px solid currentColor; outline-offset: -3px; }
 .announcement-viewport {
   position: relative;
+  display: block;
   flex: 1;
   min-width: 0;
   height: 100%;
@@ -199,6 +218,8 @@ h1, h2, h3 {
   height: 100%;
   animation: announcement-scroll-ltr 32s linear infinite;
 }
+.announcement-bar[data-speed="slow"] .announcement-track { animation-duration: 48s; }
+.announcement-bar[data-speed="fast"] .announcement-track { animation-duration: 20s; }
 .announcement-track[data-dir="rtl"] { animation-name: announcement-scroll-rtl; }
 .announcement-half {
   display: flex;
@@ -233,7 +254,20 @@ h1, h2, h3 {
 }
 .announcement-toggle:hover { color: var(--color-surface); }
 .announcement-toggle:focus-visible { outline: 2px solid var(--color-logo-light); outline-offset: -3px; }
-/* Reduced motion: the text stands still (centered, cut off with … if too long). */
+/* Reduced motion — or motion turned off by staff: the text stands still
+   (centered, cut off with … if too long). */
+.announcement-static-item + .announcement-static-item { margin-inline-start: 1.5rem; }
+.announcement-bar[data-static] .announcement-track, .announcement-bar[data-static] .announcement-toggle { display: none; }
+.announcement-bar[data-static] .announcement-static {
+  display: block;
+  height: 100%;
+  line-height: 1.75rem;
+  padding-inline: 1rem;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 @media (prefers-reduced-motion: reduce) {
   .announcement-track, .announcement-toggle { display: none; }
   .announcement-static {

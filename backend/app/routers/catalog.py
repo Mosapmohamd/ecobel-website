@@ -1,7 +1,7 @@
 from typing import List, Literal, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import func, or_
+from sqlalchemy import false, func, or_
 from sqlalchemy.orm import Session, joinedload, selectinload
 
 from .. import models, schemas, pricing
@@ -54,6 +54,8 @@ def list_products(
     min_price: Optional[float] = Query(None, ge=0),
     max_price: Optional[float] = Query(None, ge=0),
     on_offer: bool = False,
+    any_offer: bool = Query(False, description="Sale prices OR products a running cart offer is badged on"),
+    promotion: Optional[str] = Query(None, max_length=64, description="Only products a live cart offer applies to"),
     sort: ProductSort = "newest",
     limit: int = Query(24, ge=1, le=100),
     offset: int = Query(0, ge=0),
@@ -87,6 +89,24 @@ def list_products(
         query = query.filter(price <= max_price)
     if on_offer:
         query = query.filter(price < models.Product.sale_price)
+    if any_offer:
+        # "Offers only": a sale price, or named in a running cart offer
+        # (bundle, discount, gift…). Offers open to every product aren't
+        # counted — they'd make the filter list everything.
+        ids, cats = pricing.badged_targets(pricing.live_promotions(db))
+        query = query.filter(or_(
+            price < models.Product.sale_price,
+            models.Product.id.in_(list(ids)),
+            models.Product.category_id.in_(list(cats)),
+        ))
+    if promotion:
+        rule = next((r for r in pricing.live_promotions(db) if r.id == promotion), None)
+        if rule is None:
+            query = query.filter(false())  # not running (or no such offer): nothing qualifies
+        elif rule.restricted:  # an offer open to every product filters nothing
+            products = rule.eligible_products | rule.reward_products
+            categories = rule.eligible_categories | rule.reward_categories
+            query = query.filter(or_(models.Product.id.in_(list(products)), models.Product.category_id.in_(list(categories))))
 
     total = query.count()
     order = {

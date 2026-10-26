@@ -30,13 +30,19 @@ export default function OrderStatusBadge({ status }: { status: Status }) {
 }
 
 /** Subtotal → discount → shipping → total, as charged. */
-export function OrderTotals({ order }: { order: Pick<Order, 'subtotal' | 'discount_amount' | 'shipping_fee' | 'total_amount'> }) {
+export function OrderTotals({ order }: { order: Pick<Order, 'subtotal' | 'discount_amount' | 'promotion_discount' | 'shipping_fee' | 'total_amount'> }) {
   return (
     <dl className="flex flex-col gap-1 text-[13px]">
       <div className="flex justify-between text-ink-secondary">
         <dt>المجموع الفرعي</dt>
         <dd>{egp(order.subtotal)}</dd>
       </div>
+      {(order.promotion_discount ?? 0) > 0 && (
+        <div className="flex justify-between text-success-strong">
+          <dt>خصم العروض</dt>
+          <dd>-{egp(order.promotion_discount ?? 0)}</dd>
+        </div>
+      )}
       {order.discount_amount > 0 && (
         <div className="flex justify-between text-success-strong">
           <dt>الخصم</dt>

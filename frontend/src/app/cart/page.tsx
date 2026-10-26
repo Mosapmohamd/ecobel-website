@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { useCart, type CartLine } from '@/lib/cart';
+import { bundleKey, bundlesIn, useCart, type CartBundleLine, type CartLine } from '@/lib/cart';
 import { useToast } from '@/lib/toast';
 import { useAuth } from '@/lib/auth';
 import { orderApi, catalogApi, type Order } from '@/lib/api';
@@ -12,6 +12,7 @@ import ConfirmDialog from '@/components/ConfirmDialog';
 import FieldError, { errorProps } from '@/components/FieldError';
 import Icon from '@/components/Icon';
 import OfferTitle from '@/components/OfferTitle';
+import CartBundleItem from '@/components/CartBundleItem';
 import { focusFirstError, validateFullName, validatePhone, validateRequired, type FieldErrors } from '@/lib/validation';
 
 // Cart and checkout live on one page (Stitch "السلة وإتمام الطلب"):
@@ -67,13 +68,18 @@ function Steps({ current }: { current: 1 | 2 }) {
 }
 
 export default function CartPage() {
-  const { lines, remove, restore, setQuantity, clear, quote, quoting, quoteError, retryQuote, checkout, setCheckout } = useCart();
+  const {
+    lines, bundles, count, remove, restore, setQuantity, removeBundle, restoreBundle, setBundleQuantity,
+    clear, quote, quoting, quoteError, retryQuote, checkout, setCheckout,
+  } = useCart();
   const { customer, token } = useAuth();
   const toast = useToast();
   // Every number below comes from the server quote — the same pricing
   // checkout charges — never from prices remembered in the browser.
   const subtotal = quote?.subtotal ?? 0;
   const quoteLine = (productId: string) => quote?.lines.find((q) => q.product_id === productId);
+  const quoteBundle = (key: string) =>
+    quote?.bundles?.find((b) => bundleKey(b.promotion_id, b.items.map((i) => ({ productId: i.product_id, quantity: i.quantity }))) === key);
 
   // Removing a line is instant and reversible — an undo toast instead of
   // an "are you sure?" modal, which would just slow down a common action.
@@ -83,6 +89,17 @@ export default function CartPage() {
     toast.show(`تم حذف ${name} من السلة`, {
       tone: 'info',
       action: { label: 'تراجع', onClick: () => restore(line, index) },
+      duration: 6000,
+    });
+  }
+
+  /** A bundle goes as one item — with everything in it — and comes back the same way. */
+  function removeBundleWithUndo(bundle: CartBundleLine, name: string) {
+    const index = bundles.findIndex((b) => b.key === bundle.key);
+    removeBundle(bundle.key);
+    toast.show(`تم حذف ${name} من السلة`, {
+      tone: 'info',
+      action: { label: 'تراجع', onClick: () => restoreBundle(bundle, index) },
       duration: 6000,
     });
   }
@@ -132,14 +149,21 @@ export default function CartPage() {
   const closeConfirmClear = useCallback(() => setConfirmClear(false), []);
 
   const discount = quote?.discount ?? 0;
+  // Cart offers (bundles, % / fixed discounts, gifts, free shipping) — all
+  // decided by the server's quote, exactly as checkout will charge.
+  const promotionDiscount = quote?.promotion_discount ?? 0;
+  const shippingDiscount = quote?.shipping_discount ?? 0;
+  const appliedPromotions = quote?.promotions ?? [];
+  const promotionHints = quote?.promotion_hints ?? [];
+  const shippingOffer = appliedPromotions.find((p) => p.shipping_discount > 0);
   const shippingFee = quote?.shipping_fee ?? null;
   const total = quote?.total ?? subtotal;
   const threshold = quote?.free_shipping_threshold ?? 0;
-  const netAfterDiscount = subtotal - discount;
-  const freeShipping = !!quote && netAfterDiscount >= threshold;
+  const netAfterDiscount = subtotal - promotionDiscount - discount;
+  const freeShipping = !!quote && (netAfterDiscount >= threshold || shippingDiscount > 0);
   const remainingForFree = Math.max(0, threshold - netAfterDiscount);
   const freeProgress = threshold ? Math.min(100, Math.round((netAfterDiscount / threshold) * 100)) : 0;
-  const itemCount = lines.reduce((sum, l) => sum + l.quantity, 0);
+  const itemCount = count;
 
   function handleApplyCoupon() {
     const code = couponInput.trim();
@@ -167,6 +191,7 @@ export default function CartPage() {
         city,
         shipping_address: address.trim(),
         items: lines.map((l) => ({ product_id: l.productId, quantity: l.quantity })),
+        bundles: bundlesIn(bundles),
         coupon_code: appliedCoupon?.valid ? appliedCoupon.code : undefined,
         note: note.trim() || undefined,
       }, token || undefined);
@@ -212,7 +237,7 @@ export default function CartPage() {
     );
   }
 
-  if (lines.length === 0) {
+  if (lines.length === 0 && bundles.length === 0) {
     return (
       <div className="page-container py-20 text-center">
         <span className="mx-auto mb-5 w-16 h-16 rounded-full flex items-center justify-center" style={{ background: 'var(--color-surface-tint)', color: 'var(--color-primary)' }}>
@@ -380,7 +405,9 @@ export default function CartPage() {
             <div className="rounded p-3 mb-4" style={{ background: 'var(--color-surface-tint)' }}>
               <div className="flex items-center gap-2 text-[13px] mb-2">
                 <Icon name="truck" size={16} style={{ color: 'var(--color-primary)' }} />
-                {freeShipping ? (
+                {shippingOffer && netAfterDiscount < threshold ? (
+                  <span className="font-bold" style={{ color: 'var(--color-success)' }}>الشحن مجاني بعرض «{shippingOffer.name}»</span>
+                ) : freeShipping ? (
                   <span className="font-bold" style={{ color: 'var(--color-success)' }}>طلبك مؤهل للشحن المجاني!</span>
                 ) : (
                   <span>
@@ -389,7 +416,7 @@ export default function CartPage() {
                 )}
               </div>
               <div className="h-1.5 rounded-sm overflow-hidden" style={{ background: 'var(--color-line)' }}>
-                <div className="h-full transition-all" style={{ width: `${freeProgress}%`, background: freeShipping ? 'var(--color-success)' : 'var(--color-primary)' }} />
+                <div className="h-full transition-all" style={{ width: `${freeShipping ? 100 : freeProgress}%`, background: freeShipping ? 'var(--color-success)' : 'var(--color-primary)' }} />
               </div>
             </div>
             )}
@@ -401,6 +428,15 @@ export default function CartPage() {
               </div>
             )}
             <ul className="flex flex-col" aria-busy={quoting || undefined}>
+              {bundles.map((b) => (
+                <CartBundleItem
+                  key={b.key}
+                  bundle={b}
+                  view={quoteBundle(b.key)}
+                  onQuantity={(n) => setBundleQuantity(b.key, n)}
+                  onRemove={() => removeBundleWithUndo(b, quoteBundle(b.key)?.name || 'الباقة')}
+                />
+              ))}
               {lines.map((line) => {
                 const q = quoteLine(line.productId);
                 const product = q?.product;
@@ -476,6 +512,11 @@ export default function CartPage() {
                             {q.unit_price < q.regular_unit_price && (
                               <span className="block text-body-sm line-through text-ink-muted">{egp(q.regular_unit_price * q.quantity)}</span>
                             )}
+                            {(q.promotion_discount ?? 0) > 0 && (
+                              <span className="block text-body-sm font-bold text-success-strong">
+                                {(q.free_units ?? 0) > 0 ? `${(q.free_units ?? 0).toLocaleString('ar-EG')} هدية · ` : 'عرض '}-{egp(q.promotion_discount ?? 0)}
+                              </span>
+                            )}
                           </span>
                         )}
                       </div>
@@ -484,6 +525,32 @@ export default function CartPage() {
                 );
               })}
             </ul>
+            {quote && (appliedPromotions.length > 0 || promotionHints.length > 0) && (
+              <div className="mt-4 flex flex-col gap-2" aria-live="polite">
+                {appliedPromotions.map((p) => (
+                  <div key={p.id} className="flex items-start justify-between gap-2 rounded border px-3 py-2 text-[13px]" style={{ borderColor: 'var(--color-success)', background: 'var(--color-surface-tint)' }}>
+                    <span className="flex items-start gap-2 min-w-0">
+                      <Icon name="check" size={16} style={{ color: 'var(--color-success)', flex: 'none', marginTop: 2 }} />
+                      <span><strong>{p.name}</strong> — {p.summary}</span>
+                    </span>
+                    <span className="flex-none font-bold" style={{ color: 'var(--color-success)' }}>
+                      {p.shipping_discount > 0 ? 'شحن مجاني' : `-${egp(p.discount)}`}
+                    </span>
+                  </div>
+                ))}
+                {promotionHints.map((h) => (
+                  <div key={h.id} className="rounded border px-3 py-2 text-[13px]" style={{ borderColor: 'var(--color-line)' }}>
+                    <span className="flex items-start gap-2">
+                      <Icon name="tag" size={15} style={{ color: 'var(--color-primary)', flex: 'none', marginTop: 2 }} />
+                      <span>
+                        <strong>{h.name}</strong> ({h.summary}): {h.reason}{' '}
+                        <Link href={`/products?promotion=${encodeURIComponent(h.id)}`} className="font-bold link-underline" style={{ color: 'var(--color-primary)' }}>منتجات العرض</Link>
+                      </span>
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
           </Panel>
 
           <Panel>
@@ -526,6 +593,9 @@ export default function CartPage() {
 
             <div className="mt-5 pt-4 border-t flex flex-col gap-2.5 text-[14px]" style={{ borderColor: 'var(--color-line)' }}>
               <div className="flex justify-between"><span style={{ color: 'var(--color-ink-secondary)' }}>المجموع الفرعي</span><span>{egp(subtotal)}</span></div>
+              {promotionDiscount > 0 && (
+                <div className="flex justify-between" style={{ color: 'var(--color-success)' }}><span>خصم العروض</span><span>-{egp(promotionDiscount)}</span></div>
+              )}
               {discount > 0 && (
                 <div className="flex justify-between" style={{ color: 'var(--color-success)' }}><span>الخصم</span><span>-{egp(discount)}</span></div>
               )}
@@ -533,7 +603,10 @@ export default function CartPage() {
                 <span style={{ color: 'var(--color-ink-secondary)' }}>الشحن{city ? ` (${city})` : ''}</span>
                 <span>
                   {shippingFee === 0 ? (
-                    <span style={{ color: 'var(--color-success)' }}>مجاني</span>
+                    <span style={{ color: 'var(--color-success)' }}>
+                      {shippingDiscount > 0 && <span className="line-through text-ink-muted ml-1.5">{egp(shippingDiscount)}</span>}
+                      مجاني
+                    </span>
                   ) : shippingFee === null ? (
                     <span style={{ color: 'var(--color-ink-muted)' }}>حسب المحافظة</span>
                   ) : (
@@ -545,6 +618,11 @@ export default function CartPage() {
                 <span className="font-bold">الإجمالي النهائي</span>
                 <span className="text-[24px] font-bold" style={{ color: 'var(--color-primary)' }}>{egp(total)}</span>
               </div>
+              {(quote?.total_savings ?? 0) > 0 && (
+                <div className="flex justify-between text-[13px]" style={{ color: 'var(--color-success)' }}>
+                  <span>إجمالي التوفير</span><span>{egp(quote?.total_savings ?? 0)}</span>
+                </div>
+              )}
             </div>
 
             <button

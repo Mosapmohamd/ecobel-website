@@ -16,15 +16,8 @@ export const SITE_CONTACT = {
   },
 } as const;
 
-/** The slim scrolling announcement above the promo bar — the one place to
- * change it (then redeploy the storefront). `enabled: false` hides the bar.
- * `dir`: 'rtl' for Arabic text, 'ltr' for English. Keep it short, and only
- * announce what's actually true (no invented prices or claims). */
-export const ANNOUNCEMENT: { enabled: boolean; text: string; dir: 'rtl' | 'ltr' } = {
-  enabled: true,
-  text: 'أهلاً بكم في EcoBel',
-  dir: 'rtl',
-};
+/** Running cart offers shown on the homepage (the rest: «كل العروض»). */
+export const HOME_PROMOTIONS_SHOWN = 6;
 
 /** Formats an EGP amount the same way everywhere ("١٬٢٥٠ ج.م"). */
 export const egp = (n: number) => `${n.toLocaleString('ar-EG')} ج.م`;

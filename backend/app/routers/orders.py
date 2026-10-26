@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, joinedload
 
-from .. import abuse_limits, auth, checkout, models, pricing, schemas, services
+from .. import abuse_limits, auth, checkout, models, pricing, promotions, schemas, services
 from ..database import get_db
 from ..rate_limit import limiter
 from slowapi.util import get_remote_address
@@ -16,12 +16,16 @@ router = APIRouter(prefix="/orders", tags=["Orders"])
 NOT_FOUND = "مش لاقيين طلب بالبيانات دي — راجعي رقم الطلب ورقم التليفون"
 
 
-def _lock_and_price(db: Session, items: list) -> tuple[list, float]:
-    """Locks each product row, checks it can be sold in that quantity, then
-    prices every line through app/pricing.py — the same rules the catalog
-    and the cart quote use, so the order is charged exactly what the
-    customer was shown. Never trusts client prices."""
+def _lock_and_price(db: Session, items: list, bundles: list = ()) -> tuple[list, float]:
+    """Locks each product row, checks it can be sold in the quantity the
+    order needs (its own line plus what bundles hold), then prices every
+    product through app/pricing.py — the same rules the catalog and the cart
+    quote use, so the order is charged exactly what the customer was shown.
+    Never trusts client prices. Line specs are one per product (inventory
+    and order items); bundles are priced from the same locked prices."""
     merged = pricing.merge_lines(items)
+    for pid, n in pricing.bundle_demand(bundles).items():
+        merged[pid] = merged.get(pid, 0) + n
     products = []
     # Lock in a fixed (id) order so two concurrent checkouts can't deadlock.
     for product_id in sorted(merged):
@@ -54,6 +58,34 @@ def _lock_and_price(db: Session, items: list) -> tuple[list, float]:
         subtotal += line_total
         line_specs.append((product, qty, unit_price, line_total))
     return line_specs, subtotal
+
+
+def _promotion_input(line_specs: list, items: list, bundles: list) -> tuple[list, list]:
+    """Engine input from the locked, priced products: the loose lines and one
+    BundleGroup per bundle the customer added."""
+    priced = {p.id: (p, unit_price) for p, _, unit_price, _ in line_specs}
+    loose = [promotions.Line(pid, priced[pid][0].category_id, priced[pid][1], qty)
+             for pid, qty in pricing.merge_lines(items).items()]
+    groups = [
+        promotions.BundleGroup(b.promotion_id, [promotions.Line(it.product_id, priced[it.product_id][0].category_id,
+                                                                priced[it.product_id][1], it.quantity) for it in b.items], b.quantity)
+        for b in bundles
+    ]
+    return loose, groups
+
+
+def _order_bundles(db: Session, order: models.Order) -> list[schemas.BundleIn]:
+    """The bundles an order holds, as the customer added them (from its
+    offer snapshots) — kept as they are when an edit doesn't change them."""
+    out = []
+    rows = db.query(models.OrderPromotion).filter(models.OrderPromotion.order_id == order.id, models.OrderPromotion.type == "bundle").all()
+    for row in rows:
+        for g in (row.details or {}).get("groups") or []:
+            out.append(schemas.BundleIn(
+                promotion_id=row.promotion_id, quantity=int(g.get("count", 1)),
+                items=[schemas.BundleItemIn(product_id=i["product_id"], quantity=int(i["quantity"])) for i in g.get("items", [])],
+            ))
+    return out
 
 
 def _add_lines(db: Session, order: models.Order, line_specs: list, note: str) -> None:
@@ -165,15 +197,23 @@ def create_order(
     else:
         ip_hash = abuse_limits.check_account_order(db, logged_in_customer.id, client_ip)
 
-    line_specs, subtotal = _lock_and_price(db, payload.items)
-    t = checkout.totals(db, subtotal, city=payload.city, coupon_code=payload.coupon_code, lock_coupon=True, client=client_ip)
-    checkout.require_orderable(t)
+    line_specs, subtotal = _lock_and_price(db, payload.items, payload.bundles)
+    loose, groups = _promotion_input(line_specs, payload.items, payload.bundles)
 
     # Signed in → the order belongs to that account (it shows in its history
     # and can be edited/cancelled there). Guest → it belongs to the guest
     # profile for that phone, never to an account: typing a phone number
-    # proves nothing about who owns it.
+    # proves nothing about who owns it. (Known before pricing: per-customer
+    # offer limits count this customer's orders.)
     customer = logged_in_customer or _guest_profile(db, payload.customer_phone, payload.customer_name)
+
+    # Recomputed here from the locked rows — whatever the cart showed is
+    # never trusted. Offers with usage limits are locked while counted.
+    t = checkout.totals(
+        db, subtotal, city=payload.city, coupon_code=payload.coupon_code, lock_coupon=True, client=client_ip,
+        lines=loose, bundles=groups, customer_id=customer.id, lock_promotions=True,
+    )
+    checkout.require_orderable(t)
 
     order = models.Order(
         order_number=_generate_order_number(db),
@@ -185,6 +225,7 @@ def create_order(
         subtotal=subtotal,
         coupon_id=t.coupon.id if t.coupon else None,
         discount_amount=t.discount,
+        promotion_discount=t.promotion_discount,
         shipping_fee=t.shipping_fee,
         total_amount=t.total,
         note=payload.note,
@@ -196,6 +237,7 @@ def create_order(
 
     if t.coupon:
         t.coupon.used_count += 1
+    checkout.record_promotions(db, order, t)
 
     db.add(models.FinanceEntry(
         type=models.FinanceEntryType.income,
@@ -269,6 +311,9 @@ def edit_order(
     delivery) or later, it's locked. Only the order's own customer can
     edit it — guest orders (no account) can't be edited this way."""
     order = _own_pending_order(db, order_id, customer, "تتعدّلي عليه")
+    bundles = _order_bundles(db, order) if payload.bundles is None else payload.bundles
+    if not payload.items and not bundles:
+        raise HTTPException(400, "الطلب لازم يحتوي على منتج واحد على الأقل — لو عايزة تلغي الطلب كامل استخدمي زرار الإلغاء")
 
     # Give back the stock the current items hold before repricing and
     # re-deducting for the new item list.
@@ -282,14 +327,21 @@ def edit_order(
     db.query(models.OrderItem).filter(models.OrderItem.order_id == order.id).delete()
 
     # Re-price the new item list from the current DB state, same as checkout.
-    line_specs, subtotal = _lock_and_price(db, payload.items)
+    line_specs, subtotal = _lock_and_price(db, payload.items, bundles)
+    loose, groups = _promotion_input(line_specs, payload.items, bundles)
 
     # The order keeps its coupon (already counted) as long as the new
     # subtotal still meets its minimum; otherwise the discount and the
     # coupon use are released rather than charging a discount that no
     # longer qualifies.
     city = payload.city or order.city
-    t = checkout.totals(db, subtotal, city=city, applied_coupon=order.coupon)
+    # Offers the order already holds keep counting as used (even if they
+    # have since ended or run out) as long as the new cart still meets them.
+    t = checkout.totals(
+        db, subtotal, city=city, applied_coupon=order.coupon,
+        lines=loose, bundles=groups, customer_id=order.customer_id,
+        held_promotions=checkout.order_promotion_ids(db, order), exclude_order_id=order.id, lock_promotions=True,
+    )
     if order.coupon is not None and t.coupon is None:
         checkout.release_coupon(order)
         order.coupon_id = None
@@ -298,6 +350,8 @@ def edit_order(
 
     order.subtotal = subtotal
     order.discount_amount = t.discount
+    order.promotion_discount = t.promotion_discount
+    checkout.replace_promotions(db, order, t)
     order.shipping_fee = t.shipping_fee
     order.total_amount = t.total
     order.city = city.strip()
@@ -332,7 +386,8 @@ def cancel_order(
     customer: models.Customer = Depends(auth.get_current_customer),
 ):
     """Customer self-service cancellation — same pending-only, own-order-only
-    rule as editing. Releases the reserved stock and the coupon use."""
+    rule as editing. Releases the reserved stock, the coupon use and the
+    offer uses."""
     order = _own_pending_order(db, order_id, customer, "يتلغي")
 
     for item in order.items:
@@ -343,6 +398,7 @@ def cancel_order(
                 reference_id=order.id, note=f"إلغاء طلب #{order.order_number}",
             )
     checkout.release_coupon(order)
+    checkout.release_promotions(db, order)
     order.status = models.OrderStatus.cancelled
 
     db.add(models.FinanceEntry(
