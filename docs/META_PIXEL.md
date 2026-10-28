@@ -14,7 +14,8 @@ Vercel project's environment variables, Production), then rebuild:
 NEXT_PUBLIC_META_PIXEL_ID=<numeric Pixel ID from Meta Events Manager>
 ```
 
-Unset, empty or not numeric → tracking is off: no script loads, nothing is
+Unset, empty or not numeric → tracking is off (and no consent banner is
+shown — there's nothing optional to choose): no script loads, nothing is
 sent, and the Content-Security-Policy keeps Meta's hosts out. When set, the
 CSP (`next.config.ts`) adds exactly: `script-src https://connect.facebook.net`
 (Meta's script), `img-src https://www.facebook.com` and `connect-src
@@ -34,9 +35,12 @@ deployed storefront (Pixel ID served, CSP) — see
 | File | Role |
 |---|---|
 | `frontend/src/lib/metaPixel.ts` | the rules (framework-free, unit-tested) + Meta's base code |
-| `frontend/src/lib/analytics.ts` | the site's one tracker |
+| `frontend/src/lib/consent.ts` | the opt-in consent record (framework-free, unit-tested) |
+| `frontend/src/lib/analytics.ts` | the site's one tracker, gated on consent |
 | `frontend/src/components/MetaPixel.tsx` | PageView on load and route changes (root layout) |
-| `frontend/tests/metaPixel.test.mjs` | `npm test` — fakes only, never sends to Meta |
+| `frontend/src/components/ConsentBanner.tsx` | accept / reject / preferences (root layout, only with a Pixel ID) |
+| `frontend/src/app/privacy/page.tsx` | privacy text — DRAFT, pending legal review, `noindex` |
+| `frontend/tests/*.test.mjs` | `npm test` — fakes only, never sends to Meta |
 
 ## Events
 
@@ -76,8 +80,10 @@ lists a delivered COD order, Purchase is sent (once). Not covered:
   design (no order id or amount), so it never sends Purchase;
 - customers who don't come back to their account after delivery;
 - the delay between delivery and that visit;
-- **returns** after delivery — Meta has no "negative purchase"; the value
-  sent stays the delivered total.
+- **returns** after delivery are **not subtracted** from Meta's reporting —
+  Meta has no "negative purchase"; the value sent stays the delivered total.
+  Revenue truth (net of returns) is the accounting system's reports;
+- visitors who didn't accept tracking (by design: nothing is sent).
 
 Purchase is **never** sent at checkout or order creation, nor for pending,
 shipped, cancelled or non-cash-on-delivery orders.
@@ -87,7 +93,8 @@ Purchase source in production. The accounting system already knows, server-
 side, exactly which orders qualify (delivered + cash on delivery, with the
 delivery time from its status audit); its Integrations page shows them.
 
-**Reliable path (not built — needs credentials and a scope decision):** send
+**Reliable path — designed, NOT built (decided 2026-10-28: no Conversions
+API, no access token requested, stored or exposed in this phase):** send
 Purchase **server-side** with the Meta Conversions API from the accounting
 backend at the moment staff mark a COD order delivered
 (`PATCH /online-orders/{id}/status` → delivered, after the revenue entry is
@@ -95,22 +102,49 @@ written), with the same `event_id = "purchase_<order id>"`, so Meta
 deduplicates it against the browser event. It needs a Conversions API access
 token (server secret, never `NEXT_PUBLIC_*`), hashed customer data rules
 (phone → SHA-256, per Meta's spec) and a retry/outbox so a Meta outage can't
-block or duplicate the status change.
+block or duplicate the status change. It must also honour consent: the
+server only knows the browser choice if the storefront records it with the
+order — that, and whether server-side events need separate consent, are part
+of the required security/privacy/legal review. Keep the event id contract
+(`purchase_<order id>`) unchanged so browser and server events deduplicate.
 
-## Consent
+## Consent (opt-in) — implemented, pending legal review
 
-The storefront has no consent banner or consent setting today, so tracking is
-on whenever the Pixel ID is set. `createMetaPixel` takes a `consent()` gate:
-when a consent mechanism is added, wire it there and nothing is loaded or sent
-until it allows.
+Meta tracking is **off by default** and starts only after the visitor
+explicitly accepts (`frontend/src/lib/consent.ts`, wired to the tracker's
+`consent()` gate in `lib/analytics.ts`; UI `components/ConsentBanner.tsx`).
 
-**Decision needed before setting the production Pixel ID:** whether visitors
-must consent first (Egypt's Personal Data Protection Law no. 151/2020, and EU
-rules for any EU visitors — legal advice, not an engineering call), and the
-privacy-policy wording that discloses Meta tracking. Data sent: page URLs,
-product ids/prices, search terms typed (capped at 100 characters — a visitor
-could type anything), cart and order values, and the order id for Purchase.
-Meta also sets its own cookies (`_fbp`) and sees the visitor's IP and browser.
+- Banner (only when a Pixel ID is configured): «موافقة» and «رفض» as equal
+  choices (same style), «الإعدادات» with an **unticked** checkbox — nothing
+  preselected; the site works the same either way; link to `/privacy`.
+- Before a choice and after «رفض»: Meta's script is never loaded and no
+  request goes to Meta — on any page, route change or event (Purchase
+  included). There is **no `<noscript>` beacon** (a visitor without
+  JavaScript can't consent, so nothing is sent for them).
+- «موافقة»: the script loads, `init` runs, and the current page's PageView is
+  sent; later routes/events follow the normal rules.
+- Changing the choice: footer «إعدادات الخصوصية» (or the link on `/privacy`).
+  Switching to reject sends `fbq('consent','revoke')` to an already-loaded
+  script and drops every later event; switching back sends `grant`.
+- Stored in `localStorage` (`ecobel_consent`, versioned — raising
+  `CONSENT_VERSION` asks everyone again); unreadable/old/tampered records
+  count as "no choice". A choice made in another tab applies in this one.
+- Only our explicit events: Meta's automatic events are off
+  (`autoConfig false` before `init`) and so is its automatic history-API
+  PageView (`disablePushState`).
+
+**Not certified as legally compliant.** The consent behaviour and the privacy
+text (`/privacy`, kept `noindex`; review notes in
+`docs/PRIVACY_POLICY_DRAFT.md`) must be reviewed by a lawyer before a real
+Pixel ID is set in production (Egypt's Personal Data Protection Law no.
+151/2020; EU rules if EU visitors are targeted).
+
+Data sent to Meta after consent: page URLs, product ids / prices /
+quantities, search terms typed (capped at 100 characters — a visitor could
+type anything), cart and checkout values, and for Purchase the order value,
+items and the order id (as `eventID`). Never names, phones, addresses,
+passwords or tokens. Meta itself also receives the visitor's IP address and
+browser details and sets its own cookies (`_fbp`).
 
 ## Verifying (before relying on it)
 

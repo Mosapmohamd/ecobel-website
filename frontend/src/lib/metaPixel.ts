@@ -8,6 +8,12 @@
  *
  * Rules:
  * - No (valid) Pixel ID → every call is a no-op: nothing loads, nothing sends.
+ * - No consent → the same: nothing loads, nothing sends (lib/consent.ts —
+ *   opt-in, off until the visitor accepts). Revoking stops every later event
+ *   (and tells an already-loaded Meta script to stop: fbq('consent','revoke')).
+ * - Only our explicit events: Meta's automatic events are switched off
+ *   (autoConfig false, before init) and so is its automatic PageView on
+ *   history changes (disablePushState) — the route component sends those.
  * - The Meta base code loads and `init` runs once — not per render, not per
  *   route, not again after hot reload (the init is marked on `fbq` itself).
  * - One PageView per page: the first event on a new path sends it, so a
@@ -121,6 +127,7 @@ export function createMetaPixel({ pixelId, host, consent = () => true, storage =
     const fbq = host.fbq();
     if (!fbq) return null;
     if (fbq.ecobelInitialized !== id) {
+      fbq('set', 'autoConfig', false, id); // no automatic button/metadata events
       fbq('init', id);
       fbq.ecobelInitialized = id;
     }
@@ -164,6 +171,21 @@ export function createMetaPixel({ pixelId, host, consent = () => true, storage =
 
   return {
     enabled: id !== null,
+
+    /** The visitor's choice changed (lib/consent.ts). Granting starts
+     * tracking on the current page; revoking stops it — nothing more is sent,
+     * and an already-loaded Meta script is told to stop too. */
+    consentChanged(granted: boolean): void {
+      if (!id) return;
+      const loaded = host.fbq();
+      if (loaded && loaded.ecobelInitialized === id) loaded('consent', granted ? 'grant' : 'revoke');
+      if (granted) {
+        // The page the visitor is on now gets its PageView (none was sent
+        // without consent); re-granting on an already-counted page adds none.
+        const fbq = fbqReady();
+        if (fbq) syncPage(fbq);
+      }
+    },
 
     /** Call on every route change (and first load). */
     pageView(): boolean {
@@ -233,6 +255,9 @@ export function browserHost(): PixelHost {
       stub.loaded = true;
       stub.version = '2.0';
       stub.queue = queue;
+      // We send PageView on route changes ourselves (components/MetaPixel.tsx);
+      // Meta's own history-API PageViews would double-count them.
+      stub.disablePushState = true;
       w.fbq = stub;
       if (!w._fbq) w._fbq = stub;
       const script = document.createElement('script');

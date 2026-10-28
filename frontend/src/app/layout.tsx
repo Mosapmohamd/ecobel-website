@@ -10,6 +10,7 @@ import AnnouncementBar from "@/components/AnnouncementBar";
 import PromoBar from "@/components/PromoBar";
 import JsonLd from "@/components/JsonLd";
 import MetaPixel from "@/components/MetaPixel";
+import ConsentBanner from "@/components/ConsentBanner";
 import { validPixelId } from "@/lib/metaPixel";
 import { ToastProvider } from "@/lib/toast";
 import { getAnnouncementBar, getCategories } from "@/lib/server-api";
@@ -49,7 +50,8 @@ export const metadata: Metadata = {
   twitter: { card: "summary_large_image" },
 };
 
-// Meta Pixel: on only when NEXT_PUBLIC_META_PIXEL_ID holds a Pixel ID (lib/metaPixel.ts).
+// Meta Pixel: on only when NEXT_PUBLIC_META_PIXEL_ID holds a Pixel ID
+// (lib/metaPixel.ts) — and then only after the visitor opts in (lib/consent.ts).
 const META_PIXEL_ID = validPixelId(process.env.NEXT_PUBLIC_META_PIXEL_ID);
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
@@ -62,6 +64,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     // to <html> before React hydrates.
     <html lang="ar" dir="rtl" className={`h-full ${tajawal.variable} ${markazi.variable}`} suppressHydrationWarning>
       <head>
+        {/* Public marker for the admin's Integrations check (Pixel ID is public; tracking is opt-in). */}
+        {META_PIXEL_ID && <meta name="ecobel-meta-pixel" content={META_PIXEL_ID} data-consent="opt-in" />}
         {/* Before first paint: hide the promo bar if it was dismissed this session (no flash, no shift). */}
         <script
           dangerouslySetInnerHTML={{
@@ -75,11 +79,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           <>
             {/* Before the page content, so a route's PageView goes out before its other events. */}
             <MetaPixel />
-            <noscript>
-              {/* eslint-disable-next-line @next/next/no-img-element -- Meta's no-JavaScript PageView beacon */}
-              <img height="1" width="1" style={{ display: "none" }} alt=""
-                src={`https://www.facebook.com/tr?id=${META_PIXEL_ID}&ev=PageView&noscript=1`} />
-            </noscript>
+            {/* No <noscript> beacon: a visitor without JavaScript can't consent, so nothing is sent for them. */}
           </>
         )}
         <JsonLd
@@ -121,7 +121,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                 <PromoBar />
                 <Header initialCategories={categories} />
                 <main id="main" tabIndex={-1} className="flex-1 outline-none">{children}</main>
-                <Footer initialCategories={categories} />
+                <Footer initialCategories={categories} privacyControls={!!META_PIXEL_ID} />
+                {META_PIXEL_ID && <ConsentBanner />}
               </WishlistProvider>
             </CartProvider>
           </AuthProvider>

@@ -58,7 +58,8 @@ test('init happens once, even across many events and a second tracker (hot reloa
   f.host.current = '/products';
   again.pageView();
   assert.equal(f.calls.filter((c) => c[0] === 'init').length, 1);
-  assert.deepEqual(f.calls[0], ['init', ID]);
+  // Meta's automatic events are switched off before init
+  assert.deepEqual(f.calls.slice(0, 2), [['set', 'autoConfig', false, ID], ['init', ID]]);
 });
 
 test('one PageView per page: re-renders / Strict Mode / same route add nothing', () => {
