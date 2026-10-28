@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useMemo, useState, type FormEvent } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { pixel } from '@/lib/analytics';
 import { catalogApi, type Category, type ProductPage, type ProductSort, type PromotionPublic, type Routine } from '@/lib/api';
 import ProductCard, { ProductCardSkeleton } from '@/components/ProductCard';
 import RoutineCard from '@/components/RoutineCard';
@@ -82,6 +83,10 @@ function ProductsContent({ initial }: { initial: CatalogInitial | null }) {
   }, [key, attempt]);
 
   const productsLoading = result?.key !== key;
+
+  useEffect(() => {
+    if (query.q) pixel.search(query.q);
+  }, [query.q]);
 
   // A search also finds routines — unless a product-only filter (category,
   // price, offers) narrows it, since routines have none of those.

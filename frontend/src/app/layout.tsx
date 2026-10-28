@@ -9,6 +9,8 @@ import Footer from "@/components/Footer";
 import AnnouncementBar from "@/components/AnnouncementBar";
 import PromoBar from "@/components/PromoBar";
 import JsonLd from "@/components/JsonLd";
+import MetaPixel from "@/components/MetaPixel";
+import { validPixelId } from "@/lib/metaPixel";
 import { ToastProvider } from "@/lib/toast";
 import { getAnnouncementBar, getCategories } from "@/lib/server-api";
 import { PROMO_DISMISS_KEY, SITE_CONTACT } from "@/lib/constants";
@@ -47,6 +49,9 @@ export const metadata: Metadata = {
   twitter: { card: "summary_large_image" },
 };
 
+// Meta Pixel: on only when NEXT_PUBLIC_META_PIXEL_ID holds a Pixel ID (lib/metaPixel.ts).
+const META_PIXEL_ID = validPixelId(process.env.NEXT_PUBLIC_META_PIXEL_ID);
+
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   // Fetched once on the server for the header menu and footer (cached
   // briefly; categories carry no prices). null → they load it themselves.
@@ -66,6 +71,17 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       </head>
       <body className="min-h-full flex flex-col">
         <a href="#main" className="skip-link">تخطي إلى المحتوى</a>
+        {META_PIXEL_ID && (
+          <>
+            {/* Before the page content, so a route's PageView goes out before its other events. */}
+            <MetaPixel />
+            <noscript>
+              {/* eslint-disable-next-line @next/next/no-img-element -- Meta's no-JavaScript PageView beacon */}
+              <img height="1" width="1" style={{ display: "none" }} alt=""
+                src={`https://www.facebook.com/tr?id=${META_PIXEL_ID}&ev=PageView&noscript=1`} />
+            </noscript>
+          </>
+        )}
         <JsonLd
           data={{
             "@context": "https://schema.org",

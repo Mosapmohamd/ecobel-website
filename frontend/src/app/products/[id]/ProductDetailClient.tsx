@@ -6,6 +6,7 @@ import { catalogApi, reviewApi, type Product, type ReviewSummary } from '@/lib/a
 import { useCart } from '@/lib/cart';
 import { useWishlist } from '@/lib/wishlist';
 import { useToast } from '@/lib/toast';
+import { pixel } from '@/lib/analytics';
 import ProductCard from '@/components/ProductCard';
 import ProductGallery from '@/components/ProductGallery';
 import RichDescription from '@/components/RichDescription';
@@ -77,6 +78,11 @@ export default function ProductDetailClient({
   const current = state?.id === id ? state : null;
   const summary = reviews?.id === id ? reviews.summary : null;
   const quantity = qty.id === id ? qty.value : 1;
+
+  const viewed = current?.product;
+  useEffect(() => {
+    if (viewed) pixel.viewContent({ id: viewed.id, price: viewed.price });
+  }, [viewed]);
 
   if (current?.error || (current && !current.product)) {
     return (
@@ -219,6 +225,7 @@ export default function ProductDetailClient({
                   className="btn btn-primary order-last grow basis-full min-w-0 lg:order-none lg:basis-0"
                   onClick={() => {
                     add(product.id, quantity);
+                    pixel.addToCart([{ id: product.id, quantity, price: product.price }]);
                     setAdded(true);
                     setTimeout(() => setAdded(false), 1800);
                     toast.show(`تمت إضافة ${product.name} للسلة`, { action: { label: 'عرض السلة', href: '/cart' } });
