@@ -114,6 +114,7 @@ class MovementType(str, enum.Enum):
     website_sale = "website_sale"
     b2b_sale = "b2b_sale"
     free_distribution = "free_distribution"
+    customer_return = "customer_return"  # recorded by the accounting system (returns)
 
 
 class InventoryMovement(Base):

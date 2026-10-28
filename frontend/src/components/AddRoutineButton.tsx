@@ -3,6 +3,7 @@
 import type { Routine } from '@/lib/api';
 import { useCart } from '@/lib/cart';
 import { useToast } from '@/lib/toast';
+import { pixel } from '@/lib/analytics';
 import Icon from './Icon';
 
 /** Adds every product in a routine to the cart (one of each) — real
@@ -25,6 +26,7 @@ export default function AddRoutineButton({ routine, className = '' }: { routine:
       className={`btn btn-primary ${className}`}
       onClick={() => {
         addMany(routine.items.map((it) => ({ productId: it.product.id, quantity: 1 })));
+        pixel.addToCart(routine.items.map((it) => ({ id: it.product.id, quantity: 1, price: it.product.price })), routine.total);
         toast.show(`تمت إضافة روتين "${routine.name}" للسلة`, { action: { label: 'عرض السلة', href: '/cart' } });
       }}
     >

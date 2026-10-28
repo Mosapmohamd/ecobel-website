@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { bundleKey, bundlesIn, useCart, type CartBundleLine, type CartLine } from '@/lib/cart';
 import { useToast } from '@/lib/toast';
 import { useAuth } from '@/lib/auth';
+import { pixel } from '@/lib/analytics';
 import { orderApi, catalogApi, type Order } from '@/lib/api';
 import { egp } from '@/lib/constants';
 import ProductImage from '@/components/ProductImage';
@@ -175,6 +176,17 @@ export default function CartPage() {
     setCheckout({ couponCode: '' });
   }
 
+  // The customer starts filling in the checkout form → InitiateCheckout
+  // (once per visit; priced from the server quote, as checkout charges).
+  function startedCheckout() {
+    if (!quote) return;
+    const items = [
+      ...quote.lines.map((l) => ({ id: l.product_id, quantity: l.quantity, price: l.unit_price })),
+      ...(quote.bundles ?? []).flatMap((b) => b.items.map((i) => ({ id: i.product_id, quantity: i.quantity * b.quantity, price: i.unit_price }))),
+    ];
+    pixel.initiateCheckout(items, quote.total);
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
@@ -285,7 +297,7 @@ export default function CartPage() {
               </div>
             )}
 
-            <form id="checkout-form" onSubmit={handleSubmit} noValidate className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <form id="checkout-form" onSubmit={handleSubmit} onFocusCapture={startedCheckout} noValidate className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="field sm:col-span-2">
                 <label htmlFor="co-name">الاسم بالكامل (ثلاثي)</label>
                 <input

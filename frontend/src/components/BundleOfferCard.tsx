@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { catalogApi, type BundleOffer } from '@/lib/api';
 import { useCart } from '@/lib/cart';
+import { pixel } from '@/lib/analytics';
 import { useToast } from '@/lib/toast';
 import { egp } from '@/lib/constants';
 import ProductImage from './ProductImage';
@@ -70,6 +71,8 @@ function useAddBundle(offer: BundleOffer) {
   const toast = useToast();
   return (items: { productId: string; quantity: number }[]) => {
     addBundle(offer.id, items);
+    const price = new Map(offer.products.map((p) => [p.product.id, p.product.price]));
+    pixel.addToCart(items.map((i) => ({ id: i.productId, quantity: i.quantity, price: price.get(i.productId) ?? 0 })), offer.bundle_price);
     toast.show(`اتضافت «${offer.name}» للسلة`, { action: { label: 'عرض السلة', href: '/cart' } });
   };
 }

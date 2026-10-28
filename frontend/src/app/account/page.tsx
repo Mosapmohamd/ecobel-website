@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
 import { accountApi, orderApi, type Order } from '@/lib/api';
+import { pixel } from '@/lib/analytics';
 import Link from 'next/link';
 import OrderEditor from './OrderEditor';
 import Icon from '@/components/Icon';
@@ -50,6 +51,13 @@ export default function AccountPage() {
     }
   }
   useEffect(loadOrders, [token]);
+
+  // Purchase is sent only for an order that's completed AND paid —
+  // delivered + cash on delivery — as the server reports it here; once per
+  // order (lib/metaPixel.ts). Never at checkout or order creation.
+  useEffect(() => {
+    for (const o of orders) pixel.purchase(o);
+  }, [orders]);
 
   async function confirmCancel() {
     if (!token || !cancelId) return;

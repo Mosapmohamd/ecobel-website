@@ -21,18 +21,23 @@ const productImages = productImageBase ? new URL(productImageBase) : null;
 const isLocalImageHost = !!productImages && ["localhost", "127.0.0.1", "::1"].includes(productImages.hostname);
 const apiOrigin = process.env.NEXT_PUBLIC_API_BASE ? new URL(process.env.NEXT_PUBLIC_API_BASE).origin : null;
 const siteIsHttps = (process.env.NEXT_PUBLIC_SITE_URL ?? "").startsWith("https://");
+// Meta Pixel (src/lib/metaPixel.ts), only when a Pixel ID is configured:
+// its script from connect.facebook.net, its beacons/requests to
+// www.facebook.com — nothing broader (docs/META_PIXEL.md).
+const metaPixel = /^\d{6,20}$/.test((process.env.NEXT_PUBLIC_META_PIXEL_ID ?? "").trim());
 
 // Content-Security-Policy (production builds; dev mode needs eval). Scripts
 // and styles only from this site — 'unsafe-inline' is required by Next's
-// inline bootstrap without per-request nonces — but no third-party scripts,
-// and data can only be sent to this site and the storefront API.
+// inline bootstrap without per-request nonces — but no third-party scripts
+// (except Meta's Pixel when configured), and data can only be sent to this
+// site, the storefront API (and Meta, when the Pixel is on).
 const csp = [
   "default-src 'self'",
-  "script-src 'self' 'unsafe-inline'",
+  `script-src 'self' 'unsafe-inline'${metaPixel ? " https://connect.facebook.net" : ""}`,
   "style-src 'self' 'unsafe-inline'",
-  `img-src 'self' data: blob:${productImages ? ` ${productImages.origin}` : ""}`,
+  `img-src 'self' data: blob:${productImages ? ` ${productImages.origin}` : ""}${metaPixel ? " https://www.facebook.com" : ""}`,
   "font-src 'self'",
-  `connect-src 'self'${apiOrigin ? ` ${apiOrigin}` : ""}`,
+  `connect-src 'self'${apiOrigin ? ` ${apiOrigin}` : ""}${metaPixel ? " https://www.facebook.com" : ""}`,
   "frame-ancestors 'none'",
   "base-uri 'self'",
   "form-action 'self'",

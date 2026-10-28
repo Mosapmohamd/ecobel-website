@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { catalogApi, type Category } from '@/lib/api';
 import { FREE_SHIPPING_THRESHOLD, ROUTINES_LABEL, ROUTINES_PATH, SITE_CONTACT } from '@/lib/constants';
 import Icon from './Icon';
+import { PrivacyPreferencesLink } from './ConsentBanner';
 
 function ColumnTitle({ children }: { children: React.ReactNode }) {
   return <h2 className="text-headline-sm text-surface pb-2 mb-4 border-b border-surface/20">{children}</h2>;
@@ -12,7 +13,11 @@ function ColumnTitle({ children }: { children: React.ReactNode }) {
 
 const linkClass = 'text-surface/80 hover:text-surface transition-colors';
 
-export default function Footer({ initialCategories = null }: { initialCategories?: Category[] | null }) {
+export default function Footer({ initialCategories = null, privacyControls = false }: {
+  initialCategories?: Category[] | null;
+  /** Show «إعدادات الخصوصية» (only when there's optional tracking to choose). */
+  privacyControls?: boolean;
+}) {
   const [categories, setCategories] = useState<Category[]>(initialCategories ?? []);
 
   // Server-rendered with the page; fetched here only if the server couldn't.
@@ -98,7 +103,11 @@ export default function Footer({ initialCategories = null }: { initialCategories
 
       <div className="border-t border-surface/15">
         <div className="page-container py-5 text-label flex flex-col sm:flex-row gap-2 justify-between text-surface/80">
-          <span>© {new Date().getFullYear()} جميع الحقوق محفوظة لـ Eco Bel</span>
+          <span className="flex flex-wrap items-center gap-x-4 gap-y-1">
+            <span>© {new Date().getFullYear()} جميع الحقوق محفوظة لـ Eco Bel</span>
+            <Link href="/privacy" className={linkClass}>سياسة الخصوصية</Link>
+            {privacyControls && <PrivacyPreferencesLink className={`${linkClass} underline`} />}
+          </span>
           <span className="flex items-center gap-1.5">
             <Icon name="truck" size={14} />
             شحن مجاني للطلبات فوق {FREE_SHIPPING_THRESHOLD.toLocaleString('ar-EG')} ج.م

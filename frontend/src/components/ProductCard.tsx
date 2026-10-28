@@ -5,6 +5,7 @@ import type { Product } from '@/lib/api';
 import { useCart } from '@/lib/cart';
 import { useWishlist } from '@/lib/wishlist';
 import { useToast } from '@/lib/toast';
+import { pixel } from '@/lib/analytics';
 import { egp } from '@/lib/constants';
 import ProductImage from './ProductImage';
 import Icon from './Icon';
@@ -79,6 +80,7 @@ export default function ProductCard({ product }: { product: Product }) {
           disabled={outOfStock}
           onClick={() => {
             add(product.id, 1);
+            pixel.addToCart([{ id: product.id, quantity: 1, price: product.price }]);
             toast.show(`تمت إضافة ${product.name} للسلة`, { action: { label: 'عرض السلة', href: '/cart' } });
           }}
         >
