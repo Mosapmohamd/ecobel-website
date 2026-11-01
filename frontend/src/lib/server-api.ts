@@ -33,7 +33,13 @@ async function get<T>(path: string, revalidate?: number): Promise<T | null | typ
 const orNull = <T,>(v: T | null | typeof NOT_FOUND): T | null => (v === NOT_FOUND ? null : v);
 
 // `cache` dedupes calls made by both generateMetadata and the page itself.
-export const getCategories = cache(async () => orNull(await get<Category[]>('/catalog/categories', 300)));
+// Category names and links (header, footer, sitemap): cached for a minute,
+// so a category renamed in the admin shows everywhere within a minute.
+export const getCategories = cache(async () => orNull(await get<Category[]>('/catalog/categories', 60)));
+// Pages that show each category's product count use this uncached copy, so
+// the count always matches the category's listing (also uncached) — a
+// product added, archived or moved in the admin shows in both at once.
+export const getCategoriesWithCounts = cache(async () => orNull(await get<Category[]>('/catalog/categories')));
 // Staff edits show within a minute — no rebuild (no prices or stock in it).
 export const getAnnouncementBar = cache(async () => orNull(await get<AnnouncementBarSettings>('/storefront/announcement-bar', 60)));
 export const getProduct = cache((id: string) => get<Product>(`/catalog/products/${encodeURIComponent(id)}`));

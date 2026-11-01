@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import CatalogClient, { type CatalogInitial } from './CatalogClient';
-import { getCategories, getProductPage, getRoutines } from '@/lib/server-api';
+import { getCategoriesWithCounts, getProductPage, getRoutines } from '@/lib/server-api';
 import { parseCatalogQuery, productQueryString, routineQueryOf, toProductQuery, toSearch } from '@/lib/catalogQuery';
 import { NO_INDEX } from '@/lib/seo';
 
@@ -14,7 +14,7 @@ const queryOf = (sp: Record<string, string | string[] | undefined>) =>
 
 export async function generateMetadata({ searchParams }: Props): Promise<Metadata> {
   const q = queryOf(await searchParams);
-  const categories = await getCategories();
+  const categories = await getCategoriesWithCounts();
   const category = q.categoryId ? categories?.find((c) => c.id === q.categoryId) : undefined;
 
   // One canonical URL per real listing: all products, a category, or offers.
@@ -48,7 +48,7 @@ export default async function ProductsPage({ searchParams }: Props) {
   const routineQuery = routineQueryOf(q);
   const [page, categories, routines, routineMatches] = await Promise.all([
     getProductPage(productQueryString(toProductQuery(q))),
-    getCategories(),
+    getCategoriesWithCounts(),
     getRoutines(),
     routineQuery ? getRoutines(routineQuery) : Promise.resolve(null),
   ]);
