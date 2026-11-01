@@ -37,7 +37,7 @@ export default function RichDescription({ text }: { text: string }) {
         block.kind === 'heading' ? (
           <h3 key={i} className="mt-2 text-headline-sm text-ink">{block.text}</h3>
         ) : block.kind === 'list' ? (
-          <ul key={i} className="flex flex-col gap-2 ps-5 list-disc marker:text-primary">
+          <ul key={i} className="flex flex-col gap-2 ps-5 list-disc marker:text-primary-ink">
             {block.items.map((item, j) => <li key={j}>{item}</li>)}
           </ul>
         ) : (

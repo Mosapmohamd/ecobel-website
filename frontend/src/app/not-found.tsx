@@ -12,7 +12,7 @@ export const metadata: Metadata = {
 export default function NotFound() {
   return (
     <div className="page-container py-20 text-center">
-      <span className="mx-auto mb-5 w-16 h-16 rounded-full flex items-center justify-center bg-surface-tint text-primary">
+      <span className="mx-auto mb-5 w-16 h-16 rounded-full flex items-center justify-center bg-surface-tint text-primary-ink">
         <Icon name="search" size={30} />
       </span>
       <h1 className="text-headline-md mb-2">الصفحة دي مش موجودة</h1>

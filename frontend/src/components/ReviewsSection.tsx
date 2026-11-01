@@ -11,7 +11,7 @@ import Icon from './Icon';
 export function Stars({ value, size = 16 }: { value: number; size?: number }) {
   const full = Math.round(value);
   return (
-    <span role="img" aria-label={`${value.toLocaleString('ar-EG', { maximumFractionDigits: 1 })} من ٥ نجوم`} className="text-accent" style={{ fontSize: size, letterSpacing: 1 }}>
+    <span role="img" aria-label={`${value.toLocaleString('ar-EG', { maximumFractionDigits: 1 })} من ٥ نجوم`} className="text-rating" style={{ fontSize: size, letterSpacing: 1 }}>
       <span aria-hidden="true">{'★'.repeat(full)}</span>
       <span aria-hidden="true" className="text-line">{'★'.repeat(5 - full)}</span>
     </span>
@@ -88,7 +88,7 @@ export default function ReviewsSection({
           <h2 id="reviews-title" className="text-headline-md lg:text-headline-lg">تقييمات العملاء</h2>
         </div>
         {!customer && (
-          <Link href="/account/login" className="text-label font-bold text-primary link-underline">
+          <Link href="/account/login" className="text-label font-bold text-primary-ink link-underline">
             سجّلي دخولك عشان تقيّمي
           </Link>
         )}
@@ -109,7 +109,7 @@ export default function ReviewsSection({
           {summary && summary.review_count > 0 ? (
             <>
               <div className="flex items-baseline gap-2">
-                <span className="font-display text-[44px] font-bold leading-none text-primary">{summary.average_rating.toFixed(1)}</span>
+                <span className="font-display text-[44px] font-bold leading-none text-primary-ink">{summary.average_rating.toFixed(1)}</span>
                 <span className="text-body-sm text-ink-muted">من 5</span>
               </div>
               <div className="mt-2"><Stars value={summary.average_rating} size={18} /></div>
@@ -140,7 +140,7 @@ export default function ReviewsSection({
               {error && <div role="alert" className="notice notice-error mb-3">{error}</div>}
               <div className="mb-4">
                 <span id="review-rating-label" className="block text-label font-bold mb-2">تقييمك</span>
-                <div role="group" aria-labelledby="review-rating-label" className="flex gap-1 text-2xl text-accent">
+                <div role="group" aria-labelledby="review-rating-label" className="flex gap-1 text-2xl text-rating">
                   {[1, 2, 3, 4, 5].map((n) => (
                     <button
                       type="button"

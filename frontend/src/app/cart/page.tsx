@@ -54,7 +54,7 @@ function Steps({ current }: { current: 1 | 2 }) {
               className="w-7 h-7 rounded-full flex items-center justify-center text-[12.5px]"
               style={{
                 background: active || done ? 'var(--color-primary)' : 'var(--color-surface-muted)',
-                color: active || done ? 'var(--color-surface)' : 'var(--color-ink-muted)',
+                color: active || done ? 'var(--color-on-primary)' : 'var(--color-ink-muted)',
               }}
             >
               {done ? <Icon name="check" size={14} strokeWidth={2.5} /> : n.toLocaleString('ar-EG')}
@@ -231,7 +231,7 @@ export default function CartPage() {
           </span>
           <h1 className="text-[30px] mb-2">تم استلام طلبك بنجاح!</h1>
           <p className="text-[14px] mb-1" style={{ color: 'var(--color-ink-muted)' }}>رقم طلبك</p>
-          <p className="text-[22px] font-bold mb-4" style={{ color: 'var(--color-primary)' }} dir="ltr">{confirmedOrder.order_number}</p>
+          <p className="text-[22px] font-bold mb-4" style={{ color: 'var(--color-primary-ink)' }} dir="ltr">{confirmedOrder.order_number}</p>
           <p className="text-[14px] leading-relaxed mb-8" style={{ color: 'var(--color-ink-secondary)' }}>
             شكرًا لثقتك في Eco Bel. احتفظي برقم الطلب مع رقم تليفونك عشان تقدري تتابعي حالة الطلب.
           </p>
@@ -252,7 +252,7 @@ export default function CartPage() {
   if (lines.length === 0 && bundles.length === 0) {
     return (
       <div className="page-container py-20 text-center">
-        <span className="mx-auto mb-5 w-16 h-16 rounded-full flex items-center justify-center" style={{ background: 'var(--color-surface-tint)', color: 'var(--color-primary)' }}>
+        <span className="mx-auto mb-5 w-16 h-16 rounded-full flex items-center justify-center" style={{ background: 'var(--color-surface-tint)', color: 'var(--color-primary-ink)' }}>
           <Icon name="bag" size={30} />
         </span>
         <h1 className="text-[28px] mb-2">السلة فاضية</h1>
@@ -282,7 +282,7 @@ export default function CartPage() {
         <div className="flex flex-col gap-6 order-2 lg:order-1">
           <Panel>
             <div className="flex items-center gap-3 mb-6">
-              <span className="w-10 h-10 rounded-full flex items-center justify-center flex-none" style={{ background: 'var(--color-surface-tint)', color: 'var(--color-primary)' }}>
+              <span className="w-10 h-10 rounded-full flex items-center justify-center flex-none" style={{ background: 'var(--color-surface-tint)', color: 'var(--color-primary-ink)' }}>
                 <Icon name="truck" size={20} />
               </span>
               <div>
@@ -377,8 +377,8 @@ export default function CartPage() {
 
           <Panel>
             <h2 className="text-[20px] mb-4">طريقة الدفع</h2>
-            <div className="flex items-start gap-3 rounded border p-4" style={{ borderColor: 'var(--color-primary)', background: 'var(--color-surface-tint)' }}>
-              <span className="mt-0.5 w-5 h-5 rounded-full flex items-center justify-center flex-none" style={{ background: 'var(--color-primary)', color: 'var(--color-surface)' }}>
+            <div className="flex items-start gap-3 rounded border p-4" style={{ borderColor: 'var(--color-primary-dark)', background: 'var(--color-primary-light)' }}>
+              <span className="mt-0.5 w-5 h-5 rounded-full flex items-center justify-center flex-none" style={{ background: 'var(--color-primary)', color: 'var(--color-on-primary)' }}>
                 <Icon name="check" size={12} strokeWidth={3} />
               </span>
               <div>
@@ -407,7 +407,7 @@ export default function CartPage() {
                 >
                   إفراغ السلة
                 </button>
-                <Link href="/products" className="text-[13px] font-bold link-underline" style={{ color: 'var(--color-primary)' }}>
+                <Link href="/products" className="text-[13px] font-bold link-underline" style={{ color: 'var(--color-primary-ink)' }}>
                   متابعة التسوق
                 </Link>
               </div>
@@ -416,14 +416,14 @@ export default function CartPage() {
             {quote && (
             <div className="rounded p-3 mb-4" style={{ background: 'var(--color-surface-tint)' }}>
               <div className="flex items-center gap-2 text-[13px] mb-2">
-                <Icon name="truck" size={16} style={{ color: 'var(--color-primary)' }} />
+                <Icon name="truck" size={16} style={{ color: 'var(--color-primary-ink)' }} />
                 {shippingOffer && netAfterDiscount < threshold ? (
                   <span className="font-bold" style={{ color: 'var(--color-success)' }}>الشحن مجاني بعرض «{shippingOffer.name}»</span>
                 ) : freeShipping ? (
                   <span className="font-bold" style={{ color: 'var(--color-success)' }}>طلبك مؤهل للشحن المجاني!</span>
                 ) : (
                   <span>
-                    أضيفي بـ <strong style={{ color: 'var(--color-primary)' }}>{egp(remainingForFree)}</strong> كمان للشحن المجاني
+                    أضيفي بـ <strong style={{ color: 'var(--color-primary-ink)' }}>{egp(remainingForFree)}</strong> كمان للشحن المجاني
                   </span>
                 )}
               </div>
@@ -553,10 +553,10 @@ export default function CartPage() {
                 {promotionHints.map((h) => (
                   <div key={h.id} className="rounded border px-3 py-2 text-[13px]" style={{ borderColor: 'var(--color-line)' }}>
                     <span className="flex items-start gap-2">
-                      <Icon name="tag" size={15} style={{ color: 'var(--color-primary)', flex: 'none', marginTop: 2 }} />
+                      <Icon name="tag" size={15} style={{ color: 'var(--color-primary-ink)', flex: 'none', marginTop: 2 }} />
                       <span>
                         <strong>{h.name}</strong> ({h.summary}): {h.reason}{' '}
-                        <Link href={`/products?promotion=${encodeURIComponent(h.id)}`} className="font-bold link-underline" style={{ color: 'var(--color-primary)' }}>منتجات العرض</Link>
+                        <Link href={`/products?promotion=${encodeURIComponent(h.id)}`} className="font-bold link-underline" style={{ color: 'var(--color-primary-ink)' }}>منتجات العرض</Link>
                       </span>
                     </span>
                   </div>
@@ -628,7 +628,7 @@ export default function CartPage() {
               </div>
               <div className="flex justify-between items-baseline pt-3 mt-1 border-t" style={{ borderColor: 'var(--color-line)' }}>
                 <span className="font-bold">الإجمالي النهائي</span>
-                <span className="text-[24px] font-bold" style={{ color: 'var(--color-primary)' }}>{egp(total)}</span>
+                <span className="text-[24px] font-bold" style={{ color: 'var(--color-primary-ink)' }}>{egp(total)}</span>
               </div>
               {(quote?.total_savings ?? 0) > 0 && (
                 <div className="flex justify-between text-[13px]" style={{ color: 'var(--color-success)' }}>

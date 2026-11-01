@@ -35,7 +35,7 @@ export default function RoutinesClient({ initialRoutines }: { initialRoutines: R
       <section className="border-b border-line bg-surface-tint">
         <div className="page-container py-8">
           <nav aria-label="مسار التصفح" className="flex items-center gap-1.5 text-body-sm text-ink-muted mb-3">
-            <Link href="/" className="hover:text-primary transition-colors">الرئيسية</Link>
+            <Link href="/" className="hover:text-primary-ink transition-colors">الرئيسية</Link>
             <Icon name="chevronLeft" size={14} />
             <span className="text-ink" aria-current="page">{ROUTINES_LABEL}</span>
           </nav>

@@ -16,7 +16,7 @@ export default function TrustStrip() {
           <li key={item.title} className="flex items-center gap-4 rounded bg-surface-tint p-4">
             <span
               className={`flex-none w-12 h-12 rounded bg-surface flex items-center justify-center shadow-soft ${
-                item.tone === 'success' ? 'text-success' : 'text-primary'
+                item.tone === 'success' ? 'text-success' : 'text-primary-ink'
               }`}
             >
               <Icon name={item.icon} size={24} />

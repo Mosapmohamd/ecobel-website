@@ -26,7 +26,7 @@ function NavLink({ href, label, active }: { href: string; label: string; active:
       href={href}
       aria-current={active ? 'page' : undefined}
       className={`relative py-2 text-label-lg transition-colors ${
-        active ? 'font-bold text-primary' : 'font-medium text-ink-secondary hover:text-ink'
+        active ? 'font-bold text-primary-ink' : 'font-medium text-ink-secondary hover:text-ink'
       }`}
     >
       {label}
@@ -41,7 +41,7 @@ function NavLink({ href, label, active }: { href: string; label: string; active:
 function CountBadge({ n }: { n: number }) {
   if (n <= 0) return null;
   return (
-    <span className="absolute top-0.5 left-0.5 min-w-[17px] h-[17px] px-1 flex items-center justify-center rounded-full bg-primary text-surface text-[10px] font-bold leading-none">
+    <span className="absolute top-0.5 left-0.5 min-w-[17px] h-[17px] px-1 flex items-center justify-center rounded-full bg-primary text-on-primary text-[10px] font-bold leading-none">
       {n.toLocaleString('ar-EG')}
     </span>
   );
@@ -67,7 +67,7 @@ function CategoriesMenu({ categories }: { categories: Category[] }) {
     };
   }, [open]);
 
-  const itemClass = 'block px-4 py-2.5 text-body-sm text-ink-secondary transition-colors hover:bg-surface-tint hover:text-primary';
+  const itemClass = 'block px-4 py-2.5 text-body-sm text-ink-secondary transition-colors hover:bg-surface-tint hover:text-primary-ink';
 
   return (
     <div ref={ref} className="relative group h-full flex items-center" onMouseLeave={() => setOpen(false)}>
@@ -148,7 +148,7 @@ export default function Header({ initialCategories = null }: { initialCategories
         onChange={(e) => setQuery(e.target.value)}
         placeholder="ابحثي عن منتج طبيعي..."
         aria-label="بحث في المنتجات"
-        className="w-full h-10 pr-9 pl-3 rounded border border-transparent bg-surface-tint text-body-sm text-ink outline-none transition-colors placeholder:text-ink-muted focus:bg-surface focus:border-primary"
+        className="w-full h-10 pr-9 pl-3 rounded border border-transparent bg-surface-tint text-body-sm text-ink outline-none transition-colors placeholder:text-ink-muted focus:bg-surface focus:border-primary-dark"
       />
     </form>
   );
@@ -177,7 +177,7 @@ export default function Header({ initialCategories = null }: { initialCategories
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/logo/ecobel-mark-black.png" alt="" width={42} height={28} className="h-7 w-auto" />
             <span className="flex flex-col leading-none">
-              <span className="font-display text-[26px] font-bold text-primary">Eco Bel</span>
+              <span className="font-display text-[26px] font-bold text-primary-ink">Eco Bel</span>
               <span className="text-label-sm font-bold text-ink-muted mt-0.5">طبيعي 100%</span>
             </span>
           </Link>
@@ -192,18 +192,18 @@ export default function Header({ initialCategories = null }: { initialCategories
         <div className="flex items-center justify-end gap-3 flex-1 min-w-0">
           <div className="hidden md:block w-full max-w-[240px]">{searchBox}</div>
           <div className="flex items-center gap-0.5 flex-none text-ink-secondary">
-            <Link href="/wishlist" className="relative p-2 transition-colors hover:text-primary" aria-label={`المفضلة${wishCount ? ` (${wishCount})` : ''}`}>
+            <Link href="/wishlist" className="relative p-2 transition-colors hover:text-primary-ink" aria-label={`المفضلة${wishCount ? ` (${wishCount})` : ''}`}>
               <Icon name="heart" size={22} />
               <CountBadge n={wishCount} />
             </Link>
-            <Link href="/cart" className="relative p-2 transition-colors hover:text-primary" aria-label={`السلة${count ? ` (${count})` : ''}`}>
+            <Link href="/cart" className="relative p-2 transition-colors hover:text-primary-ink" aria-label={`السلة${count ? ` (${count})` : ''}`}>
               <Icon name="bag" size={22} />
               <CountBadge n={count} />
             </Link>
-            <Link href={accountHref} aria-label={accountLabel} className="flex items-center gap-2 p-1.5 mr-1 transition-colors hover:text-primary">
+            <Link href={accountHref} aria-label={accountLabel} className="flex items-center gap-2 p-1.5 mr-1 transition-colors hover:text-primary-ink">
               <span
                 className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                  customer ? 'bg-primary text-surface' : 'border border-line text-ink-secondary'
+                  customer ? 'bg-primary text-on-primary' : 'border border-line text-ink-secondary'
                 }`}
               >
                 <Icon name="user" size={17} />
@@ -231,7 +231,7 @@ export default function Header({ initialCategories = null }: { initialCategories
                   key={n.href}
                   href={n.href}
                   aria-current={n.match(pathname) ? 'page' : undefined}
-                  className={`py-3 border-b border-line ${n.match(pathname) ? 'text-primary font-bold' : 'text-ink'}`}
+                  className={`py-3 border-b border-line ${n.match(pathname) ? 'text-primary-ink font-bold' : 'text-ink'}`}
                 >
                   {n.label}
                 </Link>

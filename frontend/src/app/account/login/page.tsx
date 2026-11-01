@@ -62,7 +62,7 @@ export default function LoginPage() {
         <button className="btn btn-primary" disabled={loading}>{loading ? 'جاري الدخول...' : 'تسجيل الدخول'}</button>
       </form>
       <p className="mt-5 text-[13.5px] text-center" style={{ color: 'var(--color-ink-muted)' }}>
-        معندكيش حساب؟ <Link href="/account/register" className="font-bold" style={{ color: 'var(--color-primary)' }}>سجّلي دلوقتي</Link>
+        معندكيش حساب؟ <Link href="/account/register" className="font-bold" style={{ color: 'var(--color-primary-ink)' }}>سجّلي دلوقتي</Link>
       </p>
     </div>
     </div>

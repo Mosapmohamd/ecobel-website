@@ -71,7 +71,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
               className="w-7 h-7 rounded-full flex items-center justify-center flex-none"
               style={{
                 background: t.tone === 'error' ? 'color-mix(in srgb, var(--color-error) 9%, transparent)' : 'var(--color-surface-tint)',
-                color: t.tone === 'error' ? 'var(--color-error)' : t.tone === 'success' ? 'var(--color-success)' : 'var(--color-primary)',
+                color: t.tone === 'error' ? 'var(--color-error)' : t.tone === 'success' ? 'var(--color-success)' : 'var(--color-primary-ink)',
               }}
             >
               <Icon name={t.tone === 'error' ? 'alert' : t.tone === 'success' ? 'check' : 'info'} size={15} strokeWidth={2.2} />
@@ -83,7 +83,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                   href={t.action.href}
                   onClick={() => dismiss(t.id)}
                   className="flex-none text-[13.5px] font-bold link-underline"
-                  style={{ color: 'var(--color-primary)' }}
+                  style={{ color: 'var(--color-primary-ink)' }}
                 >
                   {t.action.label}
                 </Link>
@@ -95,7 +95,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                     dismiss(t.id);
                   }}
                   className="flex-none text-[13.5px] font-bold link-underline"
-                  style={{ color: 'var(--color-primary)' }}
+                  style={{ color: 'var(--color-primary-ink)' }}
                 >
                   {t.action.label}
                 </button>

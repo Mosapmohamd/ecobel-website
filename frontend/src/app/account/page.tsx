@@ -116,7 +116,7 @@ export default function AccountPage() {
             <div className="flex items-center gap-3 mb-4">
               <span
                 className="w-12 h-12 rounded-full flex items-center justify-center text-[22px] font-bold flex-none"
-                style={{ background: 'var(--color-surface-muted)', color: 'var(--color-primary)', fontFamily: 'var(--font-display)' }}
+                style={{ background: 'var(--color-surface-muted)', color: 'var(--color-primary-ink)', fontFamily: 'var(--font-display)' }}
               >
                 {customer.name.trim().charAt(0)}
               </span>
@@ -130,7 +130,7 @@ export default function AccountPage() {
           </div>
 
           <nav className="rounded border overflow-hidden text-[14px] font-medium" style={{ background: 'var(--color-surface)', borderColor: 'var(--color-line)' }}>
-            <span className="flex items-center gap-2.5 px-5 py-3 border-r-2" style={{ background: 'var(--color-surface-tint)', color: 'var(--color-primary)', borderColor: 'var(--color-primary)' }}>
+            <span className="flex items-center gap-2.5 px-5 py-3 border-r-2" style={{ background: 'var(--color-surface-tint)', color: 'var(--color-primary-ink)', borderColor: 'var(--color-primary)' }}>
               <Icon name="box" size={18} />طلباتي
             </span>
             <Link href="/wishlist" className="flex items-center gap-2.5 px-5 py-3 border-t transition-colors hover:bg-[var(--color-surface-tint)]" style={{ borderColor: 'var(--color-line)' }}>
@@ -172,7 +172,7 @@ export default function AccountPage() {
                     onClick={() => setFilter(f.key)}
                     className={`h-9 px-3.5 rounded border text-[13px] font-bold whitespace-nowrap transition-colors ${
                       active
-                        ? 'bg-[var(--color-surface-tint)] border-[var(--color-primary)] text-[var(--color-primary)]'
+                        ? 'bg-[var(--color-primary-light)] border-[var(--color-primary-dark)] text-[var(--color-primary-ink)]'
                         : 'bg-white border-[var(--color-line)] text-[var(--color-ink-secondary)] hover:border-[var(--color-primary)]'
                     }`}
                   >

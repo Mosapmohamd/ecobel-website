@@ -42,7 +42,7 @@ export default function CartBundleItem({
       <Link href={`/products?promotion=${encodeURIComponent(bundle.promotionId)}`} tabIndex={-1} aria-hidden="true"
         className="relative w-20 h-20 rounded overflow-hidden flex-none border border-line bg-surface-tint">
         <ProductImage src={firstImage} alt="" sizes="80px" />
-        <span className="absolute bottom-1 right-1 badge bg-brand-deep text-surface !text-[11px] !px-1.5 !py-0.5">باقة</span>
+        <span className="absolute bottom-1 right-1 badge bg-accent text-on-accent !text-[11px] !px-1.5 !py-0.5">باقة</span>
       </Link>
       <div className="flex-1 min-w-0 flex flex-col">
         <div className="flex items-start justify-between gap-2">

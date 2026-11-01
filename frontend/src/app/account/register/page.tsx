@@ -83,7 +83,7 @@ export default function RegisterPage() {
         <button className="btn btn-primary" disabled={loading}>{loading ? 'جاري الإنشاء...' : 'إنشاء الحساب'}</button>
       </form>
       <p className="mt-5 text-[13.5px] text-center" style={{ color: 'var(--color-ink-muted)' }}>
-        عندك حساب بالفعل؟ <Link href="/account/login" className="font-bold" style={{ color: 'var(--color-primary)' }}>سجّلي دخول</Link>
+        عندك حساب بالفعل؟ <Link href="/account/login" className="font-bold" style={{ color: 'var(--color-primary-ink)' }}>سجّلي دخول</Link>
       </p>
     </div>
     </div>

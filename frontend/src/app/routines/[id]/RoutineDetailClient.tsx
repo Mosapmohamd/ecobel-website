@@ -82,9 +82,9 @@ export default function RoutineDetailClient({
     <div>
       <section className="border-b border-line bg-surface-tint">
         <nav aria-label="مسار التصفح" className="page-container py-4 flex flex-wrap items-center gap-1.5 text-body-sm text-ink-muted">
-          <Link href="/" className="hover:text-primary transition-colors">الرئيسية</Link>
+          <Link href="/" className="hover:text-primary-ink transition-colors">الرئيسية</Link>
           <Icon name="chevronLeft" size={14} />
-          <Link href={ROUTINES_PATH} className="hover:text-primary transition-colors">{ROUTINES_LABEL}</Link>
+          <Link href={ROUTINES_PATH} className="hover:text-primary-ink transition-colors">{ROUTINES_LABEL}</Link>
           <Icon name="chevronLeft" size={14} />
           <span className="text-ink line-clamp-1" aria-current="page">{routine.name}</span>
         </nav>
@@ -115,11 +115,11 @@ export default function RoutineDetailClient({
 
           <div className="mt-6 rounded bg-surface-tint p-5">
             <div className="flex flex-wrap items-baseline gap-3">
-              <span className="text-headline-md font-bold text-primary">{egp(routine.total)}</span>
+              <span className="text-headline-md font-bold text-primary-ink">{egp(routine.total)}</span>
               {routine.savings > 0 && (
                 <>
                   <span className="text-body line-through text-ink-muted">{egp(routine.regular_total)}</span>
-                  <span className="badge bg-brand-deep text-surface">وفّري {egp(routine.savings)}</span>
+                  <span className="badge bg-accent text-on-accent">وفّري {egp(routine.savings)}</span>
                 </>
               )}
             </div>
@@ -137,7 +137,7 @@ export default function RoutineDetailClient({
               const available = it.product.max_quantity > 0;
               return (
                 <li key={it.product.id} className="card flex items-center gap-4 p-3">
-                  <span className="w-7 h-7 flex-none rounded-full bg-surface-muted text-primary text-label font-bold flex items-center justify-center">
+                  <span className="w-7 h-7 flex-none rounded-full bg-surface-muted text-primary-ink text-label font-bold flex items-center justify-center">
                     {(i + 1).toLocaleString('ar-EG')}
                   </span>
                   <Link href={`/products/${it.product.id}`} className="relative w-16 h-16 flex-none rounded overflow-hidden bg-surface-tint" tabIndex={-1} aria-hidden="true">
@@ -145,7 +145,7 @@ export default function RoutineDetailClient({
                   </Link>
                   <div className="flex-1 min-w-0">
                     <span className="block text-label-sm text-ink-muted">{it.product.category_name}</span>
-                    <Link href={`/products/${it.product.id}`} className="block font-bold text-body leading-snug hover:text-primary transition-colors">
+                    <Link href={`/products/${it.product.id}`} className="block font-bold text-body leading-snug hover:text-primary-ink transition-colors">
                       {it.product.name}
                     </Link>
                     {it.price < it.regular_price && <OfferTitle offer={it.product.offer} className="mt-0.5" />}
@@ -161,7 +161,7 @@ export default function RoutineDetailClient({
           </ol>
 
           <AddRoutineButton routine={routine} className="w-full mt-6" />
-          <Link href={ROUTINES_PATH} className="mt-4 inline-flex items-center gap-1.5 text-label font-bold text-primary link-underline">
+          <Link href={ROUTINES_PATH} className="mt-4 inline-flex items-center gap-1.5 text-label font-bold text-primary-ink link-underline">
             كمّلي تصفح الروتينات
             <Icon name="arrowLeft" size={15} />
           </Link>

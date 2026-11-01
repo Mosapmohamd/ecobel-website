@@ -45,8 +45,8 @@ export interface CatalogInitial {
 function chipClass(active: boolean) {
   return `inline-flex items-center gap-1.5 h-10 px-4 rounded border text-label-lg font-bold whitespace-nowrap transition-colors ${
     active
-      ? 'bg-primary border-primary text-surface'
-      : 'bg-surface border-line text-ink-secondary hover:border-primary hover:text-primary'
+      ? 'bg-primary border-primary-dark text-on-primary'
+      : 'bg-surface border-line text-ink-secondary hover:border-primary hover:text-primary-ink'
   }`;
 }
 
@@ -147,11 +147,11 @@ function ProductsContent({ initial }: { initial: CatalogInitial | null }) {
       <section className="border-b border-line bg-surface-tint">
         <div className="page-container py-8">
           <nav aria-label="مسار التصفح" className="flex flex-wrap items-center gap-1.5 text-body-sm text-ink-muted mb-3">
-            <Link href="/" className="hover:text-primary transition-colors">الرئيسية</Link>
+            <Link href="/" className="hover:text-primary-ink transition-colors">الرئيسية</Link>
             <Icon name="chevronLeft" size={14} />
             {activeCategory || query.q || query.onOffer || query.promotion ? (
               <>
-                <Link href="/products" className="hover:text-primary transition-colors">كل المنتجات</Link>
+                <Link href="/products" className="hover:text-primary-ink transition-colors">كل المنتجات</Link>
                 <Icon name="chevronLeft" size={14} />
                 <span className="text-ink" aria-current="page">{query.q ? 'البحث' : title}</span>
               </>
@@ -314,7 +314,7 @@ function Filters({ query, onApply, hasFilters }: { query: Query; onApply: (c: Pa
           type="checkbox"
           checked={query.onOffer}
           onChange={(e) => onApply({ onOffer: e.target.checked })}
-          className="w-4 h-4 accent-[var(--color-primary)]"
+          className="w-4 h-4 accent-[var(--color-primary-dark)]"
         />
         العروض فقط
       </label>
@@ -323,7 +323,7 @@ function Filters({ query, onApply, hasFilters }: { query: Query; onApply: (c: Pa
         <button
           type="button"
           onClick={() => onApply({ minPrice: undefined, maxPrice: undefined, onOffer: false, sort: 'newest' })}
-          className="lg:mr-auto self-start text-body-sm underline text-ink-muted hover:text-primary transition-colors"
+          className="lg:mr-auto self-start text-body-sm underline text-ink-muted hover:text-primary-ink transition-colors"
         >
           إعادة تعيين الفلاتر
         </button>
@@ -350,7 +350,7 @@ function Pagination({ current, pages, total, onPage }: { current: number; pages:
             key={n}
             type="button"
             aria-current={n === current ? 'page' : undefined}
-            className={`${btn} ${n === current ? 'bg-primary border-primary text-surface' : 'border-line bg-surface hover:border-primary'}`}
+            className={`${btn} ${n === current ? 'bg-primary border-primary-dark text-on-primary' : 'border-line bg-surface hover:border-primary'}`}
             onClick={() => onPage(n)}
           >
             {n.toLocaleString('ar-EG')}

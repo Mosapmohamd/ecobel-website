@@ -14,7 +14,7 @@ export const metadata: Metadata = {
 export default function AboutPage() {
   return (
     <div>
-      <section style={{ background: `linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-hover) 100%)` }}>
+      <section style={{ background: `linear-gradient(135deg, var(--color-primary-dark) 0%, var(--color-brand-deep) 100%)` }}>
         <div className="mx-auto max-w-4xl px-5 py-16 text-center">
           <div className="text-sm font-bold mb-3" style={{ color: 'var(--color-surface-muted)' }}>Eco Bel</div>
           <h1 className="text-4xl font-bold" style={{ color: 'var(--color-surface)' }}>قصتنا</h1>

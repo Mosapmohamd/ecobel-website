@@ -12,8 +12,8 @@ export const ORDER_STATUS_LABEL: Record<Status, string> = {
 };
 
 const STYLE: Record<Status, { icon: IconName; bg: string; color: string }> = {
-  pending: { icon: 'box', bg: 'var(--color-surface-muted)', color: 'var(--color-primary-hover)' },
-  shipped: { icon: 'truck', bg: 'color-mix(in srgb, var(--color-success) 14%, transparent)', color: 'var(--color-success-strong)' },
+  pending: { icon: 'box', bg: 'var(--color-surface-muted)', color: 'var(--color-primary-ink)' },
+  shipped: { icon: 'truck', bg: 'color-mix(in srgb, var(--color-info) 10%, transparent)', color: 'var(--color-info)' },
   delivered: { icon: 'checkCircle', bg: 'color-mix(in srgb, var(--color-success) 14%, transparent)', color: 'var(--color-success-strong)' },
   cancelled: { icon: 'close', bg: 'color-mix(in srgb, var(--color-error) 8%, transparent)', color: 'var(--color-error)' },
 };
