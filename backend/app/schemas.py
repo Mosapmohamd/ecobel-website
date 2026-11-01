@@ -84,9 +84,26 @@ class CustomerLogin(BaseModel):
 
 
 class CustomerUpdate(BaseModel):
-    name: Optional[str] = None
+    """Same limits as registration. Leaving a field out keeps it; the name
+    can't be emptied (email and address can be cleared with null)."""
+    name: Optional[str] = Field(None, max_length=120)
     email: Optional[EmailStr] = None
-    address: Optional[str] = None
+    address: Optional[str] = Field(None, max_length=500)
+
+    @field_validator("name", mode="before")
+    @classmethod
+    def _name_not_null(cls, v):
+        if v is None:
+            raise ValueError("اكتبي اسمك")
+        return v
+
+    @field_validator("name")
+    @classmethod
+    def _check_name(cls, v: str) -> str:
+        v = " ".join(v.split())
+        if len(v) < 2:
+            raise ValueError("اكتبي اسمك")
+        return v
 
 
 class CustomerOut(BaseModel):

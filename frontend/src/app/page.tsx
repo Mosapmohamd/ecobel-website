@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import HomeClient, { type HomeData } from './HomeClient';
-import { getCategories, getFeaturedProducts, getFeaturedRoutines, getProductPage, getPromotions, getRoutines } from '@/lib/server-api';
+import { getCategoriesWithCounts, getFeaturedProducts, getFeaturedRoutines, getProductPage, getPromotions, getRoutines } from '@/lib/server-api';
 import { DEFAULT_DESCRIPTION } from '@/lib/seo';
 import { HOME_OFFERS_SHOWN } from '@/lib/constants';
 
@@ -14,7 +14,7 @@ export default async function HomePage() {
   // Same requests the page used to make in the browser — now on the server,
   // in parallel, so the HTML arrives with real content (no layout shift).
   const [categories, featured, featuredRoutines, offers, routines, promotions] = await Promise.all([
-    getCategories(),
+    getCategoriesWithCounts(),
     getFeaturedProducts(),
     getFeaturedRoutines(),
     getProductPage(`?on_offer=true&limit=${HOME_OFFERS_SHOWN}`),
