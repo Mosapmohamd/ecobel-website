@@ -41,7 +41,7 @@ export function PromotionChips({ promotions, className = '' }: { promotions?: Pr
         </li>
       ))}
       {more > 0 && (
-        <li className="inline-flex items-center rounded-sm bg-brand-deep px-1.5 py-0.5 text-label-sm font-bold text-surface">
+        <li className="inline-flex items-center rounded-sm bg-accent px-1.5 py-0.5 text-label-sm font-bold text-on-accent">
           <span aria-hidden="true">+{more.toLocaleString('ar-EG')}</span>
           <span className="sr-only">{moreOffersLabel(more)}</span>
         </li>
@@ -67,7 +67,7 @@ export function PromotionList({ promotions }: { promotions?: PromotionBadge[] })
           </div>
           <p className="mt-1 text-body-sm text-ink-secondary">{p.summary}</p>
           {p.description && <p className="mt-1 text-body-sm text-ink-muted">{p.description}</p>}
-          <Link href={`/products?promotion=${encodeURIComponent(p.id)}`} className="mt-1.5 inline-block text-body-sm font-bold link-underline text-primary">
+          <Link href={`/products?promotion=${encodeURIComponent(p.id)}`} className="mt-1.5 inline-block text-body-sm font-bold link-underline text-primary-ink">
             منتجات العرض
           </Link>
         </div>

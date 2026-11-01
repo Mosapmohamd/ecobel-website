@@ -30,8 +30,8 @@ type Props = {
 };
 
 const TONE: Record<DialogTone, { icon: IconName; color: string; bg: string }> = {
-  info: { icon: 'info', color: 'var(--color-primary)', bg: 'var(--color-surface-muted)' },
-  warning: { icon: 'alert', color: 'var(--color-primary-hover)', bg: 'var(--color-surface-muted)' },
+  info: { icon: 'info', color: 'var(--color-info)', bg: 'color-mix(in srgb, var(--color-info) 10%, transparent)' },
+  warning: { icon: 'alert', color: 'var(--color-warning)', bg: 'color-mix(in srgb, var(--color-warning) 12%, transparent)' },
   danger: { icon: 'alert', color: 'var(--color-error)', bg: 'color-mix(in srgb, var(--color-error) 9%, transparent)' },
 };
 

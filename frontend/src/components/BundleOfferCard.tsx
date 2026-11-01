@@ -46,7 +46,7 @@ export default function BundleOfferCard({ promotionId, className = '' }: { promo
     <section aria-label={`عرض ${offer.name}`} className={`rounded border-2 border-brand-deep bg-surface p-4 sm:p-5 ${className}`} data-testid="bundle-offer">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
-          <span className="badge bg-brand-deep text-surface">{offer.badge_text || 'باقة'}</span>
+          <span className="badge bg-accent text-on-accent">{offer.badge_text || 'باقة'}</span>
           <h2 className="mt-2 text-title font-bold font-display leading-snug">{offer.name}</h2>
           <p className="text-body-sm text-ink-secondary">{offer.summary}</p>
           {offer.description && <p className="mt-1 text-body-sm text-ink-muted">{offer.description}</p>}
@@ -89,7 +89,7 @@ function FixedBundle({ offer }: { offer: BundleOffer }) {
             <Link href={`/products/${product.id}`} className="relative w-12 h-12 rounded overflow-hidden flex-none border border-line bg-surface-tint" tabIndex={-1} aria-hidden="true">
               <ProductImage src={product.image_url} alt="" sizes="48px" />
             </Link>
-            <Link href={`/products/${product.id}`} className="flex-1 min-w-0 text-body font-bold truncate hover:text-primary">{product.name}</Link>
+            <Link href={`/products/${product.id}`} className="flex-1 min-w-0 text-body font-bold truncate hover:text-primary-ink">{product.name}</Link>
             <span className="flex-none text-body-sm text-ink-muted">× {quantity.toLocaleString('ar-EG')}</span>
             <span className="flex-none text-body-sm text-ink-muted">{egp(product.price * quantity)}</span>
           </li>

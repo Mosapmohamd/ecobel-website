@@ -30,7 +30,7 @@ export default function SectionHeader({
         {description && <p className="mt-2 text-body text-ink-muted">{description}</p>}
       </div>
       {link && (
-        <Link href={link.href} className="flex-none inline-flex items-center gap-1.5 text-label font-bold text-primary link-underline">
+        <Link href={link.href} className="flex-none inline-flex items-center gap-1.5 text-label font-bold text-primary-ink link-underline">
           {link.label}
           <Icon name="arrowLeft" size={15} />
         </Link>

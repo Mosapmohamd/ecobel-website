@@ -37,9 +37,9 @@ export default function ProductCard({ product }: { product: Product }) {
         {outOfStock ? (
           <span className="absolute top-3 right-3 badge bg-surface text-ink border border-line">نفد من المخزون</span>
         ) : percentOff > 0 ? (
-          <span className="absolute top-3 right-3 badge bg-brand-deep text-surface">خصم {percentOff.toLocaleString('ar-EG')}%</span>
+          <span className="absolute top-3 right-3 badge bg-accent text-on-accent">خصم {percentOff.toLocaleString('ar-EG')}%</span>
         ) : product.stock_status === 'low' ? (
-          <span className="absolute top-3 right-3 badge bg-surface-muted text-primary-hover">كمية محدودة</span>
+          <span className="absolute top-3 right-3 badge bg-surface-muted text-primary-ink">كمية محدودة</span>
         ) : null}
         <button
           type="button"
@@ -64,7 +64,7 @@ export default function ProductCard({ product }: { product: Product }) {
       <div className="p-4 flex flex-col flex-1">
         <div className="text-label-sm font-bold text-ink-muted">{product.category_name}</div>
         <h3 className="mt-1 font-display text-title font-bold leading-snug line-clamp-2">
-          <Link href={`/products/${product.id}`} className="transition-colors hover:text-primary">
+          <Link href={`/products/${product.id}`} className="transition-colors hover:text-primary-ink">
             {product.name}
           </Link>
         </h3>

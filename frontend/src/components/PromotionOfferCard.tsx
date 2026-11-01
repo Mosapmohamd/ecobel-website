@@ -30,7 +30,7 @@ export default function PromotionOfferCard({ promotion: p }: { promotion: Promot
   return (
     <article className="card p-5 flex flex-col h-full" data-testid="promotion-card">
       <div className="flex items-center justify-between gap-2">
-        <span className="badge bg-brand-deep text-surface inline-flex items-center gap-1">
+        <span className="badge bg-accent text-on-accent inline-flex items-center gap-1">
           <Icon name="tag" size={12} />
           {TYPE_LABEL[p.type]}
         </span>

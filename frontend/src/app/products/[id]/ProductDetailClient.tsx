@@ -130,9 +130,9 @@ export default function ProductDetailClient({
     <div>
       <section className="border-b border-line bg-surface-tint">
         <nav aria-label="مسار التصفح" className="page-container py-4 flex flex-wrap items-center gap-1.5 text-body-sm text-ink-muted">
-          <Link href="/" className="hover:text-primary transition-colors">الرئيسية</Link>
+          <Link href="/" className="hover:text-primary-ink transition-colors">الرئيسية</Link>
           <Icon name="chevronLeft" size={14} />
-          <Link href={`/products?category=${product.category_id}`} className="hover:text-primary transition-colors">{product.category_name}</Link>
+          <Link href={`/products?category=${product.category_id}`} className="hover:text-primary-ink transition-colors">{product.category_name}</Link>
           <Icon name="chevronLeft" size={14} />
           <span className="text-ink line-clamp-1" aria-current="page">{product.name}</span>
         </nav>
@@ -145,18 +145,18 @@ export default function ProductDetailClient({
               images={gallery}
               name={product.name}
               badge={percentOff > 0 && (
-                <span className="absolute top-3 right-3 z-[1] badge bg-brand-deep text-surface">خصم {percentOff.toLocaleString('ar-EG')}%</span>
+                <span className="absolute top-3 right-3 z-[1] badge bg-accent text-on-accent">خصم {percentOff.toLocaleString('ar-EG')}%</span>
               )}
             />
           </div>
 
           <div>
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <Link href={`/products?category=${product.category_id}`} className="text-label font-bold text-primary hover:underline">
+              <Link href={`/products?category=${product.category_id}`} className="text-label font-bold text-primary-ink hover:underline">
                 {product.category_name}
               </Link>
               {available ? (
-                <span className={`badge ${product.stock_status === 'low' ? 'bg-surface-muted text-primary-hover' : 'bg-success/15 text-success-strong'}`}>
+                <span className={`badge ${product.stock_status === 'low' ? 'bg-surface-muted text-primary-ink' : 'bg-success/15 text-success-strong'}`}>
                   <Icon name={product.stock_status === 'low' ? 'box' : 'checkCircle'} size={13} />
                   {product.stock_status === 'low' ? 'كمية محدودة' : 'متوفر وجاهز للشحن'}
                 </span>
@@ -183,7 +183,7 @@ export default function ProductDetailClient({
                 {onOffer && (
                   <>
                     <span className="text-body line-through text-ink-muted">{egp(product.sale_price)}</span>
-                    <span className="badge bg-brand-deep text-surface">وفّري {egp(product.sale_price - product.price)}</span>
+                    <span className="badge bg-accent text-on-accent">وفّري {egp(product.sale_price - product.price)}</span>
                   </>
                 )}
               </div>
@@ -288,7 +288,7 @@ export default function ProductDetailClient({
                 <span className="kicker">من نفس الفئة</span>
                 <h2 id="related-title" className="text-headline-md lg:text-headline-lg">منتجات مشابهة</h2>
               </div>
-              <Link href={`/products?category=${product.category_id}`} className="text-label font-bold text-primary link-underline">
+              <Link href={`/products?category=${product.category_id}`} className="text-label font-bold text-primary-ink link-underline">
                 كل {product.category_name}
               </Link>
             </div>

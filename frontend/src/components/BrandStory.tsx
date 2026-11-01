@@ -14,7 +14,7 @@ export default function BrandStory({ tone = 'surface' }: { tone?: 'surface' | 't
       <div className="page-container">
         <div className={`rounded p-6 sm:p-8 lg:p-10 flex flex-col lg:flex-row lg:items-center justify-between gap-8 ${tone === 'tint' ? 'bg-surface' : 'bg-surface-tint'}`}>
           <div className="max-w-2xl">
-            <span className="inline-flex items-center gap-2 rounded bg-surface px-3 py-1 text-label font-bold text-primary shadow-soft">
+            <span className="inline-flex items-center gap-2 rounded bg-surface px-3 py-1 text-label font-bold text-primary-ink shadow-soft">
               <Icon name="leaf" size={16} />
               قصة Eco Bel
             </span>

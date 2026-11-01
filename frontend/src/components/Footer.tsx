@@ -34,7 +34,7 @@ export default function Footer({ initialCategories = null, privacyControls = fal
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/logo/ecobel-mark-white.png" alt="" className="h-7 w-auto" />
             <span className="font-display text-[30px] font-bold leading-none text-surface">Eco Bel</span>
-            <span className="badge bg-primary text-surface">طبيعي 100%</span>
+            <span className="badge bg-primary text-on-primary">طبيعي 100%</span>
           </div>
           <p className="text-body-sm leading-relaxed mb-5">
             علامة مصرية للعناية بالبشرة والشعر، بتركيبات طبيعية وآمنة لجمال حقيقي وصحة مستدامة.
@@ -93,7 +93,7 @@ export default function Footer({ initialCategories = null, privacyControls = fal
           </ul>
           <div className="mt-6">
             <span className="block text-label font-bold text-surface mb-2">طريقة الدفع</span>
-            <span className="inline-flex items-center gap-1.5 rounded bg-primary px-2.5 py-1 text-label text-surface">
+            <span className="inline-flex items-center gap-1.5 rounded bg-primary px-2.5 py-1 text-label text-on-primary">
               <Icon name="cash" size={15} />
               الدفع عند الاستلام
             </span>

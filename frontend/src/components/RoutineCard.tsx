@@ -27,7 +27,7 @@ export default function RoutineCard({ routine }: { routine: Routine }) {
           روتين من {stepsLabel(routine.items.length)}
         </span>
         {routine.savings > 0 && (
-          <span className="badge bg-surface-muted text-brand-deep">وفّري {egp(routine.savings)}</span>
+          <span className="badge bg-accent text-on-accent">وفّري {egp(routine.savings)}</span>
         )}
       </div>
 
@@ -46,14 +46,14 @@ export default function RoutineCard({ routine }: { routine: Routine }) {
       </Link>
 
       <h3 className="mt-5 text-headline-sm leading-snug">
-        <Link href={href} className="transition-colors hover:text-primary">{routine.name}</Link>
+        <Link href={href} className="transition-colors hover:text-primary-ink">{routine.name}</Link>
       </h3>
       {routine.description && <p className="mt-1.5 text-body-sm text-ink-muted line-clamp-2">{routine.description}</p>}
 
       <ol className="mt-4 flex flex-col gap-2.5">
         {routine.items.map((it, i) => (
           <li key={it.product.id} className="flex items-center gap-3 text-body-sm">
-            <span className="w-6 h-6 flex-none rounded-full bg-surface-muted text-primary text-label-sm font-bold flex items-center justify-center">
+            <span className="w-6 h-6 flex-none rounded-full bg-surface-muted text-primary-ink text-label-sm font-bold flex items-center justify-center">
               {(i + 1).toLocaleString('ar-EG')}
             </span>
             <span className="flex-1 min-w-0">{it.product.name}</span>
@@ -66,10 +66,10 @@ export default function RoutineCard({ routine }: { routine: Routine }) {
         <div className="pt-4 mb-4 border-t border-line flex flex-wrap items-end justify-between gap-2">
           <div>
             <span className="block text-label text-ink-muted">سعر الروتين كامل</span>
-            <span className="text-headline-sm font-bold text-primary">{egp(routine.total)}</span>
+            <span className="text-headline-sm font-bold text-primary-ink">{egp(routine.total)}</span>
             {routine.savings > 0 && <span className="mr-2 text-body-sm line-through text-ink-muted">{egp(routine.regular_total)}</span>}
           </div>
-          <Link href={href} className="text-label font-bold text-primary link-underline">تفاصيل الروتين</Link>
+          <Link href={href} className="text-label font-bold text-primary-ink link-underline">تفاصيل الروتين</Link>
         </div>
         <AddRoutineButton routine={routine} className="w-full" />
       </div>

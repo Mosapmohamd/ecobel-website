@@ -139,10 +139,10 @@ export default function CategoryIconRow({
                 className="card card-hover group h-full flex flex-col items-center text-center gap-3 px-3 py-5"
               >
                 <span className="w-16 h-16 rounded-full flex items-center justify-center bg-surface-tint transition-transform group-hover:scale-105">
-                  <Icon color="var(--color-primary)" />
+                  <Icon color="var(--color-primary-dark)" />
                 </span>
                 <span>
-                  <span className="block text-label-lg font-bold leading-snug transition-colors group-hover:text-primary">{label}</span>
+                  <span className="block text-label-lg font-bold leading-snug transition-colors group-hover:text-primary-ink">{label}</span>
                   <span className="block text-label-sm mt-1 text-ink-muted">{meta}</span>
                 </span>
               </Link>

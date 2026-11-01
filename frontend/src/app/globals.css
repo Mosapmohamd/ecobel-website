@@ -8,39 +8,43 @@
    a component — add a role here instead.
    ========================================================================== */
 @theme static {
-  /* EcoBel identity — taken from the official logo (/Logo.jpg in the
-     project root): rich-black ink #231f20 on a gray background gradient
-     #b3b3b3 → #f2f2f2. Every neutral below is that ink, a sample of that
-     gradient, or a step on the ink → logo-gray ramp (chosen for WCAG AA
-     contrast). The accounting system uses the same values
-     (ecobel-accounting-system frontend/src/index.css). */
-  --color-logo-ink: #231f20;       /* the logo's lettering and "eb" disc */
-  --color-logo-gray: #b3b3b3;      /* logo background, dark end */
-  --color-logo-light: #f2f2f2;     /* logo background, light end */
+  /* EcoBel brand palette (2026-10-31) — the single source of truth for color
+     on the storefront AND the admin (ecobel-accounting-system
+     frontend/src/index.css uses the same values). Contrast is WCAG AA:
+     every text/background pair below is noted where it's not obvious.
+     The brand teal is a FILL color (with dark text on it, 5.4:1): teal text
+     or white text on teal would be only 2.2:1, so text in the brand hue uses
+     --color-primary-ink. */
 
   /* Brand & actions */
-  --color-primary: #231f20;        /* the single action color: CTAs, links, active states */
-  --color-primary-hover: #423f40;  /* primary hover / pressed (ramp 15%) */
-  --color-brand-deep: #231f20;     /* deep panels: promo bar, footer, offer badges */
-  --color-accent: #4c494a;         /* star ratings (ramp 20%; 6.9:1 against empty stars) */
+  --color-primary: #49c0b7;        /* brand teal: primary buttons, selected chips, active states, badges (fill only) */
+  --color-on-primary: #263b38;     /* text/icons on a primary fill (5.4:1) */
+  --color-primary-dark: #247f79;   /* deep teal: hover/pressed fill (white text 4.8:1), focus rings, icons, selected borders */
+  --color-primary-light: #ddf3f0;  /* mint: selected/hover tints, input focus halo */
+  --color-primary-ink: #1f6e69;    /* teal TEXT: links, active nav, prices in the brand hue (≥5.2:1 on every surface) — a deeper step of Primary Dark, which is 4.49:1 on the off-white background */
+  --color-brand-deep: #263b38;     /* deep panels: promo bar, footer, closing CTA (white text 11.9:1) */
+  --color-accent: #e8b98a;         /* warm sand: offer, discount and savings badges (fill only) */
+  --color-on-accent: #263b38;      /* text on an accent fill (6.7:1) */
+  --color-rating: #a86b2f;         /* star ratings — sand deepened to 4.4:1 on white (the sand itself is 1.8:1) */
 
   /* Surfaces */
   --color-surface: #ffffff;        /* canvas, cards, header */
-  --color-surface-tint: #f2f2f2;   /* alternating sections, input focus ring (logo light) */
-  --color-surface-muted: #ebebeb;  /* badges, chips, icon tiles, deeper tint (logo gradient) */
-  --color-line: #e3e3e3;           /* hairline borders (logo gradient) */
+  --color-surface-tint: #f7f8f5;   /* off-white background: alternating sections, quiet panels */
+  --color-surface-muted: #eef2f0;  /* neutral chips, icon tiles, skeletons, inactive toggles */
+  --color-line: #e2eae7;           /* hairline borders */
 
   /* Text */
-  --color-ink: #231f20;            /* body text and headings (logo ink) */
-  --color-ink-secondary: #4c494a;  /* secondary paragraph copy (ramp 20%) */
-  --color-ink-muted: #615e5f;      /* meta text, kickers, placeholders (ramp 30%; ≥5:1 on every surface) */
+  --color-ink: #263b38;            /* body text and headings (11.2:1 on the off-white background) */
+  --color-ink-secondary: #5e6e6b;  /* secondary paragraph copy */
+  --color-ink-muted: #5e6e6b;      /* meta text, kickers, placeholders — the palette's Text Secondary (#687875) deepened to stay ≥4.6:1 on every surface (#687875 is 4.35:1 on the off-white background) */
 
-  /* Semantic — status colors stay recognizable; sale is part of the
-     monochrome identity (strike-through + badge carry the meaning). */
-  --color-sale: #231f20;           /* discounts, sale prices, urgency — never an action */
-  --color-success: #6b9c6c;        /* success, in-stock, botanical seals */
-  --color-success-strong: #3f6b40; /* success text on a tinted background */
-  --color-error: #ba1a1a;          /* errors, destructive actions */
+  /* Semantic — kept apart from the brand hues (teal/green/sand). */
+  --color-sale: #263b38;           /* sale prices: dark ink + strike-through; never an action color */
+  --color-success: #2e7d32;        /* success, in-stock (5.1:1 on white) */
+  --color-success-strong: #1e5e22; /* success text on a tinted background */
+  --color-warning: #9a5b00;        /* warnings (5.4:1 on white) */
+  --color-error: #ba1a1a;          /* errors, destructive actions (6.5:1 on white) */
+  --color-info: #2b5c9e;           /* neutral information (6.7:1 on white) */
 
   /* Type families (loaded with next/font in app/layout.tsx) */
   --font-display: var(--font-markazi), 'Markazi Text', serif;
@@ -62,9 +66,9 @@
 
   /* Elevation. Shape: Tailwind's `rounded` (4px) everywhere; circles only for
      1:1 icon buttons. */
-  --shadow-soft: 0 1px 8px rgba(35, 31, 32, 0.04);
-  --shadow-raised: 0 4px 16px -2px rgba(35, 31, 32, 0.06), 0 1px 3px 0 rgba(35, 31, 32, 0.03);
-  --shadow-overlay: -6px 0 24px -4px rgba(35, 31, 32, 0.1), 0 12px 32px -8px rgba(35, 31, 32, 0.18);
+  --shadow-soft: 0 1px 8px rgba(38, 59, 56, 0.04);
+  --shadow-raised: 0 4px 16px -2px rgba(38, 59, 56, 0.06), 0 1px 3px 0 rgba(38, 59, 56, 0.03);
+  --shadow-overlay: -6px 0 24px -4px rgba(38, 59, 56, 0.1), 0 12px 32px -8px rgba(38, 59, 56, 0.18);
 }
 
 /* ==========================================================================
@@ -132,27 +136,29 @@ h1, h2, h3 {
   border: 1px solid transparent;
   transition: background-color .2s ease, color .2s ease, border-color .2s ease;
 }
-.btn:focus-visible { outline: none; box-shadow: 0 0 0 2px var(--color-surface), 0 0 0 4px var(--color-primary); }
+/* Focus: a deep-teal ring (4.8:1 on white) — the brand teal alone is too light to see. */
+.btn:focus-visible { outline: none; box-shadow: 0 0 0 2px var(--color-surface), 0 0 0 4px var(--color-primary-dark); }
 /* One action color across the whole site — sale/accent colors are never
-   used on a clickable action, so "buy" is always this color. */
-.btn-primary { background: var(--color-primary); color: var(--color-surface); }
-.btn-primary:hover { background: var(--color-primary-hover); }
-.btn-secondary { background: transparent; color: var(--color-primary); border-color: var(--color-primary); }
-.btn-secondary:hover { background: var(--color-surface-tint); }
+   used on a clickable action, so "buy" is always this color: brand teal
+   with dark text; hover/pressed deepens to deep teal with white text. */
+.btn-primary { background: var(--color-primary); color: var(--color-on-primary); }
+.btn-primary:hover, .btn-primary:active { background: var(--color-primary-dark); color: var(--color-surface); }
+.btn-secondary { background: transparent; color: var(--color-primary-ink); border-color: var(--color-primary-dark); }
+.btn-secondary:hover, .btn-secondary:active { background: var(--color-primary-light); }
 .btn-danger { background: var(--color-error); color: var(--color-surface); }
 .btn-danger:hover { background: color-mix(in srgb, var(--color-error) 85%, var(--color-ink)); }
 .btn-sm { min-height: 44px; padding: 0 16px; font-size: var(--text-label); }
 .btn:disabled { opacity: .5; cursor: not-allowed; }
-/* Primary action on a dark (logo-ink) surface — same shape, inverted colors. */
-.btn-on-dark { background: var(--color-surface); color: var(--color-brand-deep); }
-.btn-on-dark:hover { background: var(--color-surface-muted); }
-.btn-on-dark:focus-visible { box-shadow: 0 0 0 2px var(--color-brand-deep), 0 0 0 4px var(--color-surface); }
+/* Primary action on a deep (brand-deep) panel: the brand teal stands out on it (5.4:1). */
+.btn-on-dark { background: var(--color-primary); color: var(--color-on-primary); }
+.btn-on-dark:hover, .btn-on-dark:active { background: var(--color-primary-light); }
+.btn-on-dark:focus-visible { box-shadow: 0 0 0 2px var(--color-brand-deep), 0 0 0 4px var(--color-primary-light); }
 .btn-outline-on-dark { background: transparent; color: var(--color-surface); border-color: color-mix(in srgb, var(--color-surface) 55%, transparent); }
 .btn-outline-on-dark:hover { background: color-mix(in srgb, var(--color-surface) 12%, transparent); }
 
 /* Tertiary link — underline grows from the right on hover (RTL). */
 .link-underline {
-  background-image: linear-gradient(var(--color-primary), var(--color-primary));
+  background-image: linear-gradient(currentColor, currentColor); /* the link's own (primary-ink) color */
   background-repeat: no-repeat;
   background-position: 100% 100%;
   background-size: 0 1px;
@@ -160,38 +166,38 @@ h1, h2, h3 {
 }
 .link-underline:hover { background-size: 100% 1px; }
 
-/* Small label above a section heading. Uses the deeper primary so the
-   small text keeps 4.5:1 contrast on tinted sections as well as white. */
+/* Small label above a section heading, in the brand hue's text color
+   (≥5.2:1 on tinted sections as well as white). */
 .kicker {
   display: block;
   font-size: var(--text-label);
   font-weight: 700;
-  color: var(--color-primary-hover);
+  color: var(--color-primary-ink);
   margin-bottom: 4px;
 }
 
-/* Announcement ticker (components/AnnouncementBar.tsx): a slim strip in the
-   logo's black-to-gray direction — logo ink to the darkest ramp gray that
-   keeps the logo-light text ≥5:1 (#b3b3b3 itself is too light for it).
-   Never wider than the screen. Staff pick a named theme, speed and where it
-   shows (data-theme / data-speed / data-visibility) — never free CSS. */
+/* Announcement ticker (components/AnnouncementBar.tsx): a slim strip, by
+   default deep green → deep teal with white text (≥4.8:1 along the whole
+   gradient). Never wider than the screen. Staff pick a named theme, speed
+   and where it shows (data-theme / data-speed / data-visibility) — never
+   free CSS. The admin previews the same themes
+   (ecobel-accounting-system AnnouncementBarEditor.tsx). The pause button
+   takes the strip's text color, so it stays visible on every theme. */
 .announcement-bar {
   position: relative;
   display: flex;
   align-items: center;
   height: 1.75rem;
   overflow: hidden;
-  background: linear-gradient(to right, var(--color-logo-ink), var(--color-ink-muted));
-  color: var(--color-logo-light);
-  border-bottom: 1px solid var(--color-ink-secondary); /* separates it from the black promo bar */
+  background: linear-gradient(to right, var(--color-brand-deep), var(--color-primary-dark));
+  color: var(--color-surface);
+  border-bottom: 1px solid color-mix(in srgb, var(--color-surface) 20%, transparent); /* separates it from the deep promo bar */
   font-size: var(--text-label);
   font-weight: 500;
 }
-.announcement-bar[data-theme="brand"] { background: var(--color-logo-ink); color: var(--color-surface); border-bottom-color: var(--color-logo-ink); }
-.announcement-bar[data-theme="accent"] { background: var(--color-ink-secondary); color: var(--color-surface); }
+.announcement-bar[data-theme="brand"] { background: var(--color-primary); color: var(--color-on-primary); border-bottom-color: var(--color-primary-dark); }
+.announcement-bar[data-theme="accent"] { background: var(--color-accent); color: var(--color-on-accent); border-bottom-color: color-mix(in srgb, var(--color-on-accent) 15%, transparent); }
 .announcement-bar[data-theme="light"] { background: var(--color-surface-tint); color: var(--color-ink); border-bottom-color: var(--color-line); }
-.announcement-bar[data-theme="light"] .announcement-toggle { color: var(--color-ink); }
-.announcement-bar[data-theme="light"] .announcement-toggle:focus-visible { outline-color: var(--color-ink); }
 @media (max-width: 767px) { .announcement-bar[data-visibility="desktop"] { display: none; } }
 @media (min-width: 768px) { .announcement-bar[data-visibility="mobile"] { display: none; } }
 .announcement-link {
@@ -250,10 +256,11 @@ a.announcement-link:focus-visible { outline: 2px solid currentColor; outline-off
   justify-content: center;
   width: 1.75rem;
   height: 1.75rem;
-  color: var(--color-logo-light);
+  color: inherit;
+  opacity: .85;
 }
-.announcement-toggle:hover { color: var(--color-surface); }
-.announcement-toggle:focus-visible { outline: 2px solid var(--color-logo-light); outline-offset: -3px; }
+.announcement-toggle:hover { opacity: 1; }
+.announcement-toggle:focus-visible { opacity: 1; outline: 2px solid currentColor; outline-offset: -3px; }
 /* Reduced motion — or motion turned off by staff: the text stands still
    (centered, cut off with … if too long). */
 .announcement-static-item + .announcement-static-item { margin-inline-start: 1.5rem; }
@@ -295,7 +302,7 @@ html[data-promo-dismissed] .promo-bar {
   z-index: 100;
   padding: 0.75rem 1.25rem;
   border-radius: 4px;
-  background: var(--color-primary-hover);
+  background: var(--color-primary-dark);
   color: var(--color-surface);
   font-weight: 700;
 }
@@ -327,8 +334,8 @@ html[data-promo-dismissed] .promo-bar {
 }
 .field input:focus, .field textarea:focus, .field select:focus, .input:focus {
   outline: none;
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px var(--color-surface-tint);
+  border-color: var(--color-primary-dark);
+  box-shadow: 0 0 0 3px var(--color-primary-light);
 }
 
 /* Hairline card surface shared by product/routine cards and panels. */
@@ -435,8 +442,8 @@ html[data-promo-dismissed] .promo-bar {
   pointer-events: auto;
   transform: translate(0, -50%);
 }
-.hero-edge:hover { background: var(--color-primary); color: var(--color-surface); border-color: var(--color-primary); }
-.hero-edge:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+.hero-edge:hover { background: var(--color-primary); color: var(--color-on-primary); border-color: var(--color-primary-dark); }
+.hero-edge:focus-visible { outline: 2px solid var(--color-primary-dark); outline-offset: 2px; }
 @media (prefers-reduced-motion: reduce) {
   .hero-edge { transition: opacity .15s linear, background-color .2s ease, color .2s ease; transform: translate(0, -50%); }
 }
@@ -459,4 +466,4 @@ html[data-promo-dismissed] .promo-bar {
   box-shadow: 0 1px 4px rgb(0 0 0 / 0.08);
 }
 .gallery-nav:hover { background: var(--color-surface); }
-.gallery-nav:focus-visible { outline: none; box-shadow: 0 0 0 2px var(--color-surface), 0 0 0 4px var(--color-primary); }
+.gallery-nav:focus-visible { outline: none; box-shadow: 0 0 0 2px var(--color-surface), 0 0 0 4px var(--color-primary-dark); }
